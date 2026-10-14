@@ -1,0 +1,219 @@
+/*
+ * Дизайн-токены.
+ * Нейтрали — «тёплый графит», матовое стекло (Liquid Glass) — по мотивам LM_SERVER.
+ * Акцент — нейтральный на общих экранах, цвет предмета внутри него (app/accent.ts); цвета — в OKLCH.
+ * Светлая и тёмная темы проектируются парами, не инверсией. Контраст проверен (WCAG).
+ */
+
+:root {
+  /* поверхности */
+  --app-bg: #f3f2ed;              /* подложка под стеклом */
+  --background: #faf9f6;          /* бумага редактора */
+  --foreground: #1f1e1d;          /* 15:1 */
+  --card: #ffffff;
+  --card-foreground: #1f1e1d;
+  --popover: #ffffff;
+  --popover-foreground: #1f1e1d;
+  --muted: #efeee9;
+  --muted-foreground: #6b6a64;    /* 5:1 на бумаге */
+  --border: rgb(31 30 29 / 0.1);
+  --input: rgb(31 30 29 / 0.14);
+
+  /* акцент — один оттенок --accent-h (OKLCH, задаёт app/accent.ts); светлота и насыщенность
+     фиксированы, поэтому контраст держится при любом оттенке */
+  --accent-h: 4;
+  --accent-c: 1;   /* насыщенность акцента: 1 — как у цвета предмета, у серого — почти 0 */
+  --primary: oklch(0.5 calc(0.17 * var(--accent-c)) var(--accent-h));        /* кнопки, ссылки: ~6:1 с белым */
+  --primary-foreground: #ffffff;
+  --highlight: oklch(0.56 calc(0.18 * var(--accent-c)) var(--accent-h));     /* иконки, активные элементы, кольца фокуса: ~4.6:1 */
+  --accent-pastel: var(--highlight);
+  --accent: oklch(0.6 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.1);   /* hover / выделенные строки */
+  --accent-foreground: #1f1e1d;
+  --selection: oklch(0.62 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.22);
+  --secondary: #efeee9;
+  --secondary-foreground: #1f1e1d;
+  --destructive: #c4382b;
+  --ring: var(--highlight);
+
+  /* колонки — стекло поверх подложки */
+  --sidebar: rgb(255 255 255 / 0.24);
+  --sidebar-foreground: #1f1e1d;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(255 255 255 / 0.45);
+  --sidebar-accent-foreground: #1f1e1d;
+  --sidebar-border: rgb(31 30 29 / 0.08);
+  --sidebar-ring: var(--highlight);
+  --list: rgb(255 255 255 / 0.22);
+  --column-blur: 12px;
+
+  /* матовое стекло */
+  --glass-mix: 48%;
+  --glass-blur: 24px;
+  --glass-sat: 150%;
+  --glass: color-mix(in srgb, var(--card) var(--glass-mix), transparent);
+  --glass-edge: rgb(255 255 255 / 0.75);
+  --glass-shadow: rgb(40 50 40 / 0.12);
+  --sheen: 0.35;
+  --grain-alpha: 0.05;
+
+  /* цвета предметов (всегда в паре с иконкой) */
+  --subject-red: oklch(0.56 0.19 27);
+  --subject-orange: oklch(0.62 0.17 50);
+  --subject-amber: oklch(0.66 0.15 75);
+  --subject-lime: oklch(0.62 0.17 130);
+  --subject-green: oklch(0.56 0.15 150);
+  --subject-teal: oklch(0.56 0.11 185);
+  --subject-sky: oklch(0.6 0.14 230);
+  --subject-blue: oklch(0.54 0.2 262);
+  --subject-indigo: oklch(0.5 0.2 280);
+  --subject-violet: oklch(0.52 0.21 295);
+  --subject-fuchsia: oklch(0.56 0.22 325);
+  --subject-pink: oklch(0.6 0.19 350);
+  --subject-rose: oklch(0.56 0.2 10);
+  --subject-brown: oklch(0.5 0.07 55);
+  --subject-slate: oklch(0.5 0.03 255);
+
+  /* палитра текста и фона в конспектах — как в Notion */
+  --tc-gray: #787774;   --hl-gray: #f1f1ef;
+  --tc-brown: #9f6b53;  --hl-brown: #f4eeee;
+  --tc-orange: #d9730d; --hl-orange: #fbecdd;
+  --tc-yellow: #cb912f; --hl-yellow: #fbf3db;
+  --tc-green: #448361;  --hl-green: #edf3ec;
+  --tc-blue: #337ea9;   --hl-blue: #e7f3f8;
+  --tc-purple: #9065b0; --hl-purple: #f6f3f9;
+  --tc-pink: #c14c8a;   --hl-pink: #faf1f5;
+  --tc-red: #d44c47;    --hl-red: #fdebec;
+  --hl-default: oklch(0.65 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.16);
+
+  --chart-1: var(--highlight);
+  --chart-2: #2563eb;
+  --chart-3: #c27a10;
+  --chart-4: #7c3aed;
+  --chart-5: #e11d48;
+
+  /* скругления: поверхность 24 → блок 16 → контрол 12 → чип 8 (Jobmatcher) */
+  --radius: 0.75rem;
+  --radius-surface: 1.5rem;
+  --radius-block: 1rem;
+  --radius-chip: 0.5rem;
+  --shadow-card: 0 1px 2px rgb(31 30 29 / 0.04), 0 4px 14px rgb(31 30 29 / 0.05);
+  --shadow-float: 0 10px 30px var(--glass-shadow), 0 2px 6px rgb(31 30 29 / 0.06);
+
+  /* движение: 150–300мс, выход ≈ 65% входа */
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.dark {
+  --app-bg: #191918;
+  --background: #1f1f1d;
+  --foreground: #f2f1ec;          /* 15:1 */
+  --card: #2a2a28;
+  --card-foreground: #f2f1ec;
+  --popover: #2e2e2b;
+  --popover-foreground: #f2f1ec;
+  --muted: #2f2f2c;
+  --muted-foreground: #a6a39a;    /* 6.7:1 */
+  --border: rgb(245 244 238 / 0.09);
+  --input: rgb(245 244 238 / 0.13);
+
+  /* тот же оттенок, светлее для тёмного фона (~5.8:1) */
+  --primary: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h));
+  --primary-foreground: oklch(0.24 calc(0.06 * var(--accent-c)) var(--accent-h));
+  --highlight: var(--primary);
+  --accent-pastel: var(--primary);
+  --accent: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h) / 0.12);
+  --accent-foreground: #f2f1ec;
+  --selection: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h) / 0.28);
+  --secondary: #2f2f2c;
+  --secondary-foreground: #f2f1ec;
+  --destructive: #ff7b6e;
+  --ring: var(--primary);
+
+  --sidebar: rgb(30 30 28 / 0.5);
+  --sidebar-foreground: #f2f1ec;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #f2f1ec;
+  --sidebar-border: rgb(245 244 238 / 0.07);
+  --sidebar-ring: var(--primary);
+  --list: rgb(30 30 28 / 0.3);
+
+  --glass-mix: 55%;
+  --glass-edge: rgb(255 255 255 / 0.09);
+  --glass-shadow: rgb(0 0 0 / 0.4);
+  --sheen: 0.05;
+  --grain-alpha: 0.06;
+
+  --subject-red: oklch(0.74 0.16 27);
+  --subject-orange: oklch(0.78 0.15 50);
+  --subject-amber: oklch(0.82 0.14 75);
+  --subject-lime: oklch(0.84 0.17 130);
+  --subject-green: oklch(0.76 0.15 150);
+  --subject-teal: oklch(0.78 0.12 185);
+  --subject-sky: oklch(0.78 0.12 230);
+  --subject-blue: oklch(0.72 0.15 262);
+  --subject-indigo: oklch(0.7 0.15 280);
+  --subject-violet: oklch(0.72 0.16 295);
+  --subject-fuchsia: oklch(0.74 0.18 325);
+  --subject-pink: oklch(0.78 0.14 350);
+  --subject-rose: oklch(0.74 0.16 10);
+  --subject-brown: oklch(0.72 0.06 55);
+  --subject-slate: oklch(0.74 0.03 255);
+
+  --tc-gray: #9b9b9b;   --hl-gray: #2f2f2f;
+  --tc-brown: #ba856f;  --hl-brown: #4a3228;
+  --tc-orange: #c77d48; --hl-orange: #5c3b23;
+  --tc-yellow: #ca984d; --hl-yellow: #564328;
+  --tc-green: #529e72;  --hl-green: #243d30;
+  --tc-blue: #5e87c9;   --hl-blue: #143a4e;
+  --tc-purple: #9d68d3; --hl-purple: #3c2d49;
+  --tc-pink: #d15796;   --hl-pink: #4e2c3c;
+  --tc-red: #df5452;    --hl-red: #522e2a;
+  --hl-default: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h) / 0.2);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
+
+/*
+ * Нейтральный акцент — на общих экранах (главная, корзина). Внутри предмета data-accent = его цвет,
+ * и акцент строится из --accent-h/--accent-c (app/accent.ts). Белый на белом не читается,
+ * поэтому в светлой теме нейтральный акцент — графит.
+ */
+:root[data-accent="neutral"] {
+  --primary: #1f1e1d;
+  --primary-foreground: #ffffff;
+  --highlight: #2c2b28;
+  --accent-pastel: var(--highlight);
+  --accent: rgb(31 30 29 / 0.06);
+  --selection: rgb(31 30 29 / 0.14);
+  --ring: #2c2b28;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--ring);
+  --hl-default: rgb(31 30 29 / 0.1);
+  --chart-1: var(--highlight);
+}
+:root.dark[data-accent="neutral"] {
+  --primary: #f5f4f0;
+  --primary-foreground: #1f1e1d;
+  --highlight: #ffffff;
+  --accent: rgb(255 255 255 / 0.08);
+  --selection: rgb(255 255 255 / 0.2);
+  --ring: rgb(255 255 255 / 0.85);
+  --hl-default: rgb(255 255 255 / 0.14);
+}

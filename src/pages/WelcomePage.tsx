@@ -1,0 +1,134 @@
+import { motion } from 'motion/react'
+import { ArrowLeft, FolderOpen, HardDrive, Loader2, MonitorSmartphone, TriangleAlert, WifiOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { LiquidButton } from '@/components/ui/liquid-glass-button'
+import { createBrowserAdapter } from '@/storage/browserAdapter'
+import { fsaSupported } from '@/storage/fsaAdapter'
+import { listItem, listParent } from '@/lib/motion'
+import { plural } from '@/lib/format'
+import { countNotes } from '@/vault/repo'
+import { useVault } from '@/vault/store'
+import { Nebula } from '@/app/layout/Nebula'
+
+/** Хранилище: подключить папку на диске или остаться в браузере. */
+export function WelcomePage() {
+  const navigate = useNavigate()
+  const adapter = useVault((s) => s.adapter)
+  const status = useVault((s) => s.status)
+  const init = useVault((s) => s.init)
+  const connectFolder = useVault((s) => s.connectFolder)
+  const switchToBrowser = useVault((s) => s.switchToBrowser)
+  const [browserNotes, setBrowserNotes] = useState<number | null>(null)
+  const [migrate, setMigrate] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const supported = fsaSupported()
+  const inFolder = adapter?.kind === 'folder'
+
+  useEffect(() => {
+    void init()
+    countNotes(createBrowserAdapter()).then(setBrowserNotes, () => setBrowserNotes(0))
+  }, [init])
+
+  const connect = async () => {
+    setBusy(true)
+    try {
+      const res = await connectFolder(migrate && !!browserNotes)
+      if (!res) return
+      toast.success('Папка подключена', {
+        description: res.copied ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.` : 'Конспекты теперь сохраняются на диск.',
+      })
+      navigate('/')
+    } catch (e) {
+      toast.error('Не получилось подключить папку', { description: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const backToBrowser = async () => {
+    setBusy(true)
+    await switchToBrowser()
+    setBusy(false)
+    toast('Конспекты снова хранятся в браузере', { description: 'Файлы в папке остались на месте.' })
+    navigate('/')
+  }
+
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+      <div aria-hidden className="ambient">
+        <Nebula />
+      </div>
+      <motion.div variants={listParent} initial="hidden" animate="show" className="glass w-full max-w-md rounded-[var(--radius-surface)] p-8">
+        {status === 'ready' && (
+          <Link to="/" className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-3.5" /> Назад
+          </Link>
+        )}
+        <div className="text-center">
+          <motion.span variants={listItem} className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-card">
+            К
+          </motion.span>
+          <motion.h1 variants={listItem} className="mt-5 text-[24px] font-bold tracking-tight">
+            Где будет жить учёба?
+          </motion.h1>
+          <motion.p variants={listItem} className="mt-2 text-[15px] text-muted-foreground">
+            Выбери папку на диске. Каждый предмет станет подпапкой, конспекты — обычными файлами Markdown.
+          </motion.p>
+        </div>
+
+        <motion.div variants={listItem} className="mt-5 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[14px]">
+          {inFolder ? <FolderOpen className="size-4 shrink-0 text-highlight" /> : <MonitorSmartphone className="size-4 shrink-0 text-muted-foreground" />}
+          <span className="flex-1">
+            Сейчас: <b className="font-semibold">{inFolder ? `папка «${adapter.label}»` : 'хранилище браузера'}</b>
+          </span>
+        </motion.div>
+
+        <motion.ul variants={listItem} className="mt-3 space-y-2 text-[14px]">
+          <li className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
+            <HardDrive className="size-4 shrink-0 text-highlight" /> Данные твои: копия папки = бэкап
+          </li>
+          <li className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
+            <WifiOff className="size-4 shrink-0 text-highlight" /> Работает без интернета и VPN
+          </li>
+        </motion.ul>
+
+        {!supported && (
+          <motion.p variants={listItem} role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/30 px-3 py-2.5 text-[13px] text-destructive">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" /> Этот браузер не умеет работать с папками. Открой приложение в Edge или Chrome.
+          </motion.p>
+        )}
+
+        {supported && !inFolder && !!browserNotes && (
+          <motion.label variants={listItem} className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-[14px]">
+            <input type="checkbox" checked={migrate} onChange={(e) => setMigrate(e.target.checked)} className="mt-1 size-4 accent-(--highlight)" />
+            <span>
+              Перенести то, что уже есть в браузере
+              <span className="block text-[13px] text-muted-foreground">
+                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и тулзами. Файлы с такими же именами в папке не перезапишутся.
+              </span>
+            </span>
+          </motion.label>
+        )}
+
+        <motion.div variants={listItem} className="mt-6 flex flex-col gap-2">
+          <LiquidButton size="xl" className="w-full rounded-full font-semibold" disabled={!supported || busy} onClick={connect}>
+            {busy ? <Loader2 className="animate-spin" /> : <FolderOpen />}
+            {inFolder ? 'Выбрать другую папку' : 'Выбрать папку'}
+          </LiquidButton>
+          {inFolder ? (
+            <Button size="lg" variant="ghost" disabled={busy} onClick={backToBrowser}>
+              Хранить в браузере
+            </Button>
+          ) : (
+            <Button size="lg" variant="ghost" onClick={() => navigate('/')}>
+              Пока остаться в браузере
+            </Button>
+          )}
+        </motion.div>
+      </motion.div>
+    </main>
+  )
+}

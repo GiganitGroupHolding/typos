@@ -1,0 +1,61 @@
+import type { SubjectColor, SubjectIcon } from '@/types'
+
+/*
+ * Цвета и иконки предметов — один список для диалога, проверки _subject.json и акцента.
+ * hue/chroma — оттенок и насыщенность (OKLCH) для акцента внутри предмета (app/accent.ts);
+ * сами цвета плашек — --subject-* в tokens.css.
+ */
+
+export const SUBJECT_COLORS: { id: SubjectColor; name: string; hue: number; chroma: number }[] = [
+  { id: 'red', name: 'Красный', hue: 27, chroma: 1 },
+  { id: 'orange', name: 'Оранжевый', hue: 50, chroma: 1 },
+  { id: 'amber', name: 'Янтарный', hue: 75, chroma: 0.9 },
+  { id: 'lime', name: 'Лаймовый', hue: 130, chroma: 0.95 },
+  { id: 'green', name: 'Зелёный', hue: 150, chroma: 1 },
+  { id: 'teal', name: 'Бирюзовый', hue: 185, chroma: 0.75 },
+  { id: 'sky', name: 'Голубой', hue: 230, chroma: 0.85 },
+  { id: 'blue', name: 'Синий', hue: 262, chroma: 1 },
+  { id: 'indigo', name: 'Индиго', hue: 280, chroma: 1 },
+  { id: 'violet', name: 'Фиолетовый', hue: 295, chroma: 1 },
+  { id: 'fuchsia', name: 'Фуксия', hue: 325, chroma: 1 },
+  { id: 'pink', name: 'Розовый', hue: 350, chroma: 1 },
+  { id: 'rose', name: 'Малиновый', hue: 10, chroma: 1 },
+  { id: 'brown', name: 'Коричневый', hue: 55, chroma: 0.4 },
+  { id: 'slate', name: 'Серый', hue: 255, chroma: 0.18 },
+]
+
+export const SUBJECT_ICONS: { id: SubjectIcon; label: string }[] = [
+  { id: 'sigma', label: 'Математика' },
+  { id: 'chart', label: 'Статистика' },
+  { id: 'atom', label: 'Физика' },
+  { id: 'flask', label: 'Химия' },
+  { id: 'dna', label: 'Биология' },
+  { id: 'stethoscope', label: 'Медицина' },
+  { id: 'brain', label: 'Психология' },
+  { id: 'telescope', label: 'Астрономия' },
+  { id: 'globe', label: 'География' },
+  { id: 'code', label: 'Программирование' },
+  { id: 'cpu', label: 'Информатика' },
+  { id: 'cog', label: 'Инженерия' },
+  { id: 'trending', label: 'Экономика' },
+  { id: 'coins', label: 'Финансы' },
+  { id: 'megaphone', label: 'Маркетинг' },
+  { id: 'briefcase', label: 'Менеджмент' },
+  { id: 'target', label: 'Стратегия' },
+  { id: 'handshake', label: 'Продажи и переговоры' },
+  { id: 'presentation', label: 'Презентации' },
+  { id: 'users', label: 'Социология' },
+  { id: 'scale', label: 'Право' },
+  { id: 'landmark', label: 'История' },
+  { id: 'lightbulb', label: 'Философия' },
+  { id: 'feather', label: 'Литература' },
+  { id: 'languages', label: 'Языки' },
+  { id: 'palette', label: 'Искусство и дизайн' },
+  { id: 'music', label: 'Музыка' },
+  { id: 'dumbbell', label: 'Спорт' },
+  { id: 'graduation', label: 'Учёба' },
+  { id: 'book', label: 'Другое' },
+]
+
+export const SUBJECT_COLOR_IDS = SUBJECT_COLORS.map((c) => c.id)
+export const SUBJECT_ICON_IDS = SUBJECT_ICONS.map((i) => i.id)
