@@ -4,6 +4,7 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "./mcp" }
+    { "path": "./mcp" },
+    { "path": "./server" }
   ]
 }

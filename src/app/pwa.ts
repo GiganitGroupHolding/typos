@@ -1,10 +1,11 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { registerSW } from 'virtual:pwa-register'
 
-/** Регистрирует сервис-воркер: офлайн-режим и «Доступна новая версия». */
+/** Регистрирует сервис-воркер: офлайн-режим и «Доступна новая версия». В десктопном приложении файлы и так локальные. */
 export function setupPwa() {
-  if (!('serviceWorker' in navigator) || import.meta.env.DEV) return
+  if (!('serviceWorker' in navigator) || import.meta.env.DEV || isTauri()) return
   const update = registerSW({
     onNeedRefresh() {
       toast('Доступна новая версия', {

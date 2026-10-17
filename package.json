@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "icons": "node scripts/gen-icons.mjs",
-    "mcp": "tsx --tsconfig mcp/tsconfig.json mcp/server.ts"
+    "mcp": "tsx --tsconfig mcp/tsconfig.json mcp/server.ts",
+    "storage": "node server/typos-server.mjs",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
@@ -21,6 +25,8 @@
     "@fontsource/pt-serif": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
     "@tiptap/extension-bubble-menu": "^3.31.4",
     "@tiptap/extension-floating-menu": "^3.31.4",
     "@tiptap/extension-highlight": "^3.31.4",
@@ -55,6 +61,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.3",
     "@types/katex": "^0.16.8",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

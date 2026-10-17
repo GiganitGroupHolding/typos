@@ -9,6 +9,10 @@ import {
   requestPermission,
   saveHandle,
 } from '@/storage/fsaAdapter'
+import { forgetRemoteConfig, loadRemoteConfig, RemoteAdapter, saveRemoteConfig } from '@/storage/remoteAdapter'
+import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
+import { forgetPath, isTauri, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
+import type { RemoteConfig } from '@/storage/remoteLink'
 import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
 import { extractExcerpt, extractTitle, sameBody } from './format'
@@ -31,6 +35,8 @@ interface VaultState extends repo.VaultData {
   grantAccess: () => Promise<boolean>
   /** Выбрать папку. migrate — скопировать в неё то, что лежит в браузере. */
   connectFolder: (migrate: boolean) => Promise<{ copied: number } | null>
+  /** Подключить сервер хранения по ссылке (с локальной копией). migrate — скопировать на сервер то, что лежит в браузере. */
+  connectRemote: (config: RemoteConfig, migrate: boolean) => Promise<{ copied: number }>
   switchToBrowser: () => Promise<void>
   createSubject: (input: SubjectInput) => Promise<Subject>
   updateSubject: (id: string, input: SubjectInput) => Promise<void>
@@ -71,6 +77,8 @@ const isBlank = (body: string) => body.replace(/^#{1,6}\s*$/gm, '').trim() === '
 let initRun: Promise<void> | null = null
 let browser: VaultAdapter | null = null
 const browserAdapter = () => (browser ??= createBrowserAdapter())
+/** Забыть папку на диске (браузерную и десктопную). */
+const forgetFolder = () => Promise.all([forgetHandle(), forgetPath()])
 
 /** Сохранения одной заметки идут строго по очереди (переименование файла не гоняется само с собой). */
 const queues = new Map<string, Promise<unknown>>()
@@ -145,6 +153,22 @@ export const useVault = create<VaultState>()((set, get) => {
       // StrictMode и повторные монтирования зовут init несколько раз — открываем один раз
       if (initRun && get().status !== 'error') return initRun
       initRun = (async () => {
+        const remote = await loadRemoteConfig()
+        if (remote) {
+          const synced = new SyncedAdapter(remote)
+          // копия уже есть — открываем сразу, даже без сети; первый раз — сначала забираем всё с сервера
+          try {
+            if (!(await synced.isReady())) await synced.initialSync()
+          } catch (e) {
+            set({ status: 'error', adapter: synced, error: e instanceof Error ? e.message : String(e) })
+            return
+          }
+          return open(synced)
+        }
+        if (isTauri()) {
+          const path = await loadSavedPath()
+          return open(path ? new TauriAdapter(path) : browserAdapter())
+        }
         const handle = await loadSavedHandle()
         if (handle) {
           if (await hasPermission(handle).catch(() => false)) return open(new FsaAdapter(handle))
@@ -176,20 +200,51 @@ export const useVault = create<VaultState>()((set, get) => {
     },
 
     async connectFolder(migrate) {
-      const handle = await pickFolder()
-      if (!handle) return null
-      if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
+      let folder: VaultAdapter
+      let remember: () => Promise<unknown>
+      if (isTauri()) {
+        const path = await pickFolderPath()
+        if (!path) return null
+        folder = new TauriAdapter(path)
+        remember = () => savePath(path)
+      } else {
+        const handle = await pickFolder()
+        if (!handle) return null
+        if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
+        folder = new FsaAdapter(handle)
+        remember = () => saveHandle(handle)
+      }
       await idle()
-      const folder = new FsaAdapter(handle)
       const copied = migrate ? await repo.copyVault(browserAdapter(), folder) : 0
-      await saveHandle(handle)
+      await remember()
+      await forgetRemoteConfig()
       await open(folder)
+      return { copied }
+    },
+
+    async connectRemote(config, migrate) {
+      const info = await new RemoteAdapter(config).info()
+      if (config.vaultId && info.vaultId !== config.vaultId) throw new Error('Ссылка от другого хранилища: сервер по этому адресу уже не тот. Возьми свежую ссылку командой link.')
+      // копия хранилища — по id с сервера: в старых ссылках его могло не быть
+      const full = { ...config, name: info.name || config.name, vaultId: info.vaultId }
+      await idle()
+      resetSyncState()
+      const synced = new SyncedAdapter(full)
+      await synced.initialSync()
+      const copied = migrate ? await repo.copyVault(browserAdapter(), synced) : 0
+      // перенесённое сразу на сервер; не вышло — уйдёт фоном
+      if (copied) await synced.engine.syncNow().catch(() => {})
+      await saveRemoteConfig(full)
+      await forgetFolder()
+      await open(synced)
       return { copied }
     },
 
     async switchToBrowser() {
       await idle()
-      await forgetHandle()
+      await forgetFolder()
+      await forgetRemoteConfig()
+      resetSyncState()
       await open(browserAdapter())
     },
 
@@ -376,7 +431,14 @@ export function vaultFileUrl(path: string): Promise<string | null> {
   if (!urlCache.has(key)) {
     urlCache.set(
       key,
-      a.readBlob(path).then((b) => (b ? URL.createObjectURL(b) : null)),
+      // не дочитали (сервер пропал) — не запоминаем, после переподключения попробуем снова
+      a.readBlob(path).then(
+        (b) => (b ? URL.createObjectURL(b) : null),
+        (e) => {
+          urlCache.delete(key)
+          throw e
+        },
+      ),
     )
   }
   return urlCache.get(key)!

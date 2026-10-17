@@ -46,7 +46,7 @@ export function HomePage() {
       <h1 className="text-[32px] leading-tight font-bold tracking-tight">{greeting()}</h1>
       <p className="mt-1 text-[15px] text-muted-foreground">
         {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} ·{' '}
-        {storage?.kind === 'folder' ? `папка «${storage.label}»` : 'хранятся в браузере'}
+        {storage?.kind === 'folder' ? `папка «${storage.label}»` : storage?.kind === 'remote' ? `сервер «${storage.label}»` : 'хранятся в браузере'}
       </p>
 
       {!subjects.length && (

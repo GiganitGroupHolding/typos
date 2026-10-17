@@ -1,7 +1,7 @@
 /**
  * Единственная точка доступа к файлам vault.
  * Пути относительные, разделитель «/», без ведущего слэша: «Физика/Конспекты/Кинематика.md».
- * Реализации: браузер (IndexedDB), папка на диске (File System Access), память (тесты).
+ * Реализации: браузер (IndexedDB), папка на диске (File System Access), сервер хранения (remoteAdapter), память (тесты).
  */
 
 export type EntryKind = 'file' | 'dir'
@@ -12,7 +12,7 @@ export interface Entry {
 }
 
 export interface VaultAdapter {
-  readonly kind: 'browser' | 'folder' | 'memory'
+  readonly kind: 'browser' | 'folder' | 'remote' | 'memory'
   /** Человекочитаемое имя хранилища (имя папки или «Браузер»). */
   readonly label: string
   list(dir: string): Promise<Entry[]>

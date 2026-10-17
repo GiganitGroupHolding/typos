@@ -79,6 +79,7 @@ Open <http://localhost:5173> and pick a folder for your notes. You can also star
 | `npm run build` | Type-checks and builds for production |
 | `npm test` | Runs the tests with Vitest |
 | `npm run icons` | Regenerates the icons and the logo from one shared geometry |
+| `npm run storage -- --dir <folder>` | Starts a storage server for that folder |
 
 ## How it works
 
@@ -130,6 +131,33 @@ src/
 ├── storage/    disk folder and browser storage
 └── vault/      file format and operations on the notes folder
 ```
+
+## Storage server
+
+To keep notes on another machine (a home server, a NAS, a VPS) run the storage server there. It is one file with no dependencies and needs Node.js 18 or newer. There are no accounts: access is a key inside the connection link.
+
+```bash
+node server/typos-server.mjs --dir ./vault
+```
+
+Every start prints the same connection link, one per address, labelled by where TYPOS is opened: `localhost` when the app runs on the same computer, the network address when it runs on another device. In TYPOS open the storage screen, paste the link and press «Подключить». The link contains the key, so treat it like a password. When the server runs without a terminal (systemd, Docker) the link is not printed; get it with `link`.
+
+One link works for all your devices, and they all see the same vault. Separate device keys are optional and only let you disconnect one device without touching the others.
+
+| Command | What it does |
+| --- | --- |
+| `link [device] --dir ./vault` | Prints the link again. With a new device name, creates a separate key for it |
+| `rotate <device> --dir ./vault` | Gives a device a new key. Its old link stops working (`rotate default` for the shared link) |
+| `devices --dir ./vault` | Lists devices and when they were last seen |
+| `revoke <device> --dir ./vault` | Disconnects a device. The server picks this up without a restart |
+
+Each device keeps its own copy of the server vault. Edits are saved to that copy first and sent to the server right away. When the server can't be reached, you keep working: the edits wait on the device and go up as soon as it is back, and the sidebar shows how many are still waiting. Changes from other devices arrive on their own. If the same file was changed on two devices while they were offline, both versions are kept, and the second one gets «(конфликт …)» in its name.
+
+«Отключить» on the storage screen disconnects the app from the server. The notes stay on the server, and the app goes back to the browser storage exactly as it was before you connected.
+
+The app can run on `localhost` or on any address in your network, for example `npm run preview -- --host`. If the app is opened over `https://`, the server needs HTTPS too: pass `--cert` and `--key`, or put it behind a proxy such as Caddy and pass `--public-url https://notes.example.com`. Over plain `http://` on a network address the browser turns off the folder picker and offline install, but the storage server still works.
+
+The server keeps the vault as the same plain files and speaks a subset of WebDAV under `/files/`, so you can also mount it in a file manager (any user name, the key as the password). Keys are stored in `.typos-server/` inside the vault, readable only by the server's user, and the server never serves that folder.
 
 ## Roadmap
 

@@ -1,4 +1,4 @@
-import { Droplets, FolderOpen, Home, Monitor, MonitorDown, Moon, Plus, Search, Sparkles, Sun, Trash2 } from 'lucide-react'
+import { Droplets, FolderOpen, Home, Monitor, MonitorDown, Moon, Plus, Search, Server, Sparkles, Sun, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -19,6 +19,9 @@ import {
 } from '@/components/ui/sidebar'
 import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
 import { SubjectTree } from '@/features/subjects/SubjectTree'
+import { useConnection } from '@/storage/connection'
+import { useSync } from '@/storage/sync'
+import { cn } from '@/lib/utils'
 import { useVault } from '@/vault/store'
 import { shuffleBackground } from '../accent'
 import { useInstallPrompt } from '../pwa'
@@ -39,6 +42,8 @@ export function AppSidebar() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
   const ThemeIcon = themeMeta[theme].icon
   const storage = useVault((s) => s.adapter)
+  const connection = useConnection((s) => s.status)
+  const pending = useSync((s) => s.pending)
   const install = useInstallPrompt()
   const [spins, setSpins] = useState(0)
 
@@ -128,8 +133,16 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/welcome">
-                <FolderOpen />
-                <span className="truncate">{storage?.kind === 'folder' ? `Папка «${storage.label}»` : 'В браузере · подключить папку'}</span>
+                {storage?.kind === 'remote' ? <Server /> : <FolderOpen />}
+                <span className="truncate">{storage?.kind === 'folder' ? `Папка «${storage.label}»` : storage?.kind === 'remote' ? `Сервер «${storage.label}»` : 'В браузере · подключить папку'}</span>
+                {storage?.kind === 'remote' && pending > 0 && (
+                  <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums" title="Правки, которые ещё не ушли на сервер">
+                    ↑{pending}
+                  </span>
+                )}
+                {(connection === 'offline' || connection === 'revoked') && (
+                  <span className={cn('size-2 shrink-0 rounded-full bg-destructive', !pending && 'ml-auto')} aria-label="нет связи" />
+                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
