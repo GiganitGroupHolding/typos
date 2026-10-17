@@ -1,5 +1,5 @@
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
-import { ChevronRight, FileText, Pin, Wrench } from 'lucide-react'
+import { ChevronRight, FileText, FolderOpen, Pin } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { SidebarMenu, SidebarMenuButton } from '@/components/ui/sidebar'
@@ -39,7 +39,7 @@ function TraceLine({ index, last }: { index: number; last: boolean }) {
 const sections: { tab: SubjectTab; label: string; icon: typeof FileText }[] = [
   { tab: 'notes', label: 'Конспекты', icon: FileText },
   { tab: 'pins', label: 'Закреп', icon: Pin },
-  { tab: 'tools', label: 'Инструменты', icon: Wrench },
+  { tab: 'tools', label: 'Проекты', icon: FolderOpen },
 ]
 
 function SubjectNode({ subject }: { subject: Subject }) {

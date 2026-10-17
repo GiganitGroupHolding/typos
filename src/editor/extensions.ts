@@ -8,6 +8,7 @@ import StarterKit from '@tiptap/starter-kit'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { ColorHighlight, LastColor, TextColor } from './colors'
+import { DiagramCodeBlock } from './diagrams'
 
 export const katexOptions = { throwOnError: false, strict: 'ignore' as const }
 
@@ -94,6 +95,8 @@ export interface ExtensionOptions {
   onBlockMathCreated?: (pos: number) => void
   /** Относительный путь картинки из Markdown → URL для <img>. */
   resolveImage?: (src: string) => Promise<string | null>
+  /** ```mermaid рисовать схемой (живой редактор; в тестах сериализации — обычный блок кода) */
+  diagrams?: boolean
 }
 
 /** Картинка, чей src — путь внутри vault («assets/x.webp»), а не URL. */
@@ -124,12 +127,14 @@ const VaultImage = Image.extend<{ resolve?: ExtensionOptions['resolveImage'] } &
 })
 
 /** Общий набор расширений: редактор и (без UI-опций) тесты сериализации. */
-export function buildExtensions({ onMathClick, onBlockMathCreated, resolveImage }: ExtensionOptions = {}) {
+export function buildExtensions({ onMathClick, onBlockMathCreated, resolveImage, diagrams = false }: ExtensionOptions = {}) {
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
       link: { openOnClick: false, autolink: true },
+      codeBlock: false,
     }),
+    DiagramCodeBlock.configure({ diagrams }),
     TaskList,
     TaskItem.configure({ nested: true }),
     // таблицы: в Markdown — GFM `| a | b |`; обёртка даёт горизонтальную прокрутку широким

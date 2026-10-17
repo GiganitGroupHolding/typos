@@ -392,6 +392,23 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   }
   .note-prose .tiptap pre code { background: none; padding: 0; font-size: inherit; }
 
+  /* схемы Mermaid: рисунок карточкой, как блок формулы; код под ним — только при правке */
+  .note-prose .tiptap .diagram-block { margin: 1em 0; }
+  /* свёрнут, а не display:none — иначе курсор (стрелками или щелчком) не может войти в код */
+  .note-prose .tiptap .diagram-block > pre { max-height: 0; padding-block: 0; margin: 0; opacity: 0; overflow: hidden; }
+  .note-prose .tiptap .diagram-block[data-editing] > pre { max-height: none; padding-block: 0.8em; margin-top: 0.5em; opacity: 1; overflow-x: auto; }
+  .note-prose .tiptap .diagram-view {
+    display: flex; justify-content: safe center; overflow-x: auto; padding: 1em;
+    border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-card); cursor: pointer;
+  }
+  .note-prose .tiptap .diagram-view:empty { display: none; }
+  .note-prose .tiptap .diagram-view svg { flex: none; height: auto; }
+  /* схема стала мини-картой: рисунок не нужен, под карту — пустое место (высоту ставит diagrams.ts) */
+  .note-prose .tiptap .diagram-map-slot { display: none; }
+  .note-prose .tiptap .diagram-block[data-mapped] > .diagram-view { display: none; }
+  .note-prose .tiptap .diagram-block[data-mapped] > .diagram-map-slot { display: block; }
+  .note-prose .tiptap .diagram-error { font-family: var(--font-mono); font-size: 13px; color: var(--destructive); }
+
   /* таблицы: тонкая сетка, шапка на чуть тёмном фоне, широкие — прокручиваются */
   .note-prose .tiptap .tableWrapper { overflow-x: auto; margin: 0 0 0.85em; }
   .note-prose .tiptap table { border-collapse: collapse; table-layout: fixed; width: 100%; font-size: 15px; line-height: 1.45; }
@@ -412,6 +429,29 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     float: left; height: 0; pointer-events: none;
     color: var(--muted-foreground); opacity: 0.55;
   }
+  /* разделы: сворачивание заголовков и перетаскивание блоков (editor/blocks) */
+  .tiptap .is-folded { display: none !important; }
+  .tiptap .has-fold { position: relative; }
+  .tiptap .is-collapsed::after { content: "…"; margin-left: 0.3em; color: var(--muted-foreground); font-weight: 400; }
+  .tiptap .fold-toggle {
+    position: absolute; left: -24px; top: calc(0.5lh - 10px);
+    display: flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+    border-radius: 6px; color: var(--muted-foreground); opacity: 0; cursor: pointer;
+    transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .tiptap .fold-toggle:hover { background: var(--accent); color: var(--foreground); }
+  .tiptap .fold-toggle svg { transform: rotate(90deg); transition: transform var(--dur-base) var(--ease-out); }
+  .tiptap .is-collapsed > .fold-toggle svg { transform: none; }
+  .tiptap .has-fold:hover > .fold-toggle, .tiptap .is-collapsed > .fold-toggle, .tiptap .fold-toggle:focus-visible { opacity: 1; }
+  .tiptap .is-drag-source { opacity: 0.3; transition: opacity var(--dur-fast) var(--ease-out); }
+  .block-ghost {
+    position: fixed; z-index: 60; margin: 0; padding: 0; pointer-events: none; opacity: 0.88;
+    filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.18));
+  }
+  .block-ghost .tiptap > *:first-child { margin-top: 0; }
+  body.is-block-dragging, body.is-block-dragging * { cursor: grabbing !important; user-select: none; }
+  /* подсказка «Пиши…» — только пока курсор в тексте (иначе висит в пустой строке, например в режиме карты) */
+  .tiptap:not(.ProseMirror-focused) p.is-empty::before { content: none; }
   .tiptap .ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
 
   /* формулы: кликабельны, редактируются во всплывающем окне */

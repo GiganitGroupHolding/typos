@@ -25,6 +25,10 @@ interface UiState {
   focusMode: boolean
   pinsOpen: boolean
   paletteOpen: boolean
+  /** HTML-тулзы — в рамке телефона (запоминается). */
+  phonePreview: boolean
+  /** Режим мини-карты в конспекте: мышью рисуются стеклянные блоки и стрелки. */
+  mapMode: boolean
   windows: FloatingWindow[]
   setTheme: (t: ThemePref) => void
   cycleTheme: () => void
@@ -35,6 +39,8 @@ interface UiState {
   setPinsOpen: (v: boolean) => void
   togglePins: () => void
   setPaletteOpen: (v: boolean) => void
+  togglePhone: () => void
+  setMapMode: (v: boolean) => void
   openWindow: (kind: FloatingWindow['kind'], refId: string) => void
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
@@ -69,6 +75,8 @@ export const useUi = create<UiState>()(
       focusMode: false,
       pinsOpen: false,
       paletteOpen: false,
+      phonePreview: false,
+      mapMode: false,
       windows: [],
       setTheme: (theme) => set({ theme }),
       cycleTheme: () => set((s) => ({ theme: order[(order.indexOf(s.theme) + 1) % order.length] })),
@@ -79,6 +87,8 @@ export const useUi = create<UiState>()(
       setPinsOpen: (pinsOpen) => set({ pinsOpen }),
       togglePins: () => set((s) => ({ pinsOpen: !s.pinsOpen })),
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+      togglePhone: () => set((s) => ({ phonePreview: !s.phonePreview })),
+      setMapMode: (mapMode) => set({ mapMode }),
       openWindow: (kind, refId) =>
         set((s) => {
           const id = `${kind}:${refId}`
@@ -99,7 +109,7 @@ export const useUi = create<UiState>()(
     {
       name: 'studynotes-ui',
       storage: safeStorage,
-      partialize: (s) => ({ theme: s.theme, noteFont: s.noteFont, backdrop: s.backdrop }),
+      partialize: (s) => ({ theme: s.theme, noteFont: s.noteFont, backdrop: s.backdrop, phonePreview: s.phonePreview }),
       // v1: светлая тема по умолчанию — прежнее «как в системе» переводим на светлую один раз
       version: 1,
       migrate: (persisted, version) => {

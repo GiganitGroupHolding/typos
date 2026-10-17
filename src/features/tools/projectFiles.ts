@@ -1,0 +1,50 @@
+import { toast } from 'sonner'
+import { errorText } from '@/lib/undo'
+import { basename } from '@/storage/VaultAdapter'
+import { useVault } from '@/vault/store'
+import type { Tool } from '@/types'
+
+const MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  avif: 'image/avif',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+  ogv: 'video/ogg',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+  flac: 'audio/flac',
+  aac: 'audio/aac',
+}
+
+/** Файл с диска с правильным MIME (без него Chrome не покажет PDF, а видео может не запуститься). */
+export async function readProjectBlob(path: string, ext: string): Promise<Blob> {
+  const blob = await useVault.getState().adapter?.readBlob(path)
+  if (!blob) throw new Error('Файла нет на месте: возможно, его переместили или удалили в проводнике')
+  return blob.slice(0, blob.size, MIME[ext] ?? (blob.type || 'application/octet-stream'))
+}
+
+/** «Скачать оригинал»: файл как он лежит в папке. */
+export async function downloadProjectFile(tool: Tool) {
+  try {
+    const url = URL.createObjectURL(await readProjectBlob(tool.path, tool.ext))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = basename(tool.path)
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (err) {
+    toast.error('Не удалось скачать', { description: errorText(err) })
+  }
+}

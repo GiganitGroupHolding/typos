@@ -1,15 +1,16 @@
 import { motion } from 'motion/react'
-import { ChevronDown, FileUp, Maximize2, Plus, SquarePen } from 'lucide-react'
-import { Link, useLocation, useParams, useSearchParams } from 'react-router'
+import { ChevronDown, FileDown, FileUp, Maximize2, Plus, SquarePen } from 'lucide-react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PinActions } from '@/features/pins/PinActions'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
-import { SubjectBadge, toolIcons } from '@/features/subjects/visuals'
+import { SubjectBadge, toolIcon } from '@/features/subjects/visuals'
 import { ToolActions } from '@/features/tools/ToolActions'
 import { openToolDialog } from '@/features/tools/ToolDialog'
-import { useToolDrop } from '@/features/tools/useToolDrop'
+import { pickAndImportNotes } from '@/features/import/importFiles'
+import { useFileDrop } from '@/features/import/useFileDrop'
 import { relativeTime } from '@/lib/format'
 import { listItem, listParent, spring } from '@/lib/motion'
 import { templates } from '@/lib/templates'
@@ -22,7 +23,7 @@ import { useUi } from '../store'
 const tabs: { id: SubjectTab; label: string }[] = [
   { id: 'notes', label: 'Конспекты' },
   { id: 'pins', label: 'Закреп' },
-  { id: 'tools', label: 'Тулзы' },
+  { id: 'tools', label: 'Проекты' },
 ]
 
 function useCurrentTab(): SubjectTab {
@@ -33,9 +34,10 @@ function useCurrentTab(): SubjectTab {
   return pathname.includes('/t/') ? 'tools' : 'notes'
 }
 
-/** Кнопка «создать» меняется по вкладке: конспект (с шаблонами), карточка, тулза. */
+/** Кнопка «создать» меняется по вкладке: конспект (с шаблонами), карточка, файл в проекты. */
 function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
   const createNote = useCreateNote()
+  const navigate = useNavigate()
   if (tab === 'pins')
     return (
       <Tooltip>
@@ -51,11 +53,11 @@ function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Добавить тулзу" onClick={() => openToolDialog({ subjectId: subject.id })}>
+          <Button variant="ghost" size="icon-sm" aria-label="Добавить в проекты" onClick={() => openToolDialog({ subjectId: subject.id })}>
             <FileUp />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Добавить HTML-тулзу</TooltipContent>
+        <TooltipContent>Добавить файл в проекты</TooltipContent>
       </Tooltip>
     )
   return (
@@ -84,6 +86,14 @@ function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
               </div>
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => void pickAndImportNotes(subject.id, navigate)}>
+            <FileDown />
+            <div>
+              <div>Импорт из .md…</div>
+              <div className="text-[12px] text-muted-foreground">Можно сразу с картинками</div>
+            </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -100,7 +110,7 @@ export function ListColumn() {
   const [, setParams] = useSearchParams()
   const openWindow = useUi((s) => s.openWindow)
   const windows = useUi((s) => s.windows)
-  const drop = useToolDrop(subjectId)
+  const drop = useFileDrop(subjectId)
 
   if (!subject) return null
 
@@ -191,7 +201,7 @@ export function ListColumn() {
 
         {tab === 'tools' &&
           tools.map((t) => {
-            const Icon = toolIcons[t.icon]
+            const Icon = toolIcon(t)
             return (
               <motion.li key={t.id} variants={listItem} className="group relative">
                 <Link
@@ -203,7 +213,8 @@ export function ListColumn() {
                   <span className="flex size-8 items-center justify-center rounded-lg bg-card shadow-card">
                     <Icon className="size-4 text-highlight" />
                   </span>
-                  <span className="truncate text-[14px] font-medium">{t.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{t.name}</span>
+                  {t.kind !== 'html' && t.ext && <span className="shrink-0 text-[11px] font-medium text-muted-foreground uppercase">{t.ext}</span>}
                 </Link>
                 <ToolActions
                   tool={t}
@@ -220,7 +231,7 @@ export function ListColumn() {
 
       {drop.over && (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-primary px-3 py-2 text-center text-[13px] font-medium text-primary-foreground shadow-float">
-          Отпусти — добавлю тулзу
+          Отпусти — добавлю
         </div>
       )}
     </aside>
@@ -238,9 +249,9 @@ function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
       run: () => openPinEditor({ subjectId }),
     },
     tools: {
-      title: 'Инструментов нет',
-      hint: 'Перетащи сюда HTML-файл артефакта — например, от Claude',
-      action: 'Добавить тулзу',
+      title: 'Проектов нет',
+      hint: 'Перетащи сюда файл: PDF, презентацию, документ, картинку или HTML-тулзу',
+      action: 'Добавить файл',
       run: () => openToolDialog({ subjectId }),
     },
   }[tab]

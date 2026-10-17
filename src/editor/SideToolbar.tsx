@@ -11,6 +11,7 @@ import {
   Radical,
   SquareFunction,
   Table,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
@@ -89,6 +90,8 @@ export function SideToolbar({
   onImage: () => void
 }) {
   const pinsOpen = useUi((s) => s.pinsOpen)
+  const mapMode = useUi((s) => s.mapMode)
+  const setMapMode = useUi((s) => s.setMapMode)
   const mouseY = useMotionValue(Infinity)
   const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, hidden, fallback: 'liquid liquid-lava' })
   const s = useEditorState({
@@ -127,6 +130,18 @@ export function SideToolbar({
       { icon: Radical, label: 'Формула в строке', key: '$x$', run: onFormula },
       { icon: SquareFunction, label: 'Блочная формула', key: '$$ ', run: onBlockFormula },
       { icon: ImagePlus, label: 'Картинка', key: 'Ctrl V', run: onImage },
+    ],
+    [
+      {
+        icon: Workflow,
+        label: mapMode ? 'Выйти из карты' : 'Мини-карта: блоки и стрелки',
+        key: mapMode ? 'Esc' : undefined,
+        active: mapMode,
+        run: () => {
+          if (!mapMode) editor.commands.blur()
+          setMapMode(!mapMode)
+        },
+      },
     ],
   ]
 

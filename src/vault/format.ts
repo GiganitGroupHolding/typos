@@ -1,8 +1,27 @@
 /** Чтение и запись форматов файлов vault. Чистые функции — покрыты тестами. */
+import type { ToolKind } from '@/types'
 
 export const NOTES_DIR = 'Конспекты'
 export const PINS_DIR = 'Закреп'
+/** мини-карты конспектов: Конспекты/.maps/<id>.json */
+export const MAPS_DIR = '.maps'
+export const PROJECTS_DIR = 'Проекты'
+/** старое имя «Проектов»: при открытии хранилища содержимое переезжает (repo.migrateTools) */
 export const TOOLS_DIR = 'Инструменты'
+
+const KINDS: [RegExp, ToolKind][] = [
+  [/^html?$/, 'html'],
+  [/^(png|jpe?g|gif|webp|avif|svg|bmp|ico)$/, 'image'],
+  [/^pdf$/, 'pdf'],
+  [/^docx$/, 'docx'],
+  [/^pptx$/, 'pptx'],
+  [/^(txt|md|markdown|csv|tsv|json|xml|ya?ml|log|ini|css|js|ts|py|java|c|cpp|cs|go|rs|sql|tex)$/, 'text'],
+  [/^(mp4|webm|mov|m4v|ogv)$/, 'video'],
+  [/^(mp3|wav|ogg|m4a|flac|aac)$/, 'audio'],
+]
+
+/** Тип файла по расширению. */
+export const fileKind = (ext: string): ToolKind => KINDS.find(([re]) => re.test(ext.toLowerCase()))?.[1] ?? 'other'
 export const SUBJECT_META = '_subject.json'
 export const SYSTEM_DIR = '.studynotes'
 export const TRASH_DIR = `${SYSTEM_DIR}/trash`
@@ -102,7 +121,8 @@ function textLines(body: string): string[] {
   return out
 }
 
-const plainLine = (l: string) => stripInline(l.replace(/^#{1,6}\s+|^([-*+]|\d+\.)\s+(\[[ x]]\s+)?|^>\s*/g, ''))
+// пустая строка из редактора сохраняется как &nbsp; — для заголовка и превью это пусто
+const plainLine = (l: string) => stripInline(l.replace(/&nbsp;| /g, ' ').replace(/^#{1,6}\s+|^([-*+]|\d+\.)\s+(\[[ x]]\s+)?|^>\s*/g, ''))
 
 /** Строки с текстом (картинки, формулы и пустые строки пропускаются). */
 const plainLines = (body: string) => textLines(body).map(plainLine).filter(Boolean)

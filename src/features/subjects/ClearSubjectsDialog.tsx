@@ -40,7 +40,7 @@ export function ClearSubjectsDialog() {
         <DialogHeader>
           <DialogTitle>Удалить все предметы?</DialogTitle>
           <DialogDescription>
-            {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} со всеми конспектами, закрепом и тулзами уйдут в корзину. Их можно вернуть в течение 30
+            {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} со всеми конспектами, закрепом и проектами уйдут в корзину. Их можно вернуть в течение 30
             дней.
           </DialogDescription>
         </DialogHeader>

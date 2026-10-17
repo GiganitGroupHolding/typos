@@ -1,4 +1,5 @@
 import { existsSync, statSync } from 'node:fs'
+import { readFile, stat } from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -23,7 +24,7 @@ function vaultPath(): string {
 
 const vault = new StudyVault(new NodeFsAdapter(vaultPath()))
 
-const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой) и тулзы (HTML).
+const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой) и «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки).
 
 Формат конспекта — Markdown, который понимает редактор приложения:
 - первая строка — заголовок «# …» (по нему называется файл); дальше ## / ### для разделов;
@@ -51,6 +52,15 @@ const run =
       return { ...json({ error: e instanceof Error ? e.message : String(e) }), isError: true }
     }
   }
+
+/** Большой текст можно передать файлом на этом компьютере — чтобы не гонять десятки КБ через аргументы вызова. */
+async function textArg(inline: string | undefined, file: string | undefined, what: string): Promise<string> {
+  if (inline) return inline
+  if (!file) throw new Error(`Нужен ${what} или file — путь к файлу на этом компьютере`)
+  if ((await stat(file)).size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ')
+  return readFile(file, 'utf8')
+}
+const fileArg = z.string().optional().describe('Вместо текста: путь к файлу на этом компьютере (для больших лекций и страниц)')
 
 const subject = z.string().describe('Предмет: id или название папки («Математика»)')
 const colors = z.enum(SUBJECT_COLOR_IDS as [SubjectColor, ...SubjectColor[]])
@@ -104,12 +114,15 @@ server.registerTool(
     inputSchema: {
       subject,
       title: z.string().min(1).describe('Заголовок (первая строка и имя файла)'),
-      markdown: z.string().describe('Текст в формате из инструкций сервера; заголовок «# …» в начале можно не писать'),
+      markdown: z.string().optional().describe('Текст в формате из инструкций сервера; заголовок «# …» в начале можно не писать'),
+      file: fileArg,
       source: z.string().optional().describe('Ссылка или id оригинала — для повторного переноса без дублей'),
     },
     annotations: write,
   },
-  run((a: { subject: string; title: string; markdown: string; source?: string }) => vault.createNote(a)),
+  run(async (a: { subject: string; title: string; markdown?: string; file?: string; source?: string }) =>
+    vault.createNote({ ...a, markdown: await textArg(a.markdown, a.file, 'markdown') }),
+  ),
 )
 
 server.registerTool(
@@ -121,12 +134,15 @@ server.registerTool(
     inputSchema: {
       id: z.string(),
       mode: z.enum(['replace', 'append', 'replace_section']),
-      markdown: z.string(),
+      markdown: z.string().optional(),
+      file: fileArg,
       section: z.string().optional().describe('Текст заголовка раздела для replace_section, без #'),
     },
     annotations: { ...write, idempotentHint: false },
   },
-  run((a: { id: string; mode: 'replace' | 'append' | 'replace_section'; markdown: string; section?: string }) => vault.updateNote(a)),
+  run(async (a: { id: string; mode: 'replace' | 'append' | 'replace_section'; markdown?: string; file?: string; section?: string }) =>
+    vault.updateNote({ ...a, markdown: await textArg(a.markdown, a.file, 'markdown') }),
+  ),
 )
 
 server.registerTool(
@@ -172,18 +188,38 @@ server.registerTool(
   'import_tool',
   {
     title: 'Добавить тулзу',
-    description: 'Кладёт самодостаточный HTML (калькулятор, решатель, тренажёр) в «Инструменты» предмета. В приложении он работает в песочнице без доступа к данным.',
+    description: 'Кладёт самодостаточный HTML (калькулятор, решатель, тренажёр) в «Проекты» предмета. В приложении он работает в песочнице без доступа к данным.',
     inputSchema: {
       subject,
       name: z.string().min(1),
-      html: z.string().min(1).describe('Полный HTML-документ'),
+      html: z.string().optional().describe('Полный HTML-документ'),
+      file: fileArg,
       icon: z.enum(['grid', 'chart', 'ruler', 'binary', 'calculator', 'function', 'timer', 'table']).optional(),
     },
     annotations: write,
   },
-  run((a: { subject: string; name: string; html: string; icon?: 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table' }) =>
-    vault.importTool(a),
+  run(
+    async (a: { subject: string; name: string; html?: string; file?: string; icon?: 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table' }) =>
+      vault.importTool({ ...a, html: await textArg(a.html, a.file, 'html') }),
   ),
+)
+
+server.registerTool(
+  'add_project_file',
+  {
+    title: 'Добавить файл в проекты',
+    description: 'Копирует файл с компьютера (PDF, PPTX, DOCX, картинка, HTML…) в «Проекты» предмета как есть. В приложении он открывается прямо на сайте.',
+    inputSchema: {
+      subject,
+      file: z.string().describe('Путь к файлу на этом компьютере'),
+      name: z.string().optional().describe('Название в приложении; по умолчанию — имя файла'),
+    },
+    annotations: write,
+  },
+  run(async (a: { subject: string; file: string; name?: string }) => {
+    if ((await stat(a.file)).size > 100 * 1024 * 1024) throw new Error('Файл больше 100 МБ')
+    return vault.addProjectFile({ subject: a.subject, fileName: a.file, data: await readFile(a.file), title: a.name })
+  }),
 )
 
 server.registerTool(

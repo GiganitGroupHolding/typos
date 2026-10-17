@@ -71,6 +71,8 @@ export interface Note {
   body: string
   /** Прочие ключи frontmatter — сохраняем как есть. */
   meta: Record<string, string>
+  /** Тексты блоков мини-карты (для поиска); сама карта — в .maps/<id>.json. */
+  mapText?: string
 }
 
 /** Карточка закрепа = `<Предмет>/Закреп/<Название>.md`. */
@@ -86,14 +88,26 @@ export interface Pin {
 
 export type ToolIcon = 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table'
 
-/** Тулза = `<Предмет>/Инструменты/<Название>.html`. */
+/** Что за файл в «Проектах» — от этого зависит, чем его показывать. */
+export type ToolKind = 'html' | 'image' | 'pdf' | 'docx' | 'pptx' | 'text' | 'video' | 'audio' | 'other'
+
+/**
+ * Файл в «Проектах» = `<Предмет>/Проекты/<Название>.<ext>` (старое место — `Инструменты/`).
+ * HTML — интерактивная тулза в песочнице (id и иконка — в <meta>), остальное — документы, картинки, PDF…
+ */
 export interface Tool {
   id: string
   subjectId: string
   path: string
   name: string
+  kind: ToolKind
+  /** расширение без точки, в нижнем регистре */
+  ext: string
+  /** иконка — только у HTML; у остальных — по типу файла */
   icon: ToolIcon
+  /** код страницы — только у HTML; содержимое остальных грузится, когда файл открыт */
   html: string
+  size?: number
 }
 
 export type SubjectTab = 'notes' | 'pins' | 'tools'

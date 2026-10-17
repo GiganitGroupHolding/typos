@@ -118,7 +118,9 @@ describe('картинки, закреп, тулзы, поиск, корзина
       ['Крамер', 0, 'Δ ≠ 0, иначе Гаусс'],
       ['Определитель', 1, undefined],
     ])
-    expect(s.tools).toMatchObject([{ name: 'Калькулятор', icon: 'grid' }])
+    expect(s.tools).toMatchObject([{ name: 'Калькулятор', kind: 'html', file: 'Калькулятор.html' }])
+    const pdf = await v.addProjectFile({ subject: 'Математика', fileName: 'C:\\Загрузки\\Лекция 5 матрицы.pdf', data: new Uint8Array([37, 80, 68, 70]) })
+    expect(pdf).toMatchObject({ kind: 'pdf', path: 'Математика/Проекты/Лекция 5 матрицы.pdf' })
 
     const hits = await v.search({ query: 'крамер' })
     expect(hits.map((h) => h.kind).sort()).toEqual(['note', 'pin'])

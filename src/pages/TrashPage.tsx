@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { FileText, Folder, Loader2, Pin, RotateCcw, Trash2, Wrench, type LucideIcon } from 'lucide-react'
+import { FileText, Folder, FolderOpen, Loader2, Pin, RotateCcw, Trash2, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import { useVault } from '@/vault/store'
 const KIND: Record<TrashKind, { icon: LucideIcon; label: string }> = {
   note: { icon: FileText, label: 'Конспект' },
   pin: { icon: Pin, label: 'Карточка закрепа' },
-  tool: { icon: Wrench, label: 'Тулза' },
+  tool: { icon: FolderOpen, label: 'Проект' },
   subject: { icon: Folder, label: 'Предмет целиком' },
   file: { icon: FileText, label: 'Файл' },
 }

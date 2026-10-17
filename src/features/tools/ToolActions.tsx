@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, PictureInPicture2, Trash2 } from 'lucide-react'
+import { Download, MoreHorizontal, Pencil, PictureInPicture2, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -7,6 +7,7 @@ import { toastUndo } from '@/lib/undo'
 import { cn } from '@/lib/utils'
 import { useVault } from '@/vault/store'
 import type { Tool } from '@/types'
+import { downloadProjectFile } from './projectFiles'
 import { openToolDialog } from './ToolDialog'
 
 export function ToolActions({ tool, className, onOpenWindow }: { tool: Tool; className?: string; onOpenWindow?: () => void }) {
@@ -47,7 +48,10 @@ export function ToolActions({ tool, className, onOpenWindow }: { tool: Tool; cla
           <PictureInPicture2 /> В окне поверх
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openToolDialog({ subjectId: tool.subjectId, toolId: tool.id })}>
-          <Pencil /> Название и иконка
+          <Pencil /> {tool.kind === 'html' ? 'Название и иконка' : 'Переименовать'}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void downloadProjectFile(tool)}>
+          <Download /> Скачать оригинал
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={remove}>

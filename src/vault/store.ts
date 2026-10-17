@@ -12,7 +12,9 @@ import {
 import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
 import { extractExcerpt, extractTitle, sameBody } from './format'
+import { imagesByName, isMarkdownFile } from '@/lib/files'
 import * as repo from './repo'
+import { emptyMap, mapText, type NoteMap } from '@/editor/map/types'
 
 type Status = 'loading' | 'ready' | 'needs-permission' | 'error'
 type SubjectInput = { name: string; color: SubjectColor; icon: SubjectIcon }
@@ -38,6 +40,8 @@ interface VaultState extends repo.VaultData {
   /** Несколько предметов разом в корзину. Одна отмена на всё. */
   trashSubjects: (ids: string[]) => Promise<Undo>
   createNote: (subjectId: string, body?: string) => Promise<Note>
+  /** Конспекты из .md-файлов; картинки из того же набора файлов подставляются в их ссылки. */
+  importNotes: (subjectId: string, files: File[]) => Promise<Note[]>
   /**
    * Сохраняет текст из редактора. Если файл на диске уже не тот, от которого шла правка
    * (его поменяли снаружи: Claude, MCP, другое окно), — бросает NoteConflictError вместо перезаписи.
@@ -49,6 +53,9 @@ interface VaultState extends repo.VaultData {
   /** Текст, от которого идут правки в редакторе (последний загруженный или записанный). */
   noteBase: (id: string) => string | undefined
   trashNote: (id: string) => Promise<Undo>
+  /** Мини-карта конспекта (пустая, если её ещё нет). */
+  loadNoteMap: (noteId: string) => Promise<NoteMap>
+  saveNoteMap: (noteId: string, map: NoteMap) => Promise<void>
   /** Удаляет конспект без текста (созданный и брошенный). */
   discardIfEmpty: (id: string) => Promise<void>
   saveImage: (noteId: string, file: Blob) => Promise<string>
@@ -58,6 +65,8 @@ interface VaultState extends repo.VaultData {
   reorderPins: (subjectId: string, ids: string[]) => Promise<void>
   trashPin: (id: string) => Promise<Undo>
   importTool: (subjectId: string, input: { name: string; html: string; icon: ToolIcon }) => Promise<Tool>
+  /** Любой файл в «Проекты» (HTML — как тулза). */
+  importProjectFile: (subjectId: string, input: { name: string; blob: Blob; title?: string; icon?: ToolIcon }) => Promise<Tool>
   updateTool: (id: string, input: { name: string; icon: ToolIcon }) => Promise<void>
   trashTool: (id: string) => Promise<Undo>
   listTrash: () => Promise<repo.TrashItem[]>
@@ -123,6 +132,8 @@ export const useVault = create<VaultState>()((set, get) => {
   const open = async (a: VaultAdapter) => {
     set({ status: 'loading', adapter: a, pendingFolder: undefined })
     try {
+      // «Инструменты» → «Проекты» (один раз; сбой не мешает открыть — loadVault читает обе папки)
+      await repo.migrateTools(a).catch((e) => console.warn('Перенос в «Проекты»', e))
       const data = await repo.loadVault(a)
       set({ ...data, status: 'ready', error: undefined })
       // корзина хранит удалённое 30 дней
@@ -236,6 +247,17 @@ export const useVault = create<VaultState>()((set, get) => {
       return note
     },
 
+    async importNotes(subjectId, files) {
+      const subject = get().subjects.find((s) => s.id === subjectId)
+      if (!subject) throw new Error('Предмет не найден')
+      const a = need()
+      const images = imagesByName(files)
+      const notes: Note[] = []
+      for (const f of files.filter(isMarkdownFile)) notes.push(await repo.importNote(a, subject, { name: f.name, text: await f.text(), images }))
+      set((s) => ({ notes: [...notes, ...s.notes] }))
+      return notes
+    },
+
     saveNote(id, body, opts) {
       return enqueue(id, async () => {
         const note = get().notes.find((n) => n.id === id)
@@ -264,6 +286,21 @@ export const useVault = create<VaultState>()((set, get) => {
         if (!note || !isBlank(note.body)) return
         await need().remove(note.path)
         set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }))
+      })
+    },
+
+    async loadNoteMap(noteId) {
+      const note = get().notes.find((n) => n.id === noteId)
+      return note ? repo.loadNoteMap(need(), note) : emptyMap()
+    },
+
+    saveNoteMap(noteId, map) {
+      return enqueue(`map:${noteId}`, async () => {
+        const note = get().notes.find((n) => n.id === noteId)
+        if (!note) return
+        await repo.saveNoteMap(need(), note, map)
+        const text = mapText(map) || undefined
+        if (text !== note.mapText) set((s) => ({ notes: s.notes.map((n) => (n.id === noteId ? { ...n, mapText: text } : n)) }))
       })
     },
 
@@ -334,6 +371,14 @@ export const useVault = create<VaultState>()((set, get) => {
       const subject = get().subjects.find((s) => s.id === subjectId)
       if (!subject) throw new Error('Предмет не найден')
       const tool = await repo.importTool(need(), subject, input)
+      set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      return tool
+    },
+
+    async importProjectFile(subjectId, input) {
+      const subject = get().subjects.find((s) => s.id === subjectId)
+      if (!subject) throw new Error('Предмет не найден')
+      const tool = await repo.importProjectFile(need(), subject, input)
       set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
       return tool
     },

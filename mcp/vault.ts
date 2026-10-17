@@ -4,7 +4,7 @@ import katex from 'katex'
 import sharp from 'sharp'
 import { normalizeMarkdownMath } from '@/editor/texImport'
 import { SUBJECT_COLOR_IDS } from '@/lib/subjectPalette'
-import { joinPath, type VaultAdapter } from '@/storage/VaultAdapter'
+import { basename, joinPath, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Subject, SubjectColor, SubjectIcon, ToolIcon } from '@/types'
 import { genId, NOTES_DIR } from '@/vault/format'
 import * as repo from '@/vault/repo'
@@ -78,7 +78,7 @@ export class StudyVault {
         .sort((x, y) => y.updated.localeCompare(x.updated))
         .map((n) => ({ id: n.id, title: n.title, updated: n.updated, excerpt: n.excerpt, ...(n.meta.source ? { source: n.meta.source } : {}) })),
       pins: d.pins.filter((p) => p.subjectId === s.id).map((p) => ({ id: p.id, title: p.title, tex: p.tex, text: p.text, order: p.order })),
-      tools: d.tools.filter((t) => t.subjectId === s.id).map((t) => ({ id: t.id, name: t.name, icon: t.icon })),
+      tools: d.tools.filter((t) => t.subjectId === s.id).map((t) => ({ id: t.id, name: t.name, kind: t.kind, file: basename(t.path) })),
     }
   }
 
@@ -186,6 +186,12 @@ export class StudyVault {
     const s = this.subject(await this.load(), input.subject)
     const t = await repo.importTool(this.a, s, { name: input.name, html: input.html, icon: input.icon ?? 'calculator' })
     return { id: t.id, path: t.path }
+  }
+
+  async addProjectFile(input: { subject: string; fileName: string; data: Uint8Array; title?: string }) {
+    const s = this.subject(await this.load(), input.subject)
+    const t = await repo.importProjectFile(this.a, s, { name: path.basename(input.fileName), blob: new Blob([new Uint8Array(input.data)]), title: input.title })
+    return { id: t.id, path: t.path, kind: t.kind }
   }
 
   // ---------- поиск и корзина ----------

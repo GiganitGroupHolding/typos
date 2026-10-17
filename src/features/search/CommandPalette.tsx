@@ -29,7 +29,7 @@ import {
 import { useUi } from '@/app/store'
 import { openClearSubjects } from '@/features/subjects/ClearSubjectsDialog'
 import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
-import { SubjectBadge, toolIcons } from '@/features/subjects/visuals'
+import { SubjectBadge, toolIcon, toolIcons } from '@/features/subjects/visuals'
 import { relativeTime } from '@/lib/format'
 import { useCreateNote, useRecentNotes } from '@/vault/hooks'
 import { useVault } from '@/vault/store'
@@ -38,7 +38,7 @@ import { buildDocs, createIndex, normalize, search, snippet, type SearchHit } fr
 
 /*
  * Ctrl+K. Идея — 21st.dev «Command Palette» (ddoemonn: cmdk + motion).
- * Поиск по тексту всех конспектов, карточек и тулз (MiniSearch), со сниппетами.
+ * Поиск по тексту всех конспектов, карточек и проектов (MiniSearch), со сниппетами.
  */
 
 interface Action {
@@ -72,7 +72,7 @@ const KIND_ICON = { note: FileText, pin: Pin } as const
 const GROUPS: { kind: SearchHit['kind']; heading: string }[] = [
   { kind: 'note', heading: 'Конспекты' },
   { kind: 'pin', heading: 'Закреп' },
-  { kind: 'tool', heading: 'Инструменты' },
+  { kind: 'tool', heading: 'Проекты' },
   { kind: 'subject', heading: 'Предметы' },
 ]
 
@@ -130,7 +130,8 @@ export function CommandPalette() {
   const hitIcon = (h: SearchHit, subject?: Subject) => {
     if (h.kind === 'subject' && subject) return <SubjectBadge subject={subject} size="sm" />
     if (h.kind === 'tool') {
-      const Icon = toolIcons[data.tools.find((t) => t.id === h.refId)?.icon ?? 'calculator']
+      const t = data.tools.find((x) => x.id === h.refId)
+      const Icon = t ? toolIcon(t) : toolIcons.calculator
       return <Icon />
     }
     const Icon = KIND_ICON[h.kind as 'note' | 'pin']
@@ -138,9 +139,9 @@ export function CommandPalette() {
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen} title="Поиск и команды" description="Поиск по тексту всех конспектов, закрепа и тулз" className="sm:max-w-xl">
+    <CommandDialog open={open} onOpenChange={setOpen} title="Поиск и команды" description="Поиск по тексту всех конспектов, закрепа и проектов" className="sm:max-w-xl">
       <Command shouldFilter={false} className="rounded-none!">
-        <CommandInput value={query} onValueChange={setQuery} placeholder="Найти в конспектах, формулах, тулзах…" />
+        <CommandInput value={query} onValueChange={setQuery} placeholder="Найти в конспектах, формулах, проектах…" />
         <CommandList className="thin-scrollbar max-h-[min(60vh,460px)]">
           <CommandEmpty>Ничего не нашлось{q.length > 0 && q.length < 3 ? ' — попробуй слово подлиннее' : ''}</CommandEmpty>
 

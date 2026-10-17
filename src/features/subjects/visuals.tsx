@@ -14,6 +14,11 @@ import {
   Dna,
   Dumbbell,
   Feather,
+  File,
+  FileAudio,
+  FileImage,
+  FileText,
+  FileVideo,
   FlaskConical,
   Globe,
   GraduationCap,
@@ -41,7 +46,7 @@ import {
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
-import type { Subject, SubjectIcon, ToolIcon } from '@/types'
+import type { Subject, SubjectIcon, Tool, ToolIcon, ToolKind } from '@/types'
 
 export const subjectIcons: Record<SubjectIcon, LucideIcon> = {
   sigma: Sigma,
@@ -96,6 +101,32 @@ export const toolIconLabels: Record<ToolIcon, string> = {
   function: 'Функция',
   timer: 'Таймер',
   table: 'Таблица',
+}
+
+/** Иконка файла в «Проектах»: у HTML — выбранная, у остальных — по типу. */
+const kindIcons: Record<Exclude<ToolKind, 'html'>, LucideIcon> = {
+  image: FileImage,
+  pdf: FileText,
+  docx: FileText,
+  pptx: Presentation,
+  text: FileText,
+  video: FileVideo,
+  audio: FileAudio,
+  other: File,
+}
+
+export const toolIcon = (t: Pick<Tool, 'kind' | 'icon'>): LucideIcon => (t.kind === 'html' ? toolIcons[t.icon] : kindIcons[t.kind])
+
+export const kindLabels: Record<ToolKind, string> = {
+  html: 'HTML',
+  image: 'Картинка',
+  pdf: 'PDF',
+  docx: 'Документ Word',
+  pptx: 'Презентация',
+  text: 'Текст',
+  video: 'Видео',
+  audio: 'Аудио',
+  other: 'Файл',
 }
 
 /** CSS-переменная цвета предмета, для `style`. */

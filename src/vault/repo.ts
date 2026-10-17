@@ -1,14 +1,19 @@
-import { basename, dirname, joinPath, safeName, uniquePath, type VaultAdapter } from '@/storage/VaultAdapter'
+import { basename, dirname, fileExt, fileTitle, joinPath, safeName, uniquePath, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Pin, Subject, SubjectColor, SubjectIcon, Tool, ToolIcon } from '@/types'
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from '@/lib/subjectPalette'
+import { normalizeMarkdownMath } from '@/editor/texImport'
+import { mapText, parseNoteMap, serializeNoteMap, type NoteMap } from '@/editor/map/types'
 import {
   extractExcerpt,
   extractTitle,
+  fileKind,
+  MAPS_DIR,
   genId,
   NOTES_DIR,
   parseFrontmatter,
   parsePinBody,
   PINS_DIR,
+  PROJECTS_DIR,
   serializeFrontmatter,
   serializePinBody,
   SUBJECT_META,
@@ -36,9 +41,15 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
   for (const [i, root] of roots.entries()) {
     const subject = await readSubject(a, root.name, i)
     data.subjects.push(subject)
+    const maps = new Map<string, string>()
+    const notes: Note[] = []
     await Promise.all([
       readFiles(a, joinPath(root.name, NOTES_DIR), '.md', async (path, text) => {
-        data.notes.push(noteFromFile(subject.id, path, text))
+        notes.push(noteFromFile(subject.id, path, text))
+      }),
+      readFiles(a, joinPath(root.name, NOTES_DIR, MAPS_DIR), '.json', async (path, text) => {
+        const t = mapText(parseNoteMap(text))
+        if (t) maps.set(basename(path).replace(/\.json$/, ''), t)
       }),
       readFiles(a, joinPath(root.name, PINS_DIR), '.md', async (path, text) => {
         const { meta, body } = parseFrontmatter(text)
@@ -53,18 +64,14 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
           order: Number(meta.order ?? 999),
         })
       }),
-      readFiles(a, joinPath(root.name, TOOLS_DIR), '.html', async (path, html) => {
-        const icon = getHtmlMeta(html, 'studynotes-icon') as ToolIcon | undefined
-        data.tools.push({
-          id: getHtmlMeta(html, 'studynotes-id') || pathId(path),
-          subjectId: subject.id,
-          path,
-          name: basename(path).replace(/\.html?$/i, ''),
-          icon: icon && TOOL_ICONS.includes(icon) ? icon : 'calculator',
-          html,
-        })
-      }),
+      // старая папка «Инструменты» — тоже: до миграции (и в MCP, где миграции нет) файлы не пропадают
+      readProjects(a, joinPath(root.name, PROJECTS_DIR), subject.id, data.tools),
+      readProjects(a, joinPath(root.name, TOOLS_DIR), subject.id, data.tools),
     ])
+    for (const n of notes) {
+      const t = maps.get(n.id)
+      data.notes.push(t ? { ...n, mapText: t } : n)
+    }
   }
   data.subjects.sort((x, y) => x.order - y.order || x.name.localeCompare(y.name, 'ru'))
   data.pins.sort((x, y) => x.order - y.order || x.title.localeCompare(y.title, 'ru'))
@@ -110,6 +117,56 @@ async function readFiles(a: VaultAdapter, dir: string, ext: string, cb: (path: s
   )
 }
 
+// ---------- мини-карты ----------
+
+/** Карта лежит рядом с конспектом: Конспекты/.maps/<id>.json (имя файла конспекта может меняться, id — нет). */
+export const noteMapPath = (note: Pick<Note, 'id' | 'path'>) => joinPath(dirname(note.path), MAPS_DIR, `${note.id}.json`)
+
+export async function loadNoteMap(a: VaultAdapter, note: Pick<Note, 'id' | 'path'>): Promise<NoteMap> {
+  return parseNoteMap(await a.readText(noteMapPath(note)))
+}
+
+/** Пустая карта — файл удаляется, чтобы не копить пустышки. */
+export async function saveNoteMap(a: VaultAdapter, note: Pick<Note, 'id' | 'path'>, map: NoteMap): Promise<void> {
+  const path = noteMapPath(note)
+  if (!map.nodes.length) {
+    if (await a.exists(path)) await a.remove(path)
+    return
+  }
+  await a.writeText(path, serializeNoteMap(map))
+}
+
+/** Файлы «Проектов»: HTML читается сразу (id и иконка — в <meta>), остальное только перечисляется. */
+async function readProjects(a: VaultAdapter, dir: string, subjectId: string, out: Tool[]) {
+  const entries = (await a.list(dir)).filter((e) => e.kind === 'file' && !e.name.startsWith('.') && !e.name.endsWith('.tmp'))
+  await Promise.all(
+    entries.map(async (e) => {
+      const path = joinPath(dir, e.name)
+      const ext = fileExt(e.name)
+      const kind = fileKind(ext)
+      if (kind === 'html') {
+        const html = await a.readText(path)
+        if (html === null) return
+        const icon = getHtmlMeta(html, 'studynotes-icon') as ToolIcon | undefined
+        out.push({
+          id: getHtmlMeta(html, 'studynotes-id') || pathId(path),
+          subjectId,
+          path,
+          name: fileTitle(e.name),
+          kind,
+          ext,
+          icon: icon && TOOL_ICONS.includes(icon) ? icon : 'calculator',
+          html,
+          size: html.length,
+        })
+        return
+      }
+      const blob = await a.readBlob(path)
+      out.push({ id: pathId(path), subjectId, path, name: fileTitle(e.name), kind, ext, icon: 'calculator', html: '', size: blob?.size })
+    }),
+  )
+}
+
 /** Стабильный id для файлов без frontmatter (тулзы, чужие .md). */
 function pathId(path: string) {
   let h = 0
@@ -144,6 +201,44 @@ export async function createNote(a: VaultAdapter, subject: Subject, body = ''): 
   const title = extractTitle(body)
   const path = await uniquePath(a, dir, safeName(title), '.md')
   const note: Note = { id: genId(), subjectId: subject.id, path, title, created: now, updated: now, excerpt: extractExcerpt(body), body, meta: {} }
+  await a.writeText(path, noteFile(note))
+  return note
+}
+
+/** Ссылки на картинки в Markdown: ![alt](путь "подпись"). */
+const IMAGE_LINK = /!\[([^\]]*)\]\(<?([^)\s>]+)>?(\s+"[^"]*")?\)/g
+
+/**
+ * Конспект из .md-файла. Чужой frontmatter сохраняется (кроме id и дат), формулы приводятся к $…$,
+ * заголовок — первая строка «# …» или имя файла. Картинки, перетащенные вместе с файлом и названные
+ * в его ссылках, копируются в assets/, ссылки переписываются.
+ */
+export async function importNote(
+  a: VaultAdapter,
+  subject: Subject,
+  input: { name: string; text: string; images?: Map<string, Blob> },
+): Promise<Note> {
+  const { meta, body: raw } = parseFrontmatter(input.text)
+  const { id: _id, created, updated: _updated, ...rest } = meta
+  let body = normalizeMarkdownMath(raw.replace(/\r\n?/g, '\n')).trim()
+  if (!/^#\s+\S/.test(body)) body = `# ${fileTitle(input.name) || 'Без названия'}${body ? `\n\n${body}` : ''}`
+
+  const dir = joinPath(subject.dir, NOTES_DIR)
+  if (input.images?.size) {
+    const copied = new Map<string, string>()
+    for (const [, , src] of body.matchAll(IMAGE_LINK)) {
+      if (/^(https?:|data:|blob:)/i.test(src) || copied.has(src)) continue
+      const key = decodeURIComponent(src).normalize('NFC').split(/[\\/]/).pop()!.toLowerCase()
+      const blob = input.images.get(key)
+      if (blob) copied.set(src, await saveAsset(a, dir, blob))
+    }
+    body = body.replace(IMAGE_LINK, (m, alt: string, src: string, cap = '') => (copied.has(src) ? `![${alt}](${copied.get(src)}${cap})` : m))
+  }
+
+  const now = new Date().toISOString()
+  const title = extractTitle(body)
+  const path = await uniquePath(a, dir, safeName(title), '.md')
+  const note: Note = { id: genId(), subjectId: subject.id, path, title, created: created || now, updated: now, excerpt: extractExcerpt(body), body: `${body}\n`, meta: rest }
   await a.writeText(path, noteFile(note))
   return note
 }
@@ -219,7 +314,7 @@ export async function listTrash(a: VaultAdapter): Promise<TrashItem[]> {
           ? 'note'
           : parts[1] === PINS_DIR
             ? 'pin'
-            : parts[1] === TOOLS_DIR
+            : parts[1] === TOOLS_DIR || parts[1] === PROJECTS_DIR
               ? 'tool'
               : 'file'
     const iso = stamp.replace(/T(\d\d)-(\d\d)-(\d\d)-(\d{3})Z/, 'T$1:$2:$3.$4Z')
@@ -283,20 +378,80 @@ export function setHtmlMeta(html: string, name: string, content: string): string
 }
 
 /** Имя тулзы из <title> или имени файла. */
+/** Имена файлов, по которым ничего не понять: тогда название берём из <title>. */
+const GENERIC_NAME = /^(index|document|untitled|page|artifact|new|file|download|без названия|документ|страница)( ?\(\d+\)| ?\d+)?$/i
+
+/** Название тулзы: имя файла как есть (кириллица, пробелы); <title> — если имя безликое или файла нет. */
 export function guessToolName(html: string, fileName?: string): string {
-  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim()
-  return title || fileName?.replace(/\.html?$/i, '') || 'Инструмент'
+  const fromFile = fileName ? fileTitle(fileName) : ''
+  if (fromFile.length > 2 && !GENERIC_NAME.test(fromFile)) return fromFile
+  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+  return title || fromFile || 'Проект'
 }
 
 export async function importTool(a: VaultAdapter, subject: Subject, input: { name: string; html: string; icon: ToolIcon }): Promise<Tool> {
   const id = genId()
   const html = setHtmlMeta(setHtmlMeta(input.html, 'studynotes-id', id), 'studynotes-icon', input.icon)
-  const path = await uniquePath(a, joinPath(subject.dir, TOOLS_DIR), safeName(input.name, 'Инструмент'), '.html')
+  const path = await uniquePath(a, joinPath(subject.dir, PROJECTS_DIR), safeName(input.name, 'Проект'), '.html')
   await a.writeText(path, html)
-  return { id, subjectId: subject.id, path, name: basename(path).replace(/\.html$/, ''), icon: input.icon, html }
+  return { id, subjectId: subject.id, path, name: fileTitle(basename(path)), kind: 'html', ext: 'html', icon: input.icon, html, size: html.length }
+}
+
+/** Любой файл в «Проекты»: HTML — как тулза (песочница, иконка), остальное — как есть, байт в байт. */
+export async function importProjectFile(
+  a: VaultAdapter,
+  subject: Subject,
+  input: { name: string; blob: Blob; title?: string; icon?: ToolIcon },
+): Promise<Tool> {
+  const ext = fileExt(input.name)
+  const kind = fileKind(ext)
+  if (kind === 'html') {
+    const html = await input.blob.text()
+    return importTool(a, subject, { name: input.title || guessToolName(html, input.name), html, icon: input.icon ?? 'calculator' })
+  }
+  const title = safeName(input.title || fileTitle(input.name), 'Файл')
+  const path = await uniquePath(a, joinPath(subject.dir, PROJECTS_DIR), title, ext ? `.${ext}` : '')
+  await a.writeBlob(path, input.blob)
+  return { id: pathId(path), subjectId: subject.id, path, name: fileTitle(basename(path)) || title, kind, ext, icon: 'calculator', html: '', size: input.blob.size }
+}
+
+/**
+ * Старая папка «Инструменты» → «Проекты»: файлы переезжают целиком (HTML не трогаются, id остаются в <meta>).
+ * Занятые имена получают « (2)»; ничего не перезаписывается и не удаляется, кроме опустевшей старой папки.
+ */
+export async function migrateTools(a: VaultAdapter): Promise<number> {
+  let moved = 0
+  for (const root of await a.list('')) {
+    if (root.kind !== 'dir' || root.name.startsWith('.')) continue
+    const old = joinPath(root.name, TOOLS_DIR)
+    const entries = await a.list(old)
+    for (const e of entries) {
+      const from = joinPath(old, e.name)
+      const { base, ext } = splitExt(e.name)
+      // id без <meta> считался от пути — закрепляем старый, чтобы открытые окна и ссылки не потерялись
+      if (e.kind === 'file' && fileKind(fileExt(e.name)) === 'html') {
+        const html = await a.readText(from)
+        if (html !== null && !getHtmlMeta(html, 'studynotes-id')) await a.writeText(from, setHtmlMeta(html, 'studynotes-id', pathId(from)))
+      }
+      const to = await uniquePath(a, joinPath(root.name, PROJECTS_DIR), base, ext)
+      await a.move(from, to)
+      moved++
+    }
+    if (entries.length && !(await a.list(old)).length) await a.remove(old)
+  }
+  return moved
 }
 
 export async function updateTool(a: VaultAdapter, tool: Tool, input: { name: string; icon: ToolIcon }): Promise<Tool> {
+  if (tool.kind !== 'html') {
+    const wanted = safeName(input.name, 'Файл')
+    const current = fileTitle(basename(tool.path)).replace(/ \(\d+\)$/, '')
+    const ext = tool.ext ? `.${tool.ext}` : ''
+    const path = wanted !== current ? await uniquePath(a, dirname(tool.path), wanted, ext, tool.path) : tool.path
+    if (path !== tool.path) await a.move(tool.path, path)
+    // id тот же до перезагрузки — окна и адреса не ломаются
+    return { ...tool, path, name: fileTitle(basename(path)) || wanted }
+  }
   const html = setHtmlMeta(setHtmlMeta(tool.html, 'studynotes-id', tool.id), 'studynotes-icon', input.icon)
   const wanted = safeName(input.name, 'Инструмент')
   const current = basename(tool.path).replace(/\.html?$/i, '').replace(/ \(\d+\)$/, '')

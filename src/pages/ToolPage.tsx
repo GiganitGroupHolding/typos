@@ -1,14 +1,18 @@
 import { motion } from 'motion/react'
-import { PictureInPicture2, RotateCw, ShieldCheck } from 'lucide-react'
+import { Download, PictureInPicture2, RotateCw, ShieldCheck, Smartphone } from 'lucide-react'
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUi } from '@/app/store'
-import { toolIcons } from '@/features/subjects/visuals'
+import { kindLabels, toolIcon } from '@/features/subjects/visuals'
 import { ToolActions } from '@/features/tools/ToolActions'
-import { ToolFrame } from '@/features/tools/ToolFrame'
+import { PhonePreview } from '@/features/tools/PhonePreview'
+import { ProjectViewer } from '@/features/tools/ProjectViewer'
+import { downloadProjectFile } from '@/features/tools/projectFiles'
+import { fileSize } from '@/lib/format'
 import { pageEnter } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 import { useSubject, useTool } from '@/vault/hooks'
 
 export function ToolPage() {
@@ -17,29 +21,55 @@ export function ToolPage() {
   const subject = useSubject(subjectId)
   const [runKey, setRunKey] = useState(0)
   const openWindow = useUi((s) => s.openWindow)
+  const phone = useUi((s) => s.phonePreview)
+  const togglePhone = useUi((s) => s.togglePhone)
   const navigate = useNavigate()
   if (!tool || !subject || tool.subjectId !== subject.id) return <Navigate to={subject ? `/s/${subject.id}?tab=tools` : '/'} replace />
 
-  const Icon = toolIcons[tool.icon]
+  const Icon = toolIcon(tool)
+  const isHtml = tool.kind === 'html'
+  const inPhone = isHtml && phone
 
   return (
     <motion.div {...pageEnter} key={tool.id} className="flex h-full flex-col p-3 pt-2">
       <div className="mb-2 flex items-center gap-2 px-1">
-        <Icon className="size-4 text-highlight" />
-        <h1 className="flex-1 truncate text-[15px] font-semibold">{tool.name}</h1>
+        <Icon className="size-4 shrink-0 text-highlight" />
+        <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold">{tool.name}</h1>
+        {isHtml ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-foreground">
+                <ShieldCheck className="size-3.5" /> Изолировано
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64">
+              Тулза работает в песочнице: без доступа к твоим конспектам, хранилищу браузера и сети.
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="hidden px-2 text-[12px] text-muted-foreground sm:inline">
+            {kindLabels[tool.kind]}
+            {tool.size !== undefined && ` · ${fileSize(tool.size)}`}
+          </span>
+        )}
+        {isHtml && (
+          <>
+            <Button variant="ghost" size="sm" aria-pressed={phone} onClick={togglePhone} className={cn(phone && 'bg-accent text-highlight')}>
+              <Smartphone /> Телефон
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setRunKey((k) => k + 1)}>
+              <RotateCw /> Перезапустить
+            </Button>
+          </>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-foreground">
-              <ShieldCheck className="size-3.5" /> Изолировано
-            </span>
+            <Button variant="ghost" size="icon-sm" aria-label="Скачать оригинал" onClick={() => void downloadProjectFile(tool)}>
+              <Download />
+            </Button>
           </TooltipTrigger>
-          <TooltipContent className="max-w-64">
-            Тулза работает в песочнице: без доступа к твоим конспектам, хранилищу браузера и сети.
-          </TooltipContent>
+          <TooltipContent>Скачать оригинал</TooltipContent>
         </Tooltip>
-        <Button variant="ghost" size="sm" onClick={() => setRunKey((k) => k + 1)}>
-          <RotateCw /> Перезапустить
-        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -52,8 +82,8 @@ export function ToolPage() {
         </Button>
         <ToolActions tool={tool} onOpenWindow={() => navigate(`/s/${subject.id}`)} />
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border shadow-card">
-        <ToolFrame html={tool.html} title={tool.name} runKey={runKey} />
+      <div className={cn('min-h-0 flex-1 overflow-hidden', !inPhone && 'rounded-2xl border bg-background shadow-card')}>
+        {inPhone ? <PhonePreview html={tool.html} title={tool.name} runKey={runKey} /> : <ProjectViewer tool={tool} runKey={runKey} />}
       </div>
     </motion.div>
   )

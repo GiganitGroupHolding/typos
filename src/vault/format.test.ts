@@ -62,3 +62,9 @@ describe('закреп', () => {
     expect(pin).toEqual({ title: 'Обратная матрица', tex: 'A^{-1} = \\frac{1}{\\det A} adj A', text: 'Существует при det A ≠ 0' })
   })
 })
+
+describe('пустые строки редактора', () => {
+  it('&nbsp; в начале не становится заголовком', () => {
+    expect(extractTitle('&nbsp;\n\n&nbsp;\n\n# Постановка целей\n\nТекст')).toBe('Постановка целей')
+  })
+})

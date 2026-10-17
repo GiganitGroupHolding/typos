@@ -54,7 +54,7 @@ export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[
       refId: n.id,
       subjectId: n.subjectId,
       title: n.title || 'Без названия',
-      text: plainText(n.body),
+      text: plainText(n.mapText ? `${n.body}\n${n.mapText}` : n.body),
     })),
     ...data.pins.map((p) => ({
       id: `pin:${p.id}`,

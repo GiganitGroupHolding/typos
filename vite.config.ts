@@ -17,7 +17,7 @@ export default defineConfig({
         id: '/',
         name: 'TYPOS — учебные конспекты',
         short_name: 'TYPOS',
-        description: 'Конспекты, закреп формул и тулзы по предметам. Работает офлайн, данные — файлы на диске.',
+        description: 'Конспекты, закреп формул и проекты по предметам. Работает офлайн, данные — файлы на диске.',
         lang: 'ru',
         start_url: '/',
         scope: '/',
@@ -34,6 +34,15 @@ export default defineConfig({
       workbox: {
         // всё приложение, включая шрифты и MathLive, доступно офлайн
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // просмотрщик DOCX/PPTX (1,5 МБ) — не в установку, а в кэш при первом открытии документа
+        globIgnores: ['viewers/**'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/viewers/'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'typos-viewers', expiration: { maxEntries: 4 } },
+          },
+        ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,

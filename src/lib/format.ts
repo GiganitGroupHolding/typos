@@ -11,6 +11,13 @@ export function relativeTime(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
+/** 1,4 МБ, 230 КБ. */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`
+  const [v, unit] = bytes < 1024 ** 2 ? [bytes / 1024, 'КБ'] : bytes < 1024 ** 3 ? [bytes / 1024 ** 2, 'МБ'] : [bytes / 1024 ** 3, 'ГБ']
+  return `${v.toLocaleString('ru', { maximumFractionDigits: v < 10 ? 1 : 0 })} ${unit}`
+}
+
 export function plural(n: number, [one, few, many]: [string, string, string]): string {
   const m10 = n % 10, m100 = n % 100
   if (m10 === 1 && m100 !== 11) return `${n} ${one}`

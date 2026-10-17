@@ -107,7 +107,7 @@ export function WelcomePage() {
             <span>
               Перенести то, что уже есть в браузере
               <span className="block text-[13px] text-muted-foreground">
-                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и тулзами. Файлы с такими же именами в папке не перезапишутся.
+                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и проектами. Файлы с такими же именами в папке не перезапишутся.
               </span>
             </span>
           </motion.label>

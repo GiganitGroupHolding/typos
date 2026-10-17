@@ -42,6 +42,9 @@ import { BubbleToolbar } from './BubbleToolbar'
 import { TableMenu } from './TableMenu'
 import { MathPopover, type MathEdit } from './MathPopover'
 import { SideToolbar } from './SideToolbar'
+import { NoteCanvas } from './map/NoteCanvas'
+import { BlockHandle } from './blocks/BlockHandle'
+import { Folding } from './blocks/folding'
 
 const SAVE_DELAY = 500
 
@@ -183,6 +186,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         onMathClick: (_node, pos, kind) => openMath(pos, kind, 'edit'),
         onBlockMathCreated: (pos) => openMath(pos, 'block', 'edit'),
         resolveImage: (src) => vaultFileUrl(joinPath(noteDir.current, src)),
+        diagrams: true,
       }),
       Placeholder.configure({
         placeholder: ({ node }) =>
@@ -190,8 +194,9 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
             ? 'Заголовок'
             : 'Пиши… $x^2$ — формула, $$ — блок формулы, # — заголовок, - — список',
       }),
+      Folding.configure({ noteId: note.id }),
     ],
-    [openMath],
+    [openMath, note.id],
   )
 
   // ---------- картинки: вставка, перетаскивание, кнопка ----------
@@ -295,6 +300,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
   // режим чтения: текст не редактируется, панель скрыта
   const reading = useUi((s) => s.readingMode)
+  const mapMode = useUi((s) => s.mapMode)
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.setEditable(!reading)
   }, [editor, reading])
@@ -469,7 +475,12 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         <p className="mb-5 text-center text-[13px] text-muted-foreground">
           {note.created === note.updated ? 'Новый конспект' : `Изменено ${relativeTime(note.updated)}`}
         </p>
-        <EditorContent editor={editor} />
+        {/* карта — слоем над текстом, в той же колонке */}
+        <div className="relative">
+          <EditorContent editor={editor} />
+          {editor && <BlockHandle editor={editor} disabled={reading || mapMode} />}
+          {editor && <NoteCanvas key={note.id} editor={editor} noteId={note.id} readOnly={reading} />}
+        </div>
       </div>
 
       <MathPopover edit={math} onSave={saveMath} onDelete={deleteMath} onCancel={cancelMath} onPin={pinMath} />

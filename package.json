@@ -4,15 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-viewers.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-viewers.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
     "icons": "node scripts/gen-icons.mjs",
-    "mcp": "tsx --tsconfig mcp/tsconfig.json mcp/server.ts"
+    "mcp": "tsx --tsconfig mcp/tsconfig.json mcp/server.ts",
+    "viewers": "node scripts/build-viewers.mjs --force"
   },
   "dependencies": {
+    "@dagrejs/dagre": "3.1.1",
     "@floating-ui/dom": "^1.8.0",
     "@fontsource-variable/golos-text": "^5.3.0",
     "@fontsource-variable/inter": "^5.3.0",
@@ -22,6 +26,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tiptap/extension-bubble-menu": "^3.31.4",
+    "@tiptap/extension-code-block": "^3.31.4",
     "@tiptap/extension-floating-menu": "^3.31.4",
     "@tiptap/extension-highlight": "^3.31.4",
     "@tiptap/extension-image": "^3.31.4",
@@ -36,12 +41,16 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.4.0",
+    "docx-preview": "0.4.1",
     "idb-keyval": "^6.3.0",
+    "jszip": "3.10.2",
     "katex": "^0.18.10",
     "lucide-react": "^1.54.0",
     "mathlive": "^0.111.1",
+    "mermaid": "^12.1.0",
     "minisearch": "^7.2.0",
     "motion": "^14.0.0",
+    "pptx-preview": "1.0.7",
     "radix-ui": "^1.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -70,5 +79,11 @@
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "pptx-preview": {
+      "echarts": "6.1.0",
+      "uuid": "11.1.1"
+    }
   }
 }

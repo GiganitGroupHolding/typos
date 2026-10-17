@@ -3,12 +3,12 @@ import { useRef } from 'react'
 import { Link } from 'react-router'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { toolIcons } from '@/features/subjects/visuals'
+import { toolIcon } from '@/features/subjects/visuals'
 import { cn } from '@/lib/utils'
 import type { Tool } from '@/types'
 
 /*
- * Dock тулз предмета. Идея — 21st.dev «macOS Dock» (ssicevs) / «Dock Nav» (soralabs):
+ * Dock проектов предмета. Идея — 21st.dev «macOS Dock» (ssicevs) / «Dock Nav» (soralabs):
  * размер иконки зависит от расстояния до курсора. Заменить на оригинал после ключа 21st.
  * Анимируется только transform (scale), раскладка не дёргается.
  */
@@ -17,7 +17,7 @@ const BASE = 48
 
 function DockIcon({ tool, mouseX }: { tool: Tool; mouseX: MotionValue<number> }) {
   const ref = useRef<HTMLAnchorElement>(null)
-  const Icon = toolIcons[tool.icon]
+  const Icon = toolIcon(tool)
 
   const distance = useTransform(mouseX, (x) => {
     const r = ref.current?.getBoundingClientRect()

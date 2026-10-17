@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
-import { FileUp, GraduationCap, Pin, Plus, SquarePen, Wrench } from 'lucide-react'
+import { FileDown, FileUp, FolderOpen, GraduationCap, Pin, Plus, SquarePen } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link, Navigate, useParams, useSearchParams } from 'react-router'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { useUi } from '@/app/store'
@@ -11,7 +11,8 @@ import { SubjectActions } from '@/features/subjects/SubjectActions'
 import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
 import { openToolDialog } from '@/features/tools/ToolDialog'
 import { ToolDock } from '@/features/tools/ToolDock'
-import { useToolDrop } from '@/features/tools/useToolDrop'
+import { pickAndImportNotes } from '@/features/import/importFiles'
+import { useFileDrop } from '@/features/import/useFileDrop'
 import { useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
 import { plural, relativeTime } from '@/lib/format'
 import { listItem, listParent, pageEnter } from '@/lib/motion'
@@ -19,7 +20,7 @@ import { cn } from '@/lib/utils'
 
 const PINS_PREVIEW = 4
 
-/** Главная предмета — bento: конспекты, закреп, инструменты. */
+/** Главная предмета — bento: конспекты, закреп, проекты. */
 export function SubjectHome() {
   const { subjectId } = useParams()
   const [params] = useSearchParams()
@@ -30,7 +31,8 @@ export function SubjectHome() {
   const createNote = useCreateNote()
   const openWindow = useUi((s) => s.openWindow)
   const setPinsOpen = useUi((s) => s.setPinsOpen)
-  const drop = useToolDrop(subjectId)
+  const drop = useFileDrop(subjectId)
+  const navigate = useNavigate()
   if (!subject) return <Navigate to="/" replace />
   const tab = params.get('tab')
 
@@ -49,7 +51,10 @@ export function SubjectHome() {
       </header>
 
       <motion.div variants={listParent} initial="hidden" animate="show" className="mt-8 grid auto-rows-min grid-cols-1 gap-4 lg:grid-cols-3">
-        <Tile className="lg:col-span-2 lg:row-span-2" highlight={tab === 'notes'} title="Конспекты" icon={<SquarePen />} action={{ label: 'Новый', icon: <Plus />, onClick: () => createNote(subject.id) }}>
+        <Tile className="lg:col-span-2 lg:row-span-2" highlight={tab === 'notes'} title="Конспекты" icon={<SquarePen />} actions={[
+            { label: 'Импорт', icon: <FileDown />, onClick: () => void pickAndImportNotes(subject.id, navigate) },
+            { label: 'Новый', icon: <Plus />, onClick: () => createNote(subject.id) },
+          ]}>
           {notes.length ? (
             <ul className="-mx-2">
               {notes.map((n) => (
@@ -69,7 +74,7 @@ export function SubjectHome() {
           )}
         </Tile>
 
-        <Tile highlight={tab === 'pins'} title="Закреп" icon={<Pin />} action={{ label: 'Карточка', icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }}>
+        <Tile highlight={tab === 'pins'} title="Закреп" icon={<Pin />} actions={[{ label: 'Карточка', icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }]}>
           {pins.length ? (
             <>
               <ul className="space-y-2">
@@ -103,14 +108,14 @@ export function SubjectHome() {
           )}
         </Tile>
 
-        <Tile highlight={tab === 'tools' || drop.over} title="Инструменты" icon={<Wrench />} action={{ label: 'Добавить', icon: <FileUp />, onClick: () => openToolDialog({ subjectId: subject.id }) }}>
+        <Tile highlight={tab === 'tools' || drop.over} title="Проекты" icon={<FolderOpen />} actions={[{ label: 'Добавить', icon: <FileUp />, onClick: () => openToolDialog({ subjectId: subject.id }) }]}>
           {tools.length ? (
             <div className="flex flex-col items-start gap-3">
               <ToolDock tools={tools} />
-              <p className="text-[13px] text-muted-foreground">Перетащи HTML-файл сюда, чтобы добавить ещё.</p>
+              <p className="text-[13px] text-muted-foreground">Перетащи сюда файл: PDF, презентацию, документ, картинку или HTML.</p>
             </div>
           ) : (
-            <Empty text={drop.over ? 'Отпусти — добавлю тулзу' : 'Перетащи сюда HTML-артефакт'} />
+            <Empty text={drop.over ? 'Отпусти — добавлю' : 'Перетащи сюда PDF, презентацию, документ, картинку или HTML-тулзу'} />
           )}
         </Tile>
       </motion.div>
@@ -121,14 +126,14 @@ export function SubjectHome() {
 function Tile({
   title,
   icon,
-  action,
+  actions = [],
   highlight,
   className,
   children,
 }: {
   title: string
   icon: ReactNode
-  action?: { label: string; icon: ReactNode; onClick: () => void }
+  actions?: { label: string; icon: ReactNode; onClick: () => void }[]
   highlight?: boolean
   className?: string
   children: ReactNode
@@ -149,8 +154,9 @@ function Tile({
       <header className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase [&>svg]:size-4 [&>svg]:text-(--subject)">
         {icon}
         <span className="flex-1">{title}</span>
-        {action && (
+        {actions.map((action) => (
           <button
+            key={action.label}
             type="button"
             onClick={action.onClick}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-medium tracking-normal normal-case hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5"
@@ -158,7 +164,7 @@ function Tile({
             {action.icon}
             {action.label}
           </button>
-        )}
+        ))}
       </header>
       {children}
     </motion.section>

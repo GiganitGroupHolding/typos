@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as repo from './repo'
 import { sampleVault } from '@/test/sampleVault'
+import { fileKind } from './format'
 
 const sample = async () => {
   const a = sampleVault()
@@ -30,7 +31,7 @@ describe('тулзы', () => {
     expect(repo.guessToolName(html, 'x.html')).toBe('Решатель СЛАУ')
     const t = await repo.importTool(a, v.subjects[0], { name: 'Решатель СЛАУ', html, icon: 'grid' })
     const loaded = (await repo.loadVault(a)).tools.find((x) => x.id === t.id)
-    expect(loaded).toMatchObject({ name: 'Решатель СЛАУ', icon: 'grid', path: 'Линейная алгебра/Инструменты/Решатель СЛАУ.html' })
+    expect(loaded).toMatchObject({ name: 'Решатель СЛАУ', icon: 'grid', path: 'Линейная алгебра/Проекты/Решатель СЛАУ.html', kind: 'html' })
   })
 
   it('переименование сохраняет id (ссылки и окна не ломаются)', async () => {
@@ -47,6 +48,47 @@ describe('тулзы', () => {
     const out = repo.setHtmlMeta('<div>калькулятор</div>', 'studynotes-id', 'x1')
     expect(repo.getHtmlMeta(out, 'studynotes-id')).toBe('x1')
     expect(out).toContain('<div>калькулятор</div>')
+  })
+})
+
+describe('проекты', () => {
+  it('тип по расширению', () => {
+    expect(fileKind('PNG')).toBe('image')
+    expect(fileKind('pdf')).toBe('pdf')
+    expect(fileKind('pptx')).toBe('pptx')
+    expect(fileKind('docx')).toBe('docx')
+    expect(fileKind('htm')).toBe('html')
+    expect(fileKind('csv')).toBe('text')
+    expect(fileKind('zip')).toBe('other')
+  })
+
+  it('миграция «Инструменты» → «Проекты»: файлы целиком, id сохраняются, занятые имена не затираются', async () => {
+    const { a, v } = await sample()
+    const before = v.tools.filter((t) => t.subjectId === 'la')
+    await a.writeText('Линейная алгебра/Проекты/График функции.html', '<p>уже был</p>')
+    await a.writeBlob('Линейная алгебра/Инструменты/Схема.png', new Blob([new Uint8Array([1, 2, 3])]))
+    expect(await repo.migrateTools(a)).toBe(4)
+    expect(await a.exists('Линейная алгебра/Инструменты')).toBe(false)
+    expect(await a.readText('Линейная алгебра/Проекты/График функции.html')).toBe('<p>уже был</p>')
+    const after = (await repo.loadVault(a)).tools.filter((t) => t.subjectId === 'la')
+    for (const t of before) expect(after.find((x) => x.id === t.id)?.path).toMatch(/^Линейная алгебра\/Проекты\//)
+    expect(after.map((t) => t.name).sort()).toEqual(['График функции', 'График функции (2)', 'Калькулятор матриц', 'Схема'])
+    expect(after.find((t) => t.name === 'Схема')).toMatchObject({ kind: 'image', ext: 'png', size: 3, html: '' })
+    expect(await repo.migrateTools(a)).toBe(0)
+  })
+
+  it('любой файл: имя по-русски с пробелами, байты как есть; переименование оставляет расширение', async () => {
+    const { a, v } = await sample()
+    const s = v.subjects.find((x) => x.name === 'Физика')!
+    const bytes = new Uint8Array([37, 80, 68, 70, 45])
+    const t = await repo.importProjectFile(a, s, { name: 'Лабораторная №3 — маятник.PDF'.normalize('NFD'), blob: new Blob([bytes]) })
+    expect(t).toMatchObject({ path: 'Физика/Проекты/Лабораторная №3 — маятник.pdf', name: 'Лабораторная №3 — маятник', kind: 'pdf', size: 5 })
+    expect(new Uint8Array(await (await a.readBlob(t.path))!.arrayBuffer())).toEqual(bytes)
+    const r = await repo.updateTool(a, t, { name: 'Маятник: отчёт', icon: 'calculator' })
+    expect(r.path).toBe('Физика/Проекты/Маятник отчёт.pdf')
+    expect(await a.exists(t.path)).toBe(false)
+    const html = await repo.importProjectFile(a, s, { name: 'Тренажёр.html', blob: new Blob(['<title>index</title><b>1</b>']) })
+    expect(html).toMatchObject({ kind: 'html', name: 'Тренажёр', path: 'Физика/Проекты/Тренажёр.html' })
   })
 })
 

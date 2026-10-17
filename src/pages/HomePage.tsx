@@ -67,7 +67,7 @@ export function HomePage() {
               <div className="mt-4 text-[17px] font-semibold tracking-tight">{s.name}</div>
               <div className="mt-1 text-[13px] text-muted-foreground">
                 {plural(count(notes, s.id), ['конспект', 'конспекта', 'конспектов'])} · {count(pins, s.id)} в закрепе ·{' '}
-                {plural(count(tools, s.id), ['тулза', 'тулзы', 'тулз'])}
+                {plural(count(tools, s.id), ['проект', 'проекта', 'проектов'])}
               </div>
               <div aria-hidden className="mt-4 h-1 w-10 origin-left rounded-full bg-(--subject) transition-transform duration-(--dur-slow) ease-(--ease-out) group-hover:scale-x-150" />
             </SubjectCard>

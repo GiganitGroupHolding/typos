@@ -25,3 +25,8 @@ dist-ssr
 
 # локальные настройки инструментов
 .claude/
+
+# собирается scripts/build-viewers.mjs
+public/viewers/
+# рамка телефона — картинка неизвестной лицензии, только локально (scripts/device-frame.mjs)
+public/devices/

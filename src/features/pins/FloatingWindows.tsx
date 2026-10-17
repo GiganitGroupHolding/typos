@@ -3,7 +3,7 @@ import { GripHorizontal, X } from 'lucide-react'
 import { useRef, type RefObject } from 'react'
 import { Button } from '@/components/ui/button'
 import { useUi, type FloatingWindow } from '@/app/store'
-import { ToolFrame } from '@/features/tools/ToolFrame'
+import { ProjectViewer } from '@/features/tools/ProjectViewer'
 import { usePin, useTool } from '@/vault/hooks'
 import { dur, easeIn, springSoft } from '@/lib/motion'
 import { PinBody } from './PinCard'
@@ -58,7 +58,7 @@ function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDi
       </header>
       <div className={isTool ? 'h-[380px] w-[min(440px,calc(100vw-16px))]' : 'w-[min(320px,calc(100vw-16px))] px-4 py-3'}>
         {pin && <PinBody pin={pin} hideTitle />}
-        {tool && <ToolFrame html={tool.html} title={tool.name} />}
+        {tool && <ProjectViewer tool={tool} />}
       </div>
     </motion.section>
   )

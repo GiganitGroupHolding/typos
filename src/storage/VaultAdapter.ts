@@ -36,9 +36,13 @@ export const joinPath = (...parts: string[]) =>
 export const dirname = (path: string) => path.split('/').slice(0, -1).join('/')
 export const basename = (path: string) => path.split('/').pop() ?? ''
 
-/** Убирает запрещённые в Windows символы и лишние пробелы. */
+/**
+ * Имя для файла: кириллица, пробелы и знаки остаются, убираются только запрещённые в Windows
+ * символы и лишние пробелы. NFC — имена из macOS приходят разложенными («й» = «и» + знак).
+ */
 export function safeName(name: string, fallback = 'Без названия'): string {
   const cleaned = name
+    .normalize('NFC')
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -46,6 +50,15 @@ export function safeName(name: string, fallback = 'Без названия'): st
     .slice(0, 80)
   return cleaned || fallback
 }
+
+/** Название из имени файла: без расширения и пути, в NFC, кириллица и пробелы как есть. */
+export function fileTitle(fileName: string): string {
+  const base = fileName.normalize('NFC').split(/[\\/]/).pop() ?? ''
+  return base.replace(/\.[^.\s]{1,8}$/, '').replace(/\s+/g, ' ').trim()
+}
+
+/** Расширение в нижнем регистре без точки: «Лекция 1.PDF» → «pdf». */
+export const fileExt = (fileName: string) => fileName.match(/\.([^.\s]{1,8})$/)?.[1].toLowerCase() ?? ''
 
 /** «Имя.md» → «Имя (2).md», пока путь занят. */
 export async function uniquePath(adapter: VaultAdapter, dir: string, base: string, ext: string, except?: string) {
