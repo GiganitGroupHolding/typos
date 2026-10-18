@@ -14,7 +14,11 @@ const name = rest.includes('--name') ? rest[rest.indexOf('--name') + 1] : 'phone
 // маленькую картинку увеличиваем (lanczos), чтобы рамка не мылилась на экранах с плотностью 2x
 const meta = await sharp(input).metadata()
 const up = Math.max(1, Math.ceil(2400 / (meta.height ?? 2400)))
-const { data, info } = await sharp(input).resize({ height: (meta.height ?? 0) * up, kernel: 'lanczos3' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+const { data, info } = await sharp(input)
+  .resize({ height: (meta.height ?? 0) * up, kernel: 'lanczos3' })
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true })
 const { width: W, height: H } = info
 // без прозрачности (картинки с «шахматкой» или белым фоном) — светлое серое становится прозрачным, тёмная рамка остаётся
 if (!meta.hasAlpha) {
@@ -32,13 +36,19 @@ const seed = at(cx, cy)
 const transparent = data[seed + 3] < 16
 const [r0, g0, b0] = [data[seed], data[seed + 1], data[seed + 2]]
 // пиксель экрана: прозрачный (рамки Apple/Figma) или того же цвета, что центр (картинка с чёрным экраном)
-const isScreen = (i) => (transparent ? data[i + 3] < 128 : data[i + 3] > 200 && Math.abs(data[i] - r0) + Math.abs(data[i + 1] - g0) + Math.abs(data[i + 2] - b0) < 36)
+const isScreen = (i) =>
+  transparent
+    ? data[i + 3] < 128
+    : data[i + 3] > 200 && Math.abs(data[i] - r0) + Math.abs(data[i + 1] - g0) + Math.abs(data[i + 2] - b0) < 36
 
 // заливка от центра
 const mask = new Uint8Array(W * H)
 const stack = [cy * W + cx]
 mask[cy * W + cx] = 1
-let minX = cx, maxX = cx, minY = cy, maxY = cy
+let minX = cx,
+  maxX = cx,
+  minY = cy,
+  maxY = cy
 while (stack.length) {
   const p = stack.pop()
   const x = p % W
@@ -73,7 +83,9 @@ if (!transparent) {
 }
 mkdirSync('public/devices', { recursive: true })
 const out = `public/devices/${name}.webp`
-await sharp(data, { raw: { width: W, height: H, channels: 4 } }).webp({ quality: 92, alphaQuality: 100, effort: 6 }).toFile(out)
+await sharp(data, { raw: { width: W, height: H, channels: 4 } })
+  .webp({ quality: 92, alphaQuality: 100, effort: 6 })
+  .toFile(out)
 
 const frame = { src: `/devices/${name}.webp`, width: W, height: H, screen: { x: minX, y: minY, width: sw, height: sh, radius } }
 writeFileSync(

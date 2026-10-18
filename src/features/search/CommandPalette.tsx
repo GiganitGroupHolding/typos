@@ -15,6 +15,7 @@ import {
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { useShallow } from 'zustand/react/shallow'
+import { useUi } from '@/app/store'
 import {
   Command,
   CommandDialog,
@@ -26,14 +27,13 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
-import { useUi } from '@/app/store'
 import { openClearSubjects } from '@/features/subjects/ClearSubjectsDialog'
 import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
 import { SubjectBadge, toolIcon, toolIcons } from '@/features/subjects/visuals'
 import { relativeTime } from '@/lib/format'
+import type { Subject } from '@/types'
 import { useCreateNote, useRecentNotes } from '@/vault/hooks'
 import { useVault } from '@/vault/store'
-import type { Subject } from '@/types'
 import { buildDocs, createIndex, normalize, search, snippet, type SearchHit } from './searchIndex'
 
 /*
@@ -104,10 +104,25 @@ export function CommandPalette() {
   }
 
   const actions: Action[] = [
-    { id: 'new-note', label: 'Новый конспект', keywords: 'создать заметку', icon: SquarePen, shortcut: 'Alt N', run: () => void createNote(currentSubject) },
+    {
+      id: 'new-note',
+      label: 'Новый конспект',
+      keywords: 'создать заметку',
+      icon: SquarePen,
+      shortcut: 'Alt N',
+      run: () => void createNote(currentSubject),
+    },
     { id: 'new-subject', label: 'Новый предмет', keywords: 'создать папку', icon: FolderPlus, run: openNewSubject },
     ...(currentSubject
-      ? [{ id: 'review', label: 'Повторение закрепа', keywords: 'карточки экзамен', icon: GraduationCap, run: () => navigate(`/s/${currentSubject}/review`) }]
+      ? [
+          {
+            id: 'review',
+            label: 'Повторение закрепа',
+            keywords: 'карточки экзамен',
+            icon: GraduationCap,
+            run: () => navigate(`/s/${currentSubject}/review`),
+          },
+        ]
       : []),
     { id: 'pins', label: 'Открыть закреп', keywords: 'панель формулы', icon: Pin, shortcut: 'Ctrl J', run: () => ui().setPinsOpen(true) },
     { id: 'reading', label: 'Режим чтения', keywords: 'читать serif', icon: BookOpen, run: () => ui().toggleReading() },
@@ -139,7 +154,13 @@ export function CommandPalette() {
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen} title="Поиск и команды" description="Поиск по тексту всех конспектов, закрепа и проектов" className="sm:max-w-xl">
+    <CommandDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Поиск и команды"
+      description="Поиск по тексту всех конспектов, закрепа и проектов"
+      className="sm:max-w-xl"
+    >
       <Command shouldFilter={false} className="rounded-none!">
         <CommandInput value={query} onValueChange={setQuery} placeholder="Найти в конспектах, формулах, проектах…" />
         <CommandList className="thin-scrollbar max-h-[min(60vh,460px)]">
@@ -171,7 +192,9 @@ export function CommandPalette() {
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="flex items-center gap-2">
                             <span className="truncate font-medium">{h.title}</span>
-                            {kind !== 'subject' && subject && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{subject.name}</span>}
+                            {kind !== 'subject' && subject && (
+                              <span className="ml-auto shrink-0 text-xs text-muted-foreground">{subject.name}</span>
+                            )}
                           </span>
                           {(kind === 'note' || kind === 'pin') && <Snippet hit={h} />}
                         </span>

@@ -20,7 +20,9 @@ function figure({ R, faces, inner, line, width, frost = 1 }) {
     const j = (i + 1) % 6
     return `<polygon points="${pts([p, O[j], I[j], I[i]])}" fill="${faces}" fill-opacity="${(FACE_ALPHA[i] * frost).toFixed(3)}"/>`
   }).join('')
-  const spokes = O.map(([x, y], i) => `<line x1="${x.toFixed(2)}" y1="${y.toFixed(2)}" x2="${I[i][0].toFixed(2)}" y2="${I[i][1].toFixed(2)}"/>`).join('')
+  const spokes = O.map(
+    ([x, y], i) => `<line x1="${x.toFixed(2)}" y1="${y.toFixed(2)}" x2="${I[i][0].toFixed(2)}" y2="${I[i][1].toFixed(2)}"/>`,
+  ).join('')
   return `${f}<polygon points="${pts(I)}" fill="${inner}"/><g fill="none" stroke="${line}" stroke-width="${width}" stroke-linejoin="round"><polygon points="${pts(O)}"/><polygon points="${pts(I)}"/>${spokes}</g>`
 }
 

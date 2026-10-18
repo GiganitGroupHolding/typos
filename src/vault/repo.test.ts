@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryAdapter } from '@/storage/flatAdapter'
+import { buildDocs, createIndex } from '@/features/search/searchIndex'
 import * as repo from './repo'
 import { sampleVault } from '@/test/sampleVault'
 
@@ -89,5 +90,35 @@ describe('vault repo', () => {
     expect(rel).toMatch(/^assets\/\w+\.gif$/)
     expect(await a.exists(`Физика/Конспекты/${rel}`)).toBe(true)
     expect((await repo.loadVault(a)).notes.find((x) => x.id === n.id)).toBeTruthy()
+  })
+
+  it('один id у двух конспектов (переименовали на двух устройствах) — записи разные, поиск строится', async () => {
+    const file = (body: string) => `---\nid: kryo0jmd\ncreated: 2026-10-18T13:29:37.044Z\n---\n\n${body}`
+    const a = createMemoryAdapter({ 'Матан/Конспекты/Скибиди в.md': file('# Скибиди в'), 'Матан/Конспекты/Скибиди а.md': file('# Скибиди а') })
+    const v = await repo.loadVault(a)
+    expect(v.notes.find((n) => n.title === 'Скибиди а')?.id).toBe('kryo0jmd')
+    const other = v.notes.find((n) => n.title === 'Скибиди в')!
+    expect(other.id).not.toBe('kryo0jmd')
+    expect(() => createIndex(buildDocs(v))).not.toThrow()
+
+    // на другом устройстве с теми же файлами — те же id, а после сохранения новый id уже в файле
+    expect((await repo.loadVault(a)).notes.find((n) => n.title === 'Скибиди в')?.id).toBe(other.id)
+    await repo.saveNote(a, other, '# Скибиди в\n\nправка')
+    expect((await a.readText('Матан/Конспекты/Скибиди в.md'))!).toContain(`id: ${other.id}`)
+  })
+
+  it('папку предмета скопировали руками — у копии свой id, конспекты не путаются', async () => {
+    const a = sampleVault()
+    const files = await repo.loadVault(a)
+    const la = files.subjects.find((s) => s.name === 'Линейная алгебра')!
+    for (const n of files.notes.filter((x) => x.subjectId === la.id)) await a.writeText(n.path.replace(la.dir, 'Копия'), (await a.readText(n.path))!)
+    await a.writeText('Копия/_subject.json', (await a.readText(`${la.dir}/_subject.json`))!)
+
+    const v = await repo.loadVault(a)
+    const copy = v.subjects.find((s) => s.name === 'Копия')!
+    expect(copy.id).not.toBe(v.subjects.find((s) => s.name === 'Линейная алгебра')!.id)
+    expect(new Set(v.notes.map((n) => n.id)).size).toBe(v.notes.length)
+    expect(v.notes.filter((n) => n.subjectId === copy.id)).toHaveLength(files.notes.filter((x) => x.subjectId === la.id).length)
+    expect(() => createIndex(buildDocs(v))).not.toThrow()
   })
 })

@@ -11,10 +11,10 @@ import { fileSize } from '@/lib/format'
 import { errorText, submitOnCtrlEnter } from '@/lib/undo'
 import { cn } from '@/lib/utils'
 import { fileExt, fileTitle } from '@/storage/VaultAdapter'
+import type { ToolIcon } from '@/types'
 import { fileKind } from '@/vault/format'
 import { guessToolName } from '@/vault/repo'
 import { useVault } from '@/vault/store'
-import type { ToolIcon } from '@/types'
 
 interface Target {
   subjectId: string
@@ -192,7 +192,9 @@ export function ToolDialog() {
                     <FileCode2 className="size-6 text-highlight" />
                   )}
                   <span className="text-[14px] font-medium break-all">{fileName || 'Выбрать или перетащить файл'}</span>
-                  {fileName && <span className="text-[12px] text-muted-foreground">{fileSize(file ? file.size : new Blob([html]).size)}</span>}
+                  {fileName && (
+                    <span className="text-[12px] text-muted-foreground">{fileSize(file ? file.size : new Blob([html]).size)}</span>
+                  )}
                 </button>
               ) : (
                 <textarea
@@ -222,7 +224,14 @@ export function ToolDialog() {
             <label htmlFor="tool-name" className="mb-1 block text-[13px] font-medium">
               Название
             </label>
-            <Input id="tool-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Калькулятор интегралов" maxLength={80} autoFocus={!!tool} />
+            <Input
+              id="tool-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Калькулятор интегралов"
+              maxLength={80}
+              autoFocus={!!tool}
+            />
           </div>
 
           {htmlish && (
@@ -244,7 +253,9 @@ export function ToolDialog() {
                       }}
                       className={cn(
                         'flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
-                        icon === i ? 'border-highlight bg-accent text-highlight' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                        icon === i
+                          ? 'border-highlight bg-accent text-highlight'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                       )}
                     >
                       <Icon className="size-5" />

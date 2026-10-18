@@ -30,3 +30,7 @@ dist-ssr
 public/viewers/
 # рамка телефона — картинка неизвестной лицензии, только локально (scripts/device-frame.mjs)
 public/devices/
+# конспекты и ключи сервера хранения, если vault лежит внутри проекта
+/vault/
+/server/vault/
+.typos-server/

@@ -1,10 +1,16 @@
 import { GraduationCap, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toastUndo } from '@/lib/undo'
-import { useVault } from '@/vault/store'
 import type { Subject } from '@/types'
+import { useVault } from '@/vault/store'
 import { openEditSubject } from './NewSubjectDialog'
 
 export function SubjectActions({ subject }: { subject: Subject }) {

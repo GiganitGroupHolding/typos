@@ -45,7 +45,8 @@ function toggleAt(state: EditorState, index: number): Transaction | null {
     const [, to] = sectionRange(state.doc, index)
     const start = blockPos(state.doc, index)
     const { from } = state.selection
-    if (from > start + node.nodeSize && from < blockPos(state.doc, to)) tr.setSelection(TextSelection.create(tr.doc, start + node.nodeSize - 1))
+    if (from > start + node.nodeSize && from < blockPos(state.doc, to))
+      tr.setSelection(TextSelection.create(tr.doc, start + node.nodeSize - 1))
   }
   return tr
 }
@@ -111,7 +112,8 @@ export const Folding = Extension.create<FoldingOptions>({
                     b.contentEditable = 'false'
                     b.setAttribute('aria-label', folded ? 'Развернуть раздел' : 'Свернуть раздел')
                     b.setAttribute('aria-expanded', String(!folded))
-                    b.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                    b.innerHTML =
+                      '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
                     b.addEventListener('mousedown', (e) => {
                       e.preventDefault()
                       e.stopPropagation()

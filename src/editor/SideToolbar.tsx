@@ -16,9 +16,9 @@ import {
 } from 'lucide-react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { useRef } from 'react'
+import { useUi } from '@/app/store'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useUi } from '@/app/store'
 import { cn } from '@/lib/utils'
 
 /*
@@ -124,7 +124,12 @@ export function SideToolbar({
       { icon: ListOrdered, label: 'Нумерованный список', key: '1. ', active: s.ordered, run: () => c().toggleOrderedList().run() },
       { icon: ListChecks, label: 'Чек-лист', key: '[ ] ', active: s.task, run: () => c().toggleTaskList().run() },
       { icon: Quote, label: 'Цитата', key: '> ', active: s.quote, run: () => c().toggleBlockquote().run() },
-      { icon: Table, label: 'Таблица', active: s.table, run: () => !s.table && c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+      {
+        icon: Table,
+        label: 'Таблица',
+        active: s.table,
+        run: () => !s.table && c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      },
     ],
     [
       { icon: Radical, label: 'Формула в строке', key: '$x$', run: onFormula },

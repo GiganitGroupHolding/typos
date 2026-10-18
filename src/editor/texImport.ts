@@ -8,7 +8,8 @@
 
 export const TEX_LANGS = ['latex', 'tex', 'math', 'katex', 'mathematics', 'mathjax']
 
-const CODE_HINTS = /;\s*$|=>|\b(function|const|let|var|def|return|class|import|from|print|console|#include|public|void|SELECT|elif|lambda)\b|^\s*(#|\/\/)/m
+const CODE_HINTS =
+  /;\s*$|=>|\b(function|const|let|var|def|return|class|import|from|print|console|#include|public|void|SELECT|elif|lambda)\b|^\s*(#|\/\/)/m
 
 /** Похоже на формулу LaTeX, а не на программный код. */
 export function looksLikeTex(src: string): boolean {
@@ -52,8 +53,7 @@ function convertDelimiters(text: string): string {
 }
 
 /** Строка таблицы: «|» внутри $…$ (модуль |x|) иначе режет ячейку. */
-const escapeTablePipes = (row: string) =>
-  row.replace(/\$[^$\n]+\$/g, (math) => math.replace(/(?<!\\)\|/g, '\\|'))
+const escapeTablePipes = (row: string) => row.replace(/\$[^$\n]+\$/g, (math) => math.replace(/(?<!\\)\|/g, '\\|'))
 
 /** Вставка — это Markdown (ответ нейросети, файл .md), а не обычный текст? */
 export function looksLikeMarkdown(text: string): boolean {
@@ -61,7 +61,6 @@ export function looksLikeMarkdown(text: string): boolean {
   if (/(^|\n)[^\n]*\|[^\n]*\n[ \t|:]*-[ \t|:-]*(\n|$)/.test(text)) return true // таблица GFM
   return text.includes('\n') && /(^|\n)[ \t]{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s)/.test(text)
 }
-
 
 /**
  * HTML из буфера: отрендеренные формулы и блоки кода с LaTeX → узлы формул редактора.
@@ -105,4 +104,3 @@ export function htmlMathToNodes(html: string): string {
 
   return doc.body.innerHTML
 }
-

@@ -1,16 +1,23 @@
-import { motion } from 'motion/react'
 import { ChevronDown, FileDown, FileUp, Maximize2, Plus, SquarePen } from 'lucide-react'
+import { motion } from 'motion/react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { pickAndImportNotes } from '@/features/import/importFiles'
+import { useFileDrop } from '@/features/import/useFileDrop'
 import { PinActions } from '@/features/pins/PinActions'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
 import { SubjectBadge, toolIcon } from '@/features/subjects/visuals'
 import { ToolActions } from '@/features/tools/ToolActions'
 import { openToolDialog } from '@/features/tools/ToolDialog'
-import { pickAndImportNotes } from '@/features/import/importFiles'
-import { useFileDrop } from '@/features/import/useFileDrop'
 import { relativeTime } from '@/lib/format'
 import { listItem, listParent, spring } from '@/lib/motion'
 import { templates } from '@/lib/templates'
@@ -118,7 +125,10 @@ export function ListColumn() {
     <aside
       aria-label={`Содержимое предмета «${subject.name}»`}
       {...drop.handlers}
-      className={cn('liquid-column-soft relative hidden w-[300px] shrink-0 flex-col border-r md:flex', drop.over && 'ring-2 ring-highlight ring-inset')}
+      className={cn(
+        'liquid-column-soft relative hidden w-[300px] shrink-0 flex-col border-r md:flex',
+        drop.over && 'ring-2 ring-highlight ring-inset',
+      )}
     >
       <header className="flex items-center gap-2.5 px-4 pt-4 pb-3">
         <SubjectBadge subject={subject} />
@@ -160,7 +170,9 @@ export function ListColumn() {
                 data-active={noteId === n.id || undefined}
                 className="block rounded-lg px-3 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
               >
-                <div className={cn('truncate text-[14px] font-semibold', !n.title && 'text-muted-foreground')}>{n.title || 'Без названия'}</div>
+                <div className={cn('truncate text-[14px] font-semibold', !n.title && 'text-muted-foreground')}>
+                  {n.title || 'Без названия'}
+                </div>
                 <div className="mt-0.5 flex gap-2 text-[13px] text-muted-foreground">
                   <span className="shrink-0 tabular-nums">{relativeTime(n.updated)}</span>
                   <span className="truncate">{n.excerpt || 'Нет текста'}</span>
@@ -214,7 +226,9 @@ export function ListColumn() {
                     <Icon className="size-4 text-highlight" />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{t.name}</span>
-                  {t.kind !== 'html' && t.ext && <span className="shrink-0 text-[11px] font-medium text-muted-foreground uppercase">{t.ext}</span>}
+                  {t.kind !== 'html' && t.ext && (
+                    <span className="shrink-0 text-[11px] font-medium text-muted-foreground uppercase">{t.ext}</span>
+                  )}
                 </Link>
                 <ToolActions
                   tool={t}
@@ -241,7 +255,12 @@ export function ListColumn() {
 function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
   const createNote = useCreateNote()
   const content = {
-    notes: { title: 'Конспектов пока нет', hint: 'Нажми «Новый конспект» или Alt N', action: 'Новый конспект', run: () => createNote(subjectId) },
+    notes: {
+      title: 'Конспектов пока нет',
+      hint: 'Нажми «Новый конспект» или Alt N',
+      action: 'Новый конспект',
+      run: () => createNote(subjectId),
+    },
     pins: {
       title: 'Закреп пуст',
       hint: 'Сюда кладут формулы и определения, которые нужны всегда под рукой',

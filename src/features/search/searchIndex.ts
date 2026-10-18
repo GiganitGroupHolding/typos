@@ -47,7 +47,14 @@ export function plainText(md: string): string {
 
 export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[]; tools: Tool[] }): SearchDoc[] {
   return [
-    ...data.subjects.map((s) => ({ id: `subject:${s.id}`, kind: 'subject' as const, refId: s.id, subjectId: s.id, title: s.name, text: '' })),
+    ...data.subjects.map((s) => ({
+      id: `subject:${s.id}`,
+      kind: 'subject' as const,
+      refId: s.id,
+      subjectId: s.id,
+      title: s.name,
+      text: '',
+    })),
     ...data.notes.map((n) => ({
       id: `note:${n.id}`,
       kind: 'note' as const,
@@ -87,16 +94,19 @@ export function createIndex(docs: SearchDoc[]) {
 
 export function search(ms: MiniSearch<SearchDoc>, query: string, limit = 30): SearchHit[] {
   if (!query.trim()) return []
-  return ms.search(query).slice(0, limit).map((r) => ({
-    id: String(r.id),
-    kind: r.kind,
-    refId: r.refId,
-    subjectId: r.subjectId,
-    title: r.title,
-    text: r.text,
-    score: r.score,
-    terms: r.terms,
-  }))
+  return ms
+    .search(query)
+    .slice(0, limit)
+    .map((r) => ({
+      id: String(r.id),
+      kind: r.kind,
+      refId: r.refId,
+      subjectId: r.subjectId,
+      title: r.title,
+      text: r.text,
+      score: r.score,
+      terms: r.terms,
+    }))
 }
 
 /** Кусок текста вокруг первого совпадения, разбитый на части для подсветки. */

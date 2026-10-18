@@ -1,7 +1,7 @@
 {
   "name": "typos",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "predev": "node scripts/build-viewers.mjs",
@@ -9,11 +9,19 @@
     "prebuild": "node scripts/build-viewers.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "check": "tsc -b && oxlint && prettier --check . && vitest run",
     "icons": "node scripts/gen-icons.mjs",
     "mcp": "tsx --tsconfig mcp/tsconfig.json mcp/server.ts",
-    "viewers": "node scripts/build-viewers.mjs --force"
+    "viewers": "node scripts/build-viewers.mjs --force",
+    "storage": "node server/typos-server.mjs",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@dagrejs/dagre": "3.1.1",
@@ -25,6 +33,7 @@
     "@fontsource/pt-serif": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/api": "^2.12.4",
     "@tiptap/extension-bubble-menu": "^3.31.4",
     "@tiptap/extension-code-block": "^3.31.4",
     "@tiptap/extension-floating-menu": "^3.31.4",
@@ -64,6 +73,8 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@tauri-apps/cli": "^2.12.3",
     "@types/katex": "^0.16.8",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -73,6 +84,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^28.1.0",
     "oxlint": "^1.81.0",
+    "prettier": "^3.9.10",
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "~6.0.2",

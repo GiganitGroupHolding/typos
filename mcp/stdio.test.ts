@@ -15,13 +15,34 @@ it('сервер отвечает по stdio', { timeout: 30_000 }, async () => 
     await client.connect(
       new StdioClientTransport({
         command: process.execPath,
-        args: [path.join(root, 'node_modules/tsx/dist/cli.mjs'), '--tsconfig', path.join(root, 'mcp/tsconfig.json'), path.join(root, 'mcp/server.ts'), '--vault', vault],
+        args: [
+          path.join(root, 'node_modules/tsx/dist/cli.mjs'),
+          '--tsconfig',
+          path.join(root, 'mcp/tsconfig.json'),
+          path.join(root, 'mcp/server.ts'),
+          '--vault',
+          vault,
+        ],
       }),
     )
     expect(client.getInstructions()).toMatch(/Формат конспекта/)
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['add_image', 'add_project_file', 'create_note', 'create_pin', 'create_subject', 'get_subject', 'import_tool', 'list_subjects', 'read_note', 'search', 'trash', 'update_note', 'update_pin'].sort(),
+      [
+        'add_image',
+        'add_project_file',
+        'create_note',
+        'create_pin',
+        'create_subject',
+        'get_subject',
+        'import_tool',
+        'list_subjects',
+        'read_note',
+        'search',
+        'trash',
+        'update_note',
+        'update_pin',
+      ].sort(),
     )
     await client.callTool({ name: 'create_subject', arguments: { name: 'Тест' } })
     const created = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Привет', markdown: '$x^2$' } })

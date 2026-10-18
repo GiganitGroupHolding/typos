@@ -51,9 +51,15 @@ export function edgePath(a: Rect, b: Rect) {
   return curve(sidePoint(a, sa), sa, sidePoint(b, sb), sb)
 }
 
-export const contains = (r: Rect, p: { x: number; y: number }, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad
+export const contains = (r: Rect, p: { x: number; y: number }, pad = 0) =>
+  p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad
 
 /** Прямоугольник по двум углам. */
-export const rectOf = (x0: number, y0: number, x1: number, y1: number): Rect => ({ x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) })
+export const rectOf = (x0: number, y0: number, x1: number, y1: number): Rect => ({
+  x: Math.min(x0, x1),
+  y: Math.min(y0, y1),
+  w: Math.abs(x1 - x0),
+  h: Math.abs(y1 - y0),
+})
 
 export const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max))

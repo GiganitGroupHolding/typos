@@ -1,11 +1,11 @@
-import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { GripHorizontal, X } from 'lucide-react'
+import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { useRef, type RefObject } from 'react'
-import { Button } from '@/components/ui/button'
 import { useUi, type FloatingWindow } from '@/app/store'
+import { Button } from '@/components/ui/button'
 import { ProjectViewer } from '@/features/tools/ProjectViewer'
-import { usePin, useTool } from '@/vault/hooks'
 import { dur, easeIn, springSoft } from '@/lib/motion'
+import { usePin, useTool } from '@/vault/hooks'
 import { PinBody } from './PinCard'
 
 /**
@@ -52,7 +52,13 @@ function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDi
       >
         <GripHorizontal aria-hidden className="size-4 text-muted-foreground" />
         <span className="flex-1 truncate text-[13px] font-semibold">{title}</span>
-        <Button variant="ghost" size="icon-xs" aria-label={`Закрыть «${title}»`} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(win.id)}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Закрыть «${title}»`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => close(win.id)}
+        >
           <X />
         </Button>
       </header>

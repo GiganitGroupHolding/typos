@@ -1,10 +1,10 @@
-import type { Editor } from '@tiptap/react'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { NodeSelection, TextSelection } from '@tiptap/pm/state'
+import type { Editor } from '@tiptap/react'
 import { GripVertical, Plus } from 'lucide-react'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { blockPos, foldedBlocks, moveTarget, sectionRange } from './sections'
 import { foldingKey } from './folding'
+import { blockPos, foldedBlocks, moveTarget, sectionRange } from './sections'
 
 /*
  * Ручка блока, как в Notion: при наведении слева — «+» (новая строка ниже) и ⋮⋮ (перетащить, щелчок — выделить блок).
@@ -15,9 +15,7 @@ import { foldingKey } from './folding'
 
 const ITEM_TYPES = new Set(['listItem', 'taskItem'])
 
-type Target =
-  | { kind: 'block'; index: number; el: HTMLElement }
-  | { kind: 'item'; el: HTMLElement; pos: number }
+type Target = { kind: 'block'; index: number; el: HTMLElement } | { kind: 'item'; el: HTMLElement; pos: number }
 
 interface Gap {
   y: number
@@ -61,7 +59,8 @@ function itemAt(editor: Editor, el: HTMLElement) {
   const $p = editor.state.doc.resolve(inner)
   for (let d = $p.depth; d > 0; d--) {
     const node = $p.node(d)
-    if (ITEM_TYPES.has(node.type.name)) return { from: $p.before(d), to: $p.after(d), node, list: $p.node(d - 1), listFrom: $p.before(d - 1), listTo: $p.after(d - 1) }
+    if (ITEM_TYPES.has(node.type.name))
+      return { from: $p.before(d), to: $p.after(d), node, list: $p.node(d - 1), listFrom: $p.before(d - 1), listTo: $p.after(d - 1) }
   }
   return null
 }
@@ -81,7 +80,8 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       const el = child as HTMLElement
       if (el.classList.contains('is-folded') || !el.offsetParent) return
       out.push({ kind: 'block', index, el })
-      if (/^(UL|OL)$/.test(el.tagName)) for (const li of el.querySelectorAll<HTMLElement>(':scope > li')) out.push({ kind: 'item', el: li, pos: 0 })
+      if (/^(UL|OL)$/.test(el.tagName))
+        for (const li of el.querySelectorAll<HTMLElement>(':scope > li')) out.push({ kind: 'item', el: li, pos: 0 })
     })
     return out
   }
@@ -163,7 +163,8 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
           const it = itemAt(editor, li)
           if (!it || !own || it.node.type !== own.node.type) return
           const r = li.getBoundingClientRect()
-          const push = (y: number, pos: number) => pos !== own.from && pos !== own.to && gaps.push({ y: y - wr.top, left: r.left - wr.left, right: wr.width, pos })
+          const push = (y: number, pos: number) =>
+            pos !== own.from && pos !== own.to && gaps.push({ y: y - wr.top, left: r.left - wr.left, right: wr.width, pos })
           push(r.top, it.from)
           if (k === items.length - 1) push(r.bottom, it.to)
         })
@@ -344,13 +345,21 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     editor.view.focus()
   }
 
-  const btn = 'flex size-6 items-center justify-center rounded-md text-muted-foreground/70 outline-none transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
+  const btn =
+    'flex size-6 items-center justify-center rounded-md text-muted-foreground/70 outline-none transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
 
   return (
     <div ref={self} aria-hidden={!hover} className="pointer-events-none absolute top-0 left-0 z-[6] size-0">
       {hover && !disabled && (
         <div style={{ top: hover.top, left: hover.left }} className="pointer-events-auto absolute flex items-center gap-0.5 select-none">
-          <button type="button" aria-label="Новая строка ниже" title="Новая строка ниже" onMouseDown={(e) => e.preventDefault()} onClick={onPlus} className={btn}>
+          <button
+            type="button"
+            aria-label="Новая строка ниже"
+            title="Новая строка ниже"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onPlus}
+            className={btn}
+          >
             <Plus className="size-4" />
           </button>
           <button
@@ -367,7 +376,12 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
           </button>
         </div>
       )}
-      {line && <div style={{ top: line.y - 1.5, left: line.left, width: line.width }} className="absolute h-[3px] rounded-full bg-highlight/80 shadow-[0_0_0_2px_var(--background)]" />}
+      {line && (
+        <div
+          style={{ top: line.y - 1.5, left: line.left, width: line.width }}
+          className="absolute h-[3px] rounded-full bg-highlight/80 shadow-[0_0_0_2px_var(--background)]"
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import {
   Atom,
-  BookOpen,
   Binary,
+  BookOpen,
   Brain,
   Briefcase,
   Calculator,
@@ -132,19 +132,10 @@ export const kindLabels: Record<ToolKind, string> = {
 /** CSS-переменная цвета предмета, для `style`. */
 export const subjectColor = (s: Pick<Subject, 'color'>) => `var(--subject-${s.color})`
 
-export const subjectStyle = (s: Pick<Subject, 'color'>) =>
-  ({ '--subject': subjectColor(s) }) as CSSProperties
+export const subjectStyle = (s: Pick<Subject, 'color'>) => ({ '--subject': subjectColor(s) }) as CSSProperties
 
 /** Иконка предмета в цветной плашке. Цвет — не единственный признак: всегда есть иконка. */
-export function SubjectBadge({
-  subject,
-  size = 'md',
-  className,
-}: {
-  subject: Subject
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-}) {
+export function SubjectBadge({ subject, size = 'md', className }: { subject: Subject; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const Icon = subjectIcons[subject.icon]
   return (
     <span

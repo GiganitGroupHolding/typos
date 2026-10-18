@@ -1,22 +1,22 @@
-import { motion } from 'motion/react'
 import { FileDown, FileUp, FolderOpen, GraduationCap, Pin, Plus, SquarePen } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useUi } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
-import { useUi } from '@/app/store'
+import { pickAndImportNotes } from '@/features/import/importFiles'
+import { useFileDrop } from '@/features/import/useFileDrop'
 import { PinBody } from '@/features/pins/PinCard'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
 import { SubjectActions } from '@/features/subjects/SubjectActions'
 import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
 import { openToolDialog } from '@/features/tools/ToolDialog'
 import { ToolDock } from '@/features/tools/ToolDock'
-import { pickAndImportNotes } from '@/features/import/importFiles'
-import { useFileDrop } from '@/features/import/useFileDrop'
-import { useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
 import { plural, relativeTime } from '@/lib/format'
 import { listItem, listParent, pageEnter } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
 
 const PINS_PREVIEW = 4
 
@@ -50,16 +50,31 @@ export function SubjectHome() {
         <SubjectActions subject={subject} />
       </header>
 
-      <motion.div variants={listParent} initial="hidden" animate="show" className="mt-8 grid auto-rows-min grid-cols-1 gap-4 lg:grid-cols-3">
-        <Tile className="lg:col-span-2 lg:row-span-2" highlight={tab === 'notes'} title="Конспекты" icon={<SquarePen />} actions={[
+      <motion.div
+        variants={listParent}
+        initial="hidden"
+        animate="show"
+        className="mt-8 grid auto-rows-min grid-cols-1 gap-4 lg:grid-cols-3"
+      >
+        <Tile
+          className="lg:col-span-2 lg:row-span-2"
+          highlight={tab === 'notes'}
+          title="Конспекты"
+          icon={<SquarePen />}
+          actions={[
             { label: 'Импорт', icon: <FileDown />, onClick: () => void pickAndImportNotes(subject.id, navigate) },
             { label: 'Новый', icon: <Plus />, onClick: () => createNote(subject.id) },
-          ]}>
+          ]}
+        >
           {notes.length ? (
             <ul className="-mx-2">
               {notes.map((n) => (
                 <li key={n.id}>
-                  <Link to={`/s/${subject.id}/n/${n.id}`} viewTransition className="group flex items-start gap-3 rounded-xl px-2 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+                  <Link
+                    to={`/s/${subject.id}/n/${n.id}`}
+                    viewTransition
+                    className="group flex items-start gap-3 rounded-xl px-2 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[15px] font-semibold">{n.title || 'Без названия'}</div>
                       <div className="line-clamp-2 text-[13px] text-muted-foreground">{n.excerpt || 'Нет текста'}</div>
@@ -74,7 +89,12 @@ export function SubjectHome() {
           )}
         </Tile>
 
-        <Tile highlight={tab === 'pins'} title="Закреп" icon={<Pin />} actions={[{ label: 'Карточка', icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }]}>
+        <Tile
+          highlight={tab === 'pins'}
+          title="Закреп"
+          icon={<Pin />}
+          actions={[{ label: 'Карточка', icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }]}
+        >
           {pins.length ? (
             <>
               <ul className="space-y-2">
@@ -108,7 +128,12 @@ export function SubjectHome() {
           )}
         </Tile>
 
-        <Tile highlight={tab === 'tools' || drop.over} title="Проекты" icon={<FolderOpen />} actions={[{ label: 'Добавить', icon: <FileUp />, onClick: () => openToolDialog({ subjectId: subject.id }) }]}>
+        <Tile
+          highlight={tab === 'tools' || drop.over}
+          title="Проекты"
+          icon={<FolderOpen />}
+          actions={[{ label: 'Добавить', icon: <FileUp />, onClick: () => openToolDialog({ subjectId: subject.id }) }]}
+        >
           {tools.length ? (
             <div className="flex flex-col items-start gap-3">
               <ToolDock tools={tools} />

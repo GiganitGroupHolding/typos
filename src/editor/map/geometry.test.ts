@@ -22,7 +22,12 @@ describe('файл карты в хранилище', () => {
     const a = sampleVault()
     const v = await repo.loadVault(a)
     const note = v.notes[0]
-    const map = { version: 1 as const, groups: [{ id: 'g', anchor: { kind: 'abs' as const, y: 0 } }], nodes: [{ id: 'n', group: 'g', x: 0, y: 0, w: 120, h: 44, text: 'Ёмкость рынка' }], edges: [] }
+    const map = {
+      version: 1 as const,
+      groups: [{ id: 'g', anchor: { kind: 'abs' as const, y: 0 } }],
+      nodes: [{ id: 'n', group: 'g', x: 0, y: 0, w: 120, h: 44, text: 'Ёмкость рынка' }],
+      edges: [],
+    }
     await repo.saveNoteMap(a, note, map)
     const path = repo.noteMapPath(note)
     expect(path).toMatch(/\/Конспекты\/\.maps\/.+\.json$/)

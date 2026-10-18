@@ -71,7 +71,9 @@ function FileView({ tool }: { tool: Tool }) {
     case 'pptx':
       return <OfficeView blob={file.blob} kind={tool.kind} title={tool.name} />
     default:
-      return <FileCard tool={tool} size={file.blob.size} note="Такой файл браузер не показывает. Скачай оригинал и открой в своей программе." />
+      return (
+        <FileCard tool={tool} size={file.blob.size} note="Такой файл браузер не показывает. Скачай оригинал и открой в своей программе." />
+      )
   }
 }
 
@@ -115,7 +117,10 @@ function ImageView({ url, name }: { url: string; name: string }) {
         type="button"
         aria-label={actual ? 'Вписать в окно' : 'В натуральную величину'}
         onClick={() => setActual((v) => !v)}
-        className={cn('block outline-none focus-visible:ring-2 focus-visible:ring-ring', actual ? 'm-auto cursor-zoom-out' : 'size-full cursor-zoom-in')}
+        className={cn(
+          'block outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          actual ? 'm-auto cursor-zoom-out' : 'size-full cursor-zoom-in',
+        )}
       >
         <img src={url} alt={name} draggable={false} className={cn('select-none', actual ? 'max-w-none' : 'size-full object-contain')} />
       </button>
@@ -194,7 +199,10 @@ function OfficeView({ blob, kind, title }: { blob: Blob; kind: 'docx' | 'pptx'; 
       else if (e.data?.type === 'error') setStatus({ error: String(e.data.message) })
     }
     const onLoad = () => {
-      timer = window.setTimeout(() => !booted && setStatus({ error: 'Не загрузился просмотрщик документов (public/viewers/office.js).' }), 1500)
+      timer = window.setTimeout(
+        () => !booted && setStatus({ error: 'Не загрузился просмотрщик документов (public/viewers/office.js).' }),
+        1500,
+      )
     }
     const frame = ref.current
     addEventListener('message', onMessage)
@@ -208,7 +216,14 @@ function OfficeView({ blob, kind, title }: { blob: Blob; kind: 'docx' | 'pptx'; 
 
   return (
     <div className="relative size-full">
-      <iframe ref={ref} title={title} sandbox="allow-scripts" srcDoc={srcDoc} referrerPolicy="no-referrer" className={cn('size-full border-0', status !== 'ready' && 'invisible')} />
+      <iframe
+        ref={ref}
+        title={title}
+        sandbox="allow-scripts"
+        srcDoc={srcDoc}
+        referrerPolicy="no-referrer"
+        className={cn('size-full border-0', status !== 'ready' && 'invisible')}
+      />
       {status === 'loading' && (
         <div className="absolute inset-0">
           <Spinner text={kind === 'pptx' ? 'Открываю презентацию…' : 'Открываю документ…'} />

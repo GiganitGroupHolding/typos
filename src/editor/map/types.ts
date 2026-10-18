@@ -82,7 +82,15 @@ export function parseNoteMap(text: string | null): NoteMap {
   const groups = new Set(map.groups.map((g) => g.id))
   for (const n of list(raw.nodes)) {
     if (typeof n.id !== 'string' || typeof n.group !== 'string' || !groups.has(n.group)) continue
-    map.nodes.push({ id: n.id, group: n.group, x: num(n.x), y: num(n.y), w: Math.max(MIN_W, num(n.w, 140)), h: Math.max(MIN_H, num(n.h, 44)), text: str(n.text) })
+    map.nodes.push({
+      id: n.id,
+      group: n.group,
+      x: num(n.x),
+      y: num(n.y),
+      w: Math.max(MIN_W, num(n.w, 140)),
+      h: Math.max(MIN_H, num(n.h, 44)),
+      text: str(n.text),
+    })
   }
   const nodes = new Set(map.nodes.map((n) => n.id))
   for (const e of list(raw.edges)) {
@@ -96,7 +104,8 @@ export function parseNoteMap(text: string | null): NoteMap {
 export const serializeNoteMap = (map: NoteMap) => `${JSON.stringify(map, null, 1)}\n`
 
 /** Текст карты для поиска. */
-export const mapText = (map: NoteMap) => [...map.nodes.map((n) => n.text), ...map.edges.map((e) => e.label ?? '')].filter(Boolean).join('\n')
+export const mapText = (map: NoteMap) =>
+  [...map.nodes.map((n) => n.text), ...map.edges.map((e) => e.label ?? '')].filter(Boolean).join('\n')
 
 /** Хеш кода схемы: пробелы и переносы не важны. FNV-1a, 32 бита. */
 export function codeHash(code: string): string {
@@ -110,7 +119,8 @@ export function codeHash(code: string): string {
 }
 
 let seq = 0
-export const mapId = (prefix: string) => `${prefix}${Date.now().toString(36)}${(seq++).toString(36)}${Math.random().toString(36).slice(2, 5)}`
+export const mapId = (prefix: string) =>
+  `${prefix}${Date.now().toString(36)}${(seq++).toString(36)}${Math.random().toString(36).slice(2, 5)}`
 
 /** Блок верхнего уровня, к которому привязана группа: по началу текста, при повторах — ближайший по номеру. */
 export function resolveBlock(blocks: string[], anchor: { text: string; index: number }): number {

@@ -1,12 +1,18 @@
 import { Download, MoreHorizontal, Pencil, PictureInPicture2, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useUi } from '@/app/store'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toastUndo } from '@/lib/undo'
 import { cn } from '@/lib/utils'
-import { useVault } from '@/vault/store'
 import type { Tool } from '@/types'
+import { useVault } from '@/vault/store'
 import { downloadProjectFile } from './projectFiles'
 import { openToolDialog } from './ToolDialog'
 

@@ -1,15 +1,15 @@
-import { motion } from 'motion/react'
 import { Download, PictureInPicture2, RotateCw, ShieldCheck, Smartphone } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router'
+import { useUi } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useUi } from '@/app/store'
 import { kindLabels, toolIcon } from '@/features/subjects/visuals'
-import { ToolActions } from '@/features/tools/ToolActions'
 import { PhonePreview } from '@/features/tools/PhonePreview'
-import { ProjectViewer } from '@/features/tools/ProjectViewer'
 import { downloadProjectFile } from '@/features/tools/projectFiles'
+import { ProjectViewer } from '@/features/tools/ProjectViewer'
+import { ToolActions } from '@/features/tools/ToolActions'
 import { fileSize } from '@/lib/format'
 import { pageEnter } from '@/lib/motion'
 import { cn } from '@/lib/utils'
@@ -54,7 +54,13 @@ export function ToolPage() {
         )}
         {isHtml && (
           <>
-            <Button variant="ghost" size="sm" aria-pressed={phone} onClick={togglePhone} className={cn(phone && 'bg-accent text-highlight')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={phone}
+              onClick={togglePhone}
+              className={cn(phone && 'bg-accent text-highlight')}
+            >
               <Smartphone /> Телефон
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setRunKey((k) => k + 1)}>

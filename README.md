@@ -73,12 +73,21 @@ npm run dev
 
 Open <http://localhost:5173> and pick a folder for your notes. You can also start without one. Notes are then kept in the browser, and one button moves them to a folder later.
 
+The desktop app works in any OS window, without Chrome or Edge. It needs [Rust and the Tauri prerequisites](https://v2.tauri.app/start/prerequisites/); then run `npm run desktop`.
+
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Starts the app locally |
 | `npm run build` | Type-checks and builds for production |
 | `npm test` | Runs the tests with Vitest |
+| `npm run check` | Type-checks, lints, checks formatting and runs the tests: run it before every commit |
+| `npm run format` | Formats the code with Prettier |
 | `npm run icons` | Regenerates the icons and the logo from one shared geometry |
+| `npm run storage -- --dir <folder>` | Starts a storage server for that folder |
+| `npm run desktop` | Starts the desktop app (Tauri) with hot reload |
+| `npm run desktop:build` | Builds the desktop installers |
+| `npm run test:rust` | Runs the tests of the desktop backend |
+| `npm run mcp -- --vault <folder>` | Starts the MCP server for AI assistants (or `--link typos://…` for a storage server) |
 
 ## How it works
 
@@ -119,22 +128,70 @@ A 2×2 determinant: $\det A = ad - bc$
 | Interface | React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Motion |
 | Editor | Tiptap 3, KaTeX, MathLive |
 | Storage and search | File System Access API, IndexedDB, MiniSearch |
+| Desktop | Tauri 2, Rust |
+| Storage server | Node.js, no dependencies, a subset of WebDAV |
 | Background | three.js with a WebGL shader |
-| Build | Vite 8, vite-plugin-pwa, Vitest |
+| Build | Vite 8, vite-plugin-pwa, Vitest, Prettier, oxlint |
 
 ```
 src/
 ├── app/        app shell, routes, theme and subject colors
 ├── editor/     editor, math, paste handling and Markdown
 ├── features/   formula cards, tools, search, subjects
-├── storage/    disk folder and browser storage
+├── storage/    disk folder, browser storage, storage server and sync
 └── vault/      file format and operations on the notes folder
+server/         storage server (one file) and its tests
+src-tauri/      desktop app: window and file access in Rust
+mcp/            MCP server for AI assistants (folder or storage server)
 ```
+
+## Storage server
+
+To keep notes on another machine (a home server, a NAS, a VPS) run the storage server there. It is one file with no dependencies and needs Node.js 18 or newer (20 or newer to see edits made directly in the folder on the server right away). There are no accounts: access is a key inside the connection link.
+
+```bash
+node server/typos-server.mjs --dir ./vault
+```
+
+Every start prints the same connection link, one per address, labelled by where TYPOS is opened: `localhost` when the app runs on the same computer, the network address when it runs on another device. In TYPOS open the storage screen, paste the link and press «Подключить». The link contains the key, so treat it like a password. When the server runs without a terminal (systemd, Docker) the link is not printed; get it with `link`.
+
+One link works for all your devices, and they all see the same vault. Separate device keys are optional and only let you disconnect one device without touching the others.
+
+| Command | What it does |
+| --- | --- |
+| `link [device] --dir ./vault` | Prints the link again. With a new device name, creates a separate key for it |
+| `rotate <device> --dir ./vault` | Gives a device a new key. Its old link stops working (`rotate default` for the shared link) |
+| `devices --dir ./vault` | Lists devices and when they were last seen |
+| `revoke <device> --dir ./vault` | Disconnects a device. The server picks this up without a restart |
+
+Each device keeps its own copy of the server vault. Edits are saved to that copy first and sent to the server right away. When the server can't be reached, you keep working: the edits wait on the device and go up as soon as it is back, and the sidebar shows how many are still waiting. Changes from other devices arrive on their own. If the same file was changed on two devices while they were offline, both versions are kept, and the second one gets «(конфликт …)» in its name.
+
+«Отключить» on the storage screen disconnects the app from the server. The notes stay on the server, and the app goes back to the browser storage exactly as it was before you connected. The device's copy of the server vault stays in the browser too, so edits that were still waiting go up when you connect again.
+
+Bad keys are rate-limited: 10 wrong keys in a minute block that address for a minute. Behind a proxy on the same machine with `--public-url`, the address is taken from the proxy's `X-Forwarded-For` header, so one client can't lock out the others.
+
+The app can run on `localhost` or on any address in your network, for example `npm run preview -- --host`. If the app is opened over `https://`, the server needs HTTPS too: pass `--cert` and `--key`, or put it behind a proxy such as Caddy and pass `--public-url https://notes.example.com`. Over plain `http://` on a network address the browser turns off the folder picker and offline install, but the storage server still works.
+
+The server keeps the vault as the same plain files and speaks a subset of WebDAV under `/files/`, so you can also mount it in a file manager (any user name, the key as the password). Keys are stored in `.typos-server/` inside the vault, readable only by the server's user. The server never serves that folder, under any spelling of its name or through a link.
+
+## MCP server
+
+The MCP server lets an AI assistant such as Claude read your notes and write new ones: notes, formula cards and tools, in the same format the app writes. It works with a folder on this computer or with a storage server.
+
+```bash
+# a notes folder on this computer
+npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "/path/to/notes"
+# a storage server: get a link for it with `link mcp` on the server
+npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…"
+```
+
+Instead of the flags you can set `STUDYNOTES_VAULT` or `STUDYNOTES_LINK`. With a link, every device sees the assistant's edits right away; with a folder, the app picks them up when its window gets focus. A separate device key (`link mcp`) lets you disconnect the assistant without touching your other devices. If the storage server is off when the assistant starts, the MCP server still starts and its tools report that the server can't be reached until it is back.
 
 ## Roadmap
 
-- [ ] Desktop build with Tauri
-- [ ] Folder sync and a phone app
+- [x] Desktop build with Tauri
+- [x] Sync between devices through a storage server
+- [ ] Phone app
 - [ ] Spaced repetition for formula cards
 - [ ] PDF course materials next to the notes
 

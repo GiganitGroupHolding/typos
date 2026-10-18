@@ -1,8 +1,8 @@
 import { toast } from 'sonner'
 import { errorText } from '@/lib/undo'
 import { basename } from '@/storage/VaultAdapter'
-import { useVault } from '@/vault/store'
 import type { Tool } from '@/types'
+import { useVault } from '@/vault/store'
 
 const MIME: Record<string, string> = {
   pdf: 'application/pdf',

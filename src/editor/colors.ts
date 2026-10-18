@@ -54,7 +54,9 @@ export const TextColor = Mark.create({
     }
   },
   parseHTML() {
-    return [{ tag: 'span[data-text-color]', getAttrs: (el) => (isColor((el as HTMLElement).getAttribute('data-text-color')) ? null : false) }]
+    return [
+      { tag: 'span[data-text-color]', getAttrs: (el) => (isColor((el as HTMLElement).getAttribute('data-text-color')) ? null : false) },
+    ]
   },
   renderHTML({ HTMLAttributes }) {
     return ['span', HTMLAttributes, 0]
@@ -100,8 +102,11 @@ export const ColorHighlight = Highlight.extend({
     return {}
   },
   renderMarkdown: (node, h) =>
-    isColor(node.attrs?.color) ? `<mark data-color="${node.attrs.color}">${h.renderChildren(node)}</mark>` : `==${h.renderChildren(node)}==`,
-  parseMarkdown: (token, h) => h.applyMark('highlight', h.parseInline(token.tokens || []), token.color ? { color: token.color } : undefined),
+    isColor(node.attrs?.color)
+      ? `<mark data-color="${node.attrs.color}">${h.renderChildren(node)}</mark>`
+      : `==${h.renderChildren(node)}==`,
+  parseMarkdown: (token, h) =>
+    h.applyMark('highlight', h.parseInline(token.tokens || []), token.color ? { color: token.color } : undefined),
   markdownTokenizer: {
     name: 'highlight',
     level: 'inline',

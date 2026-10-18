@@ -49,7 +49,11 @@ describe('конспекты', () => {
 
   it('update: append, replace_section, replace с переименованием файла', async () => {
     await v.createSubject({ name: 'Физика' })
-    const { id } = await v.createNote({ subject: 'Физика', title: 'Кинематика', markdown: '## Скорость\n\n$v = s/t$\n\n## Ускорение\n\nстарое' })
+    const { id } = await v.createNote({
+      subject: 'Физика',
+      title: 'Кинематика',
+      markdown: '## Скорость\n\n$v = s/t$\n\n## Ускорение\n\nстарое',
+    })
     await v.updateNote({ id, mode: 'append', markdown: '## Итог\n\nвсё' })
     await v.updateNote({ id, mode: 'replace_section', section: 'ускорение', markdown: '$a = \\Delta v / t$' })
     let body = (await v.readNote(id)).markdown
@@ -88,7 +92,12 @@ describe('картинки, закреп, тулзы, поиск, корзина
   it('локальная картинка → webp в assets, ссылка для Markdown', async () => {
     await v.createSubject({ name: 'Химия' })
     const png = path.join(dir, '..', `pic-${Date.now()}.png`)
-    writeFileSync(png, await sharp({ create: { width: 40, height: 20, channels: 3, background: '#f00' } }).png().toBuffer())
+    writeFileSync(
+      png,
+      await sharp({ create: { width: 40, height: 20, channels: 3, background: '#f00' } })
+        .png()
+        .toBuffer(),
+    )
     try {
       const r = await v.addImage({ subject: 'Химия', source: png, alt: 'схема' })
       expect(r.markdown).toMatch(/^!\[схема\]\(assets\/[a-z0-9]+\.webp\)$/)
@@ -100,7 +109,11 @@ describe('картинки, закреп, тулзы, поиск, корзина
 
   it('data:-картинка в тексте конспекта скачивается в assets', async () => {
     await v.createSubject({ name: 'Химия' })
-    const b64 = (await sharp({ create: { width: 4, height: 4, channels: 3, background: '#00f' } }).png().toBuffer()).toString('base64')
+    const b64 = (
+      await sharp({ create: { width: 4, height: 4, channels: 3, background: '#00f' } })
+        .png()
+        .toBuffer()
+    ).toString('base64')
     const { id } = await v.createNote({ subject: 'Химия', title: 'Схема', markdown: `![](data:image/png;base64,${b64})` })
     expect((await v.readNote(id)).markdown).toMatch(/!\[\]\(assets\/[a-z0-9]+\.webp\)/)
   })
@@ -110,7 +123,12 @@ describe('картинки, закреп, тулзы, поиск, корзина
     const p1 = await v.createPin({ subject: 'Математика', title: 'Крамер', tex: 'x_i = \\frac{\\Delta_i}{\\Delta}', text: 'при Δ ≠ 0' })
     await v.createPin({ subject: 'Математика', title: 'Определитель', tex: 'ad - bc' })
     await v.updatePin({ id: p1.id, text: 'Δ ≠ 0, иначе Гаусс' })
-    await v.importTool({ subject: 'Математика', name: 'Калькулятор', html: '<html><head><title>К</title></head><body>1</body></html>', icon: 'grid' })
+    await v.importTool({
+      subject: 'Математика',
+      name: 'Калькулятор',
+      html: '<html><head><title>К</title></head><body>1</body></html>',
+      icon: 'grid',
+    })
     const { id } = await v.createNote({ subject: 'Математика', title: 'Ёмкость', markdown: 'Метод Крамера для систем' })
 
     const s = await v.getSubject('Математика')
@@ -119,7 +137,11 @@ describe('картинки, закреп, тулзы, поиск, корзина
       ['Определитель', 1, undefined],
     ])
     expect(s.tools).toMatchObject([{ name: 'Калькулятор', kind: 'html', file: 'Калькулятор.html' }])
-    const pdf = await v.addProjectFile({ subject: 'Математика', fileName: 'C:\\Загрузки\\Лекция 5 матрицы.pdf', data: new Uint8Array([37, 80, 68, 70]) })
+    const pdf = await v.addProjectFile({
+      subject: 'Математика',
+      fileName: 'C:\\Загрузки\\Лекция 5 матрицы.pdf',
+      data: new Uint8Array([37, 80, 68, 70]),
+    })
     expect(pdf).toMatchObject({ kind: 'pdf', path: 'Математика/Проекты/Лекция 5 матрицы.pdf' })
 
     const hits = await v.search({ query: 'крамер' })

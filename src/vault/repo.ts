@@ -38,20 +38,21 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
   const data: VaultData = { subjects: [], notes: [], pins: [], tools: [] }
   const roots = (await a.list('')).filter((e) => e.kind === 'dir' && !e.name.startsWith('.'))
 
-  for (const [i, root] of roots.entries()) {
-    const subject = await readSubject(a, root.name, i)
-    data.subjects.push(subject)
+  for (const [i, root] of roots.entries()) data.subjects.push(await readSubject(a, root.name, i))
+  data.subjects = uniqueIds(data.subjects, (s) => s.dir)
+
+  for (const subject of data.subjects) {
     const maps = new Map<string, string>()
     const notes: Note[] = []
     await Promise.all([
-      readFiles(a, joinPath(root.name, NOTES_DIR), '.md', async (path, text) => {
+      readFiles(a, joinPath(subject.dir, NOTES_DIR), '.md', async (path, text) => {
         notes.push(noteFromFile(subject.id, path, text))
       }),
-      readFiles(a, joinPath(root.name, NOTES_DIR, MAPS_DIR), '.json', async (path, text) => {
+      readFiles(a, joinPath(subject.dir, NOTES_DIR, MAPS_DIR), '.json', async (path, text) => {
         const t = mapText(parseNoteMap(text))
         if (t) maps.set(basename(path).replace(/\.json$/, ''), t)
       }),
-      readFiles(a, joinPath(root.name, PINS_DIR), '.md', async (path, text) => {
+      readFiles(a, joinPath(subject.dir, PINS_DIR), '.md', async (path, text) => {
         const { meta, body } = parseFrontmatter(text)
         const p = parsePinBody(body)
         data.pins.push({
@@ -65,14 +66,17 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
         })
       }),
       // старая папка «Инструменты» — тоже: до миграции (и в MCP, где миграции нет) файлы не пропадают
-      readProjects(a, joinPath(root.name, PROJECTS_DIR), subject.id, data.tools),
-      readProjects(a, joinPath(root.name, TOOLS_DIR), subject.id, data.tools),
+      readProjects(a, joinPath(subject.dir, PROJECTS_DIR), subject.id, data.tools),
+      readProjects(a, joinPath(subject.dir, TOOLS_DIR), subject.id, data.tools),
     ])
     for (const n of notes) {
       const t = maps.get(n.id)
       data.notes.push(t ? { ...n, mapText: t } : n)
     }
   }
+  data.notes = uniqueIds(data.notes, (n) => n.path)
+  data.pins = uniqueIds(data.pins, (p) => p.path)
+  data.tools = uniqueIds(data.tools, (t) => t.path)
   data.subjects.sort((x, y) => x.order - y.order || x.name.localeCompare(y.name, 'ru'))
   data.pins.sort((x, y) => x.order - y.order || x.title.localeCompare(y.title, 'ru'))
   data.tools.sort((x, y) => x.name.localeCompare(y.name, 'ru'))
@@ -172,6 +176,23 @@ function pathId(path: string) {
   let h = 0
   for (const ch of path) h = (Math.imul(31, h) + ch.charCodeAt(0)) | 0
   return `f${(h >>> 0).toString(36)}`
+}
+
+/**
+ * Один id у нескольких файлов: конспект переименовали на двух устройствах сразу (синхронизация видит два разных файла)
+ * или скопировали файл руками. id остаётся у первого по пути, остальным — id от пути: на всех устройствах выйдет одно и то же,
+ * а при сохранении новый id запишется в файл.
+ */
+function uniqueIds<T extends { id: string }>(items: T[], key: (x: T) => string): T[] {
+  const seen = new Set<string>()
+  const fixed = new Map<T, string>()
+  for (const it of [...items].sort((x, y) => (key(x) < key(y) ? -1 : key(x) > key(y) ? 1 : 0))) {
+    let id = it.id
+    for (let salt = ''; seen.has(id); salt += '#') id = pathId(key(it) + salt)
+    seen.add(id)
+    if (id !== it.id) fixed.set(it, id)
+  }
+  return fixed.size ? items.map((it) => (fixed.has(it) ? { ...it, id: fixed.get(it)! } : it)) : items
 }
 
 export function noteFromFile(subjectId: string, path: string, text: string): Note {

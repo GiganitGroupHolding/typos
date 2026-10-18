@@ -1,7 +1,7 @@
 import CodeBlock, { type CodeBlockOptions } from '@tiptap/extension-code-block'
 import type { Node as PMNode } from '@tiptap/pm/model'
-import { codeHash } from './map/types'
 import { mapSlots } from './map/slots'
+import { codeHash } from './map/types'
 
 /*
  * Блок кода; с языком mermaid — рисуется схемой (как на GitHub и в Obsidian).
@@ -18,8 +18,22 @@ const isDark = () => document.documentElement.classList.contains('dark')
 
 // узлы — тёмные (светлые) плашки с тонкой рамкой, линии серые; Mermaid считает оттенки сам, поэтому только hex
 const PALETTE = {
-  light: { primaryColor: '#ffffff', primaryTextColor: '#1f1e1d', primaryBorderColor: '#d6d3cb', lineColor: '#9b988f', secondaryColor: '#f4f3ef', tertiaryColor: '#f8f7f4' },
-  dark: { primaryColor: '#1c1c1d', primaryTextColor: '#f2f2f0', primaryBorderColor: '#3d3d3f', lineColor: '#8a8a88', secondaryColor: '#242425', tertiaryColor: '#202021' },
+  light: {
+    primaryColor: '#ffffff',
+    primaryTextColor: '#1f1e1d',
+    primaryBorderColor: '#d6d3cb',
+    lineColor: '#9b988f',
+    secondaryColor: '#f4f3ef',
+    tertiaryColor: '#f8f7f4',
+  },
+  dark: {
+    primaryColor: '#1c1c1d',
+    primaryTextColor: '#f2f2f0',
+    primaryBorderColor: '#3d3d3f',
+    lineColor: '#8a8a88',
+    secondaryColor: '#242425',
+    tertiaryColor: '#202021',
+  },
 }
 
 // скруглённые узлы без теней, тонкие линии
@@ -168,7 +182,11 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
         // сначала раскрыть код, потом ставить в него курсор
         inside = true
         sync()
-        editor.chain().focus().setTextSelection(pos + 1 + current.content.size).run()
+        editor
+          .chain()
+          .focus()
+          .setTextSelection(pos + 1 + current.content.size)
+          .run()
       }
       view.addEventListener('mousedown', openCode)
       slot.addEventListener('mousedown', openCode)

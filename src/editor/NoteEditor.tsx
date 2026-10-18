@@ -1,18 +1,11 @@
-import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { Placeholder } from '@tiptap/extensions'
 import { TextSelection } from '@tiptap/pm/state'
-import {
-  BookOpen,
-  Check,
-  Loader2,
-  MoreHorizontal,
-  PenLine,
-  Trash2,
-  Type,
-} from 'lucide-react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import { BookOpen, Check, Loader2, MoreHorizontal, PenLine, Trash2, Type } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { useUi, type NoteFont } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -27,24 +20,23 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useUi, type NoteFont } from '@/app/store'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
 import { relativeTime } from '@/lib/format'
 import { toastUndo } from '@/lib/undo'
 import { cn } from '@/lib/utils'
 import { dirname, joinPath } from '@/storage/VaultAdapter'
+import type { Note } from '@/types'
 import { sameBody } from '@/vault/format'
 import { NoteConflictError, useVault, vaultFileUrl } from '@/vault/store'
-import type { Note } from '@/types'
-import { buildExtensions } from './extensions'
-import { htmlMathToNodes, looksLikeMarkdown, normalizeMarkdownMath } from './texImport'
-import { BubbleToolbar } from './BubbleToolbar'
-import { TableMenu } from './TableMenu'
-import { MathPopover, type MathEdit } from './MathPopover'
-import { SideToolbar } from './SideToolbar'
-import { NoteCanvas } from './map/NoteCanvas'
 import { BlockHandle } from './blocks/BlockHandle'
 import { Folding } from './blocks/folding'
+import { BubbleToolbar } from './BubbleToolbar'
+import { buildExtensions } from './extensions'
+import { NoteCanvas } from './map/NoteCanvas'
+import { MathPopover, type MathEdit } from './MathPopover'
+import { SideToolbar } from './SideToolbar'
+import { TableMenu } from './TableMenu'
+import { htmlMathToNodes, looksLikeMarkdown, normalizeMarkdownMath } from './texImport'
 
 const SAVE_DELAY = 500
 
@@ -207,7 +199,10 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       for (const f of files) {
         try {
           const src = await useVault.getState().saveImage(id, f)
-          ed.chain().focus().insertContentAt(at ?? ed.state.selection.from, { type: 'image', attrs: { src, alt: '' } }).run()
+          ed.chain()
+            .focus()
+            .insertContentAt(at ?? ed.state.selection.from, { type: 'image', attrs: { src, alt: '' } })
+            .run()
         } catch (e) {
           toast.error('Не удалось вставить картинку', { description: e instanceof Error ? e.message : String(e) })
         }
@@ -469,7 +464,10 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       </div>
 
       <div
-        className={cn('note-prose mx-auto w-full pt-8 pr-20 pb-32 pl-6 transition-colors duration-(--dur-slow) lg:px-6', reading && 'note-reading')}
+        className={cn(
+          'note-prose mx-auto w-full pt-8 pr-20 pb-32 pl-6 transition-colors duration-(--dur-slow) lg:px-6',
+          reading && 'note-reading',
+        )}
         data-font={reading ? 'serif' : font}
       >
         <p className="mb-5 text-center text-[13px] text-muted-foreground">
@@ -492,7 +490,10 @@ function SaveIndicator({ state }: { state: SaveState }) {
   return (
     <span
       aria-live="polite"
-      className={cn('flex items-center gap-1 px-1 text-[12px]', state === 'error' || state === 'conflict' ? 'text-destructive' : 'text-muted-foreground')}
+      className={cn(
+        'flex items-center gap-1 px-1 text-[12px]',
+        state === 'error' || state === 'conflict' ? 'text-destructive' : 'text-muted-foreground',
+      )}
     >
       {state === 'saving' || state === 'dirty' ? (
         <>

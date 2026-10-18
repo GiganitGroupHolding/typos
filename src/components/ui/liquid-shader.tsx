@@ -356,7 +356,12 @@ function appBackground(): THREE.Vector3 {
   return new THREE.Vector3(r / 255, g / 255, b / 255)
 }
 
-export function InteractiveNebulaShader({ variant = 'nebula', avoidText = false, disableCenterDimming = false, className = '' }: InteractiveNebulaShaderProps) {
+export function InteractiveNebulaShader({
+  variant = 'nebula',
+  avoidText = false,
+  disableCenterDimming = false,
+  className = '',
+}: InteractiveNebulaShaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const avoidRef = useRef(avoidText)
   const kick = useRef<() => void>(() => {})
@@ -553,7 +558,10 @@ export function InteractiveNebulaShader({ variant = 'nebula', avoidText = false,
       uniforms.uTintCol.value.lerp(target.tintCol, ck)
       uniforms.uTint.value += (target.tint - uniforms.uTint.value) * ck
       const coloring =
-        uniforms.uBg.value.distanceTo(target.bg) + uniforms.uTintCol.value.distanceTo(target.tintCol) + Math.abs(uniforms.uTint.value - target.tint) > 0.002
+        uniforms.uBg.value.distanceTo(target.bg) +
+          uniforms.uTintCol.value.distanceTo(target.tintCol) +
+          Math.abs(uniforms.uTint.value - target.tint) >
+        0.002
 
       if (!reduced || boost > 0.01 || moving || coloring || dirty) {
         renderer.render(scene, camera)

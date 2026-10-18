@@ -54,15 +54,33 @@ export function PhonePreview({ html, title, runKey }: { html: string; title: str
         <div style={{ width: stageW, height: stageH, transform: `scale(${scale})` }} className="absolute top-0 left-0 origin-top-left">
           <div
             style={{ left: g.screen.x * k, top: g.screen.y * k, width: SCREEN_W, height: screenH, borderRadius: g.screen.radius * k }}
-            className={cn('absolute flex flex-col overflow-hidden', theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black', !frame && 'shadow-float ring-[10px] ring-neutral-900')}
+            className={cn(
+              'absolute flex flex-col overflow-hidden',
+              theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black',
+              !frame && 'shadow-float ring-[10px] ring-neutral-900',
+            )}
           >
             <StatusBar />
-            {!frame && <span aria-hidden className="absolute top-[11px] left-1/2 h-[37px] w-[125px] -translate-x-1/2 rounded-full bg-black" />}
+            {!frame && (
+              <span aria-hidden className="absolute top-[11px] left-1/2 h-[37px] w-[125px] -translate-x-1/2 rounded-full bg-black" />
+            )}
             {/* iframe — только когда сцена уже разложена, иначе скрипт страницы успевает увидеть innerWidth = 0 */}
             <div className="min-h-0 flex-1">{scale > 0 && <ToolFrame html={html} title={title} runKey={runKey} />}</div>
-            <span aria-hidden className="pointer-events-none absolute bottom-2 left-1/2 h-[5px] w-[140px] -translate-x-1/2 rounded-full bg-current opacity-80" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-2 left-1/2 h-[5px] w-[140px] -translate-x-1/2 rounded-full bg-current opacity-80"
+            />
           </div>
-          {frame && <img src={frame.src} alt="" aria-hidden draggable={false} onError={() => setMissing(true)} className="pointer-events-none absolute inset-0 size-full select-none" />}
+          {frame && (
+            <img
+              src={frame.src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              onError={() => setMissing(true)}
+              className="pointer-events-none absolute inset-0 size-full select-none"
+            />
+          )}
         </div>
       </div>
     </div>
@@ -72,7 +90,11 @@ export function PhonePreview({ html, title, runKey }: { html: string; title: str
 /** Строка статуса iOS: время слева, сеть / Wi-Fi / батарея справа, посередине место под Dynamic Island. */
 function StatusBar() {
   return (
-    <div aria-hidden style={{ height: STATUS_H }} className="flex shrink-0 items-center justify-between px-[38px] pt-[14px] text-[17px] font-semibold tracking-tight select-none">
+    <div
+      aria-hidden
+      style={{ height: STATUS_H }}
+      className="flex shrink-0 items-center justify-between px-[38px] pt-[14px] text-[17px] font-semibold tracking-tight select-none"
+    >
       <span className="w-[78px] text-center tabular-nums">9:41</span>
       <span className="flex items-center gap-[7px]">
         <svg width="19" height="12" viewBox="0 0 19 12" fill="currentColor">

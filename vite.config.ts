@@ -4,8 +4,14 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const local = (dir: string) => `${path.resolve(import.meta.dirname, dir)}/**`
+// Tauri CLI задаёт TAURI_ENV_* для beforeDevCommand / beforeBuildCommand
+const tauri = !!process.env.TAURI_ENV_PLATFORM
+
 // https://vite.dev/config/
 export default defineConfig({
+  // ошибки Rust в том же терминале не должны стираться
+  clearScreen: !tauri,
   plugins: [
     react(),
     tailwindcss(),
@@ -49,6 +55,13 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    // окно Tauri открывает ровно devUrl из tauri.conf.json
+    strictPort: tauri,
+    // Node-код (MCP, сервер хранения) и vault внутри проекта браузеру не нужны:
+    // без этого правка конспекта на сервере хранения перезагружала бы страницу
+    watch: { ignored: [local('server'), local('mcp'), local('vault'), local('src-tauri'), '**/.typos-server/**'] },
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

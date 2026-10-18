@@ -3,8 +3,8 @@ import { importHtmlFile } from '@/features/tools/ToolDialog'
 import { isImageFile, isMarkdownFile, pickFiles } from '@/lib/files'
 import { plural } from '@/lib/format'
 import { errorText } from '@/lib/undo'
-import { useVault } from '@/vault/store'
 import type { Tool } from '@/types'
+import { useVault } from '@/vault/store'
 
 type Go = (to: string) => void
 
@@ -32,7 +32,11 @@ export async function importFiles(subjectId: string, files: File[], go: Go) {
   const added: Tool[] = []
   for (const f of rest) {
     try {
-      added.push(isHtmlFile(f) ? await importHtmlFile(subjectId, f) : await useVault.getState().importProjectFile(subjectId, { name: f.name, blob: f }))
+      added.push(
+        isHtmlFile(f)
+          ? await importHtmlFile(subjectId, f)
+          : await useVault.getState().importProjectFile(subjectId, { name: f.name, blob: f }),
+      )
     } catch (err) {
       toast.error(`Не удалось добавить «${f.name}»`, { description: errorText(err) })
     }

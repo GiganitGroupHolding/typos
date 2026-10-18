@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { useUi } from '@/app/store'
+import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { cn } from '@/lib/utils'
 import { useVault } from '@/vault/store'
 import { clamp, contains, curve, edgePath, rectOf, sidePoint, type Rect, type Side } from './geometry'
@@ -60,7 +60,10 @@ function withFlow(map: NoteMap, hash: string, laid: LaidOut, width: number): Not
   return {
     ...map,
     groups: [...map.groups, group],
-    nodes: [...map.nodes, ...laid.nodes.map((n) => ({ id: ids.get(n.id)!, group: group.id, x: n.x + dx, y: n.y + SLOT_PAD / 2, w: n.w, h: n.h, text: n.text }))],
+    nodes: [
+      ...map.nodes,
+      ...laid.nodes.map((n) => ({ id: ids.get(n.id)!, group: group.id, x: n.x + dx, y: n.y + SLOT_PAD / 2, w: n.w, h: n.h, text: n.text })),
+    ],
     edges: [...map.edges, ...laid.edges.map((e) => ({ id: mapId('e'), from: ids.get(e.from)!, to: ids.get(e.to)!, label: e.label }))],
   }
 }
@@ -91,7 +94,11 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
   const [tops, setTops] = useState<Record<string, number>>({})
   const topsRef = useRef(tops)
   const [width, setWidth] = useState(0)
-  const [sig, setSig] = useState(() => mermaidBlocks(editor).map((b) => b.hash).join(','))
+  const [sig, setSig] = useState(() =>
+    mermaidBlocks(editor)
+      .map((b) => b.hash)
+      .join(','),
+  )
   const [sel, setSel] = useState<Selection>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [fresh, setFresh] = useState<string | null>(null)
@@ -116,7 +123,10 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     // где были якоря — на случай, если абзац или схему удалят
     const t = topsRef.current
     const next = { ...m, groups: m.groups.map((g) => (t[g.id] !== undefined ? { ...g, lastY: Math.round(t[g.id]) } : g)) }
-    void useVault.getState().saveNoteMap(noteId, next).catch((e) => console.warn('Карта не сохранилась', e))
+    void useVault
+      .getState()
+      .saveNoteMap(noteId, next)
+      .catch((e) => console.warn('Карта не сохранилась', e))
   }, [noteId])
 
   /** record — положить прежнее состояние в историю (Ctrl+Z); при переносе мышью кладётся один раз в начале. */
@@ -156,7 +166,13 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
    * (у пустой строки нет текста, её можно найти лишь по номеру, а номера при этом сдвигаются).
    */
   const contentBlocks = useCallback(
-    () => blocks().filter((b) => blockKey(b.textContent ?? '') !== '' || !!b.querySelector('img, hr, table, .diagram-block, [data-type="block-math"]') || b.matches('.diagram-block, hr')),
+    () =>
+      blocks().filter(
+        (b) =>
+          blockKey(b.textContent ?? '') !== '' ||
+          !!b.querySelector('img, hr, table, .diagram-block, [data-type="block-math"]') ||
+          b.matches('.diagram-block, hr'),
+      ),
     [blocks],
   )
 
@@ -199,7 +215,10 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
         if (own.length) {
           const upper = top + Math.min(...own.map((n) => n.y))
           if (top > upper + 0.5) {
-            const j = Math.max(0, list.findLastIndex((b) => !b.classList.contains('is-folded') && topOf(b) <= upper + 0.5))
+            const j = Math.max(
+              0,
+              list.findLastIndex((b) => !b.classList.contains('is-folded') && topOf(b) <= upper + 0.5),
+            )
             if (j !== i) {
               shift = top - topOf(list[j])
               i = j
@@ -208,7 +227,8 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
           }
         }
         next[g.id] = top
-        if (shift || keys[i] !== g.anchor.text || i !== g.anchor.index) fixed.set(g.id, { anchor: { kind: 'block', text: keys[i], index: i }, shift })
+        if (shift || keys[i] !== g.anchor.text || i !== g.anchor.index)
+          fixed.set(g.id, { anchor: { kind: 'block', text: keys[i], index: i }, shift })
       } else next[g.id] = g.anchor.y
     }
     if (fixed.size) {
@@ -223,7 +243,9 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     }
     setWidth(el.clientWidth)
     setTops((prev) => {
-      const same = Object.keys(next).length === Object.keys(prev).length && Object.entries(next).every(([k, v]) => Math.abs((prev[k] ?? NaN) - v) < 0.5)
+      const same =
+        Object.keys(next).length === Object.keys(prev).length &&
+        Object.entries(next).every(([k, v]) => Math.abs((prev[k] ?? NaN) - v) < 0.5)
       if (same) return prev
       topsRef.current = next
       return next
@@ -239,7 +261,11 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     // любое изменение документа, в том числе подгрузка версии с диска (она не шлёт update)
     const onUpdate = ({ transaction }: { transaction: { docChanged: boolean } }) => {
       if (!transaction.docChanged) return
-      setSig(mermaidBlocks(editor).map((b) => b.hash).join(','))
+      setSig(
+        mermaidBlocks(editor)
+          .map((b) => b.hash)
+          .join(','),
+      )
       schedule()
     }
     editor.on('transaction', onUpdate)
@@ -276,7 +302,14 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       for (const g of m.groups) {
         if (g.anchor.kind !== 'mermaid' || hashes.has(g.anchor.hash)) continue
         // код сменили: нетронутую карту пересобираем, правленую оставляем на прежнем месте
-        m = g.edited ? { ...m, groups: m.groups.map((x) => (x.id === g.id ? { ...x, anchor: { kind: 'abs', y: topsRef.current[g.id] ?? g.lastY ?? 0 } } : x)) } : withoutGroup(m, g.id)
+        m = g.edited
+          ? {
+              ...m,
+              groups: m.groups.map((x) =>
+                x.id === g.id ? { ...x, anchor: { kind: 'abs', y: topsRef.current[g.id] ?? g.lastY ?? 0 } } : x,
+              ),
+            }
+          : withoutGroup(m, g.id)
         changed = true
       }
       for (const b of present) {
@@ -292,7 +325,11 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
         }
         if (laid.width > el.clientWidth) {
           const k = el.clientWidth / laid.width
-          laid = { ...laid, width: el.clientWidth, nodes: laid.nodes.map((n) => ({ ...n, x: Math.round(n.x * k), w: Math.max(MIN_W, Math.round(n.w * k)) })) }
+          laid = {
+            ...laid,
+            width: el.clientWidth,
+            nodes: laid.nodes.map((n) => ({ ...n, x: Math.round(n.x * k), w: Math.max(MIN_W, Math.round(n.w * k)) })),
+          }
         }
         if (cancelled) return
         m = withFlow(m, b.hash, laid, el.clientWidth)
@@ -336,7 +373,8 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     return { x: e.clientX - r.left, y: e.clientY - r.top }
   }
 
-  const nodeAt = (p: { x: number; y: number }, except?: string) => [...rects.values()].reverse().find((r) => r.node.id !== except && contains(r, p, 6))
+  const nodeAt = (p: { x: number; y: number }, except?: string) =>
+    [...rects.values()].reverse().find((r) => r.node.id !== except && contains(r, p, 6))
 
   /** Группа для нового блока: ближайший блок с содержимым на уровне точки или выше (своя группа на каждый). */
   const groupAt = (m: NoteMap, y: number): { map: NoteMap; group: string; top: number } => {
@@ -366,7 +404,15 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
   const addNode = (m: NoteMap, r: Rect): { map: NoteMap; id: string } => {
     const at = groupAt(m, r.y)
     const w = Math.max(MIN_W, r.w)
-    const node: MapNode = { id: mapId('n'), group: at.group, x: clamp(r.x, 0, width - w), y: Math.max(0, r.y) - at.top, w, h: Math.max(MIN_H, r.h), text: '' }
+    const node: MapNode = {
+      id: mapId('n'),
+      group: at.group,
+      x: clamp(r.x, 0, width - w),
+      y: Math.max(0, r.y) - at.top,
+      w,
+      h: Math.max(MIN_H, r.h),
+      text: '',
+    }
     return { map: { ...at.map, nodes: [...at.map.nodes, node] }, id: node.id }
   }
 
@@ -376,7 +422,11 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     if (sel.kind === 'edge') commit({ ...m, edges: m.edges.filter((e) => e.id !== sel.id) })
     else {
       const marked = markEdited(m, [sel.id])
-      commit({ ...marked, nodes: marked.nodes.filter((n) => n.id !== sel.id), edges: marked.edges.filter((e) => e.from !== sel.id && e.to !== sel.id) })
+      commit({
+        ...marked,
+        nodes: marked.nodes.filter((n) => n.id !== sel.id),
+        edges: marked.edges.filter((e) => e.from !== sel.id && e.to !== sel.id),
+      })
     }
     setSel(null)
   }
@@ -565,7 +615,15 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       >
         <svg aria-hidden className="pointer-events-none absolute inset-0 size-full overflow-visible text-muted-foreground">
           <defs>
-            <marker id={`map-arrow-${noteId}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <marker
+              id={`map-arrow-${noteId}`}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
               <path d="M0 0.5 L10 5 L0 9.5 z" fill="currentColor" />
             </marker>
           </defs>
@@ -592,7 +650,14 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
                 )}
                 <path d={g.d} fill="none" stroke="currentColor" strokeWidth={picked ? 2 : 1.5} markerEnd={`url(#map-arrow-${noteId})`} />
                 {e.label && (
-                  <text x={g.mid.x} y={g.mid.y} dy="0.35em" textAnchor="middle" className="fill-foreground text-[12.5px]" style={{ paintOrder: 'stroke', stroke: 'var(--background)', strokeWidth: 4, strokeLinejoin: 'round' }}>
+                  <text
+                    x={g.mid.x}
+                    y={g.mid.y}
+                    dy="0.35em"
+                    textAnchor="middle"
+                    className="fill-foreground text-[12.5px]"
+                    style={{ paintOrder: 'stroke', stroke: 'var(--background)', strokeWidth: 4, strokeLinejoin: 'round' }}
+                  >
                     {e.label}
                   </text>
                 )}
@@ -605,7 +670,17 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
               if (!from) return null
               const target = nodeAt(d, d.from)
               const g = target ? edgePath(from, target) : curve(sidePoint(from, d.side), d.side, d, null)
-              return <path d={g.d} fill="none" stroke="currentColor" strokeWidth={1.5} strokeDasharray="5 4" markerEnd={`url(#map-arrow-${noteId})`} className="text-highlight" />
+              return (
+                <path
+                  d={g.d}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  markerEnd={`url(#map-arrow-${noteId})`}
+                  className="text-highlight"
+                />
+              )
             })()}
         </svg>
 
@@ -628,7 +703,12 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
         {d?.kind === 'draw' && (
           <div
             style={rectStyle(rectOf(d.x0, d.y0, d.x1, d.y1))}
-            className={cn('pointer-events-none absolute rounded-[14px] border-[1.5px] border-dashed', rectOf(d.x0, d.y0, d.x1, d.y1).w >= MIN_W && rectOf(d.x0, d.y0, d.x1, d.y1).h >= MIN_H ? 'border-highlight bg-highlight/5' : 'border-muted-foreground/50')}
+            className={cn(
+              'pointer-events-none absolute rounded-[14px] border-[1.5px] border-dashed',
+              rectOf(d.x0, d.y0, d.x1, d.y1).w >= MIN_W && rectOf(d.x0, d.y0, d.x1, d.y1).h >= MIN_H
+                ? 'border-highlight bg-highlight/5'
+                : 'border-muted-foreground/50',
+            )}
           />
         )}
       </div>
@@ -682,7 +762,10 @@ function MapBlock({
       <NodeText text={node.text} editing={editing} onCommit={onCommit} />
       {mode && !editing && (
         // слой ручек: у прямых детей линзы position: relative — поэтому absolute задан в style
-        <div style={{ position: 'absolute', inset: 0, zIndex: 3 }} className={cn('pointer-events-none opacity-0 transition-opacity group-hover/node:opacity-100', selected && 'opacity-100')}>
+        <div
+          style={{ position: 'absolute', inset: 0, zIndex: 3 }}
+          className={cn('pointer-events-none opacity-0 transition-opacity group-hover/node:opacity-100', selected && 'opacity-100')}
+        >
           {SIDES.map((side) => {
             const p = sidePoint({ x: 0, y: 0, w: rect.w, h: rect.h }, side)
             return (
@@ -770,13 +853,16 @@ function MapHint() {
       ref={lens.attach}
       role="status"
       style={lens.style}
-      className={cn(lens.className, 'pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12.5px] whitespace-nowrap text-muted-foreground')}
+      className={cn(
+        lens.className,
+        'pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12.5px] whitespace-nowrap text-muted-foreground',
+      )}
     >
       {lens.extras}
       <span>
-        <b className="font-semibold text-foreground">Карта</b> · протяни по пустому месту — блок · точка на краю — стрелка · двойной щелчок — текст · Delete · Ctrl+Z · Esc — выйти
+        <b className="font-semibold text-foreground">Карта</b> · протяни по пустому месту — блок · точка на краю — стрелка · двойной щелчок
+        — текст · Delete · Ctrl+Z · Esc — выйти
       </span>
     </div>
   )
 }
-
