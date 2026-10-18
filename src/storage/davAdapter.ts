@@ -1,21 +1,31 @@
-import { RemoteAdapter, RemoteError } from '@/storage/remoteAdapter'
-import type { Entry, VaultAdapter } from '@/storage/VaultAdapter'
+import { RemoteAdapter, RemoteError } from './remoteAdapter'
+import type { Entry, VaultAdapter } from './VaultAdapter'
 
 /**
- * Только для тестов: vault прямо на сервере через WebDAV, без локальной копии.
- * Так ходит в хранилище файловый менеджер; тесты так проверяют сервер и кладут файлы «с другого устройства».
+ * Vault прямо на сервере хранения через WebDAV, без локальной копии: каждый вызов идёт в сеть.
+ * Так работают MCP-сервер (--link) и тесты сервера; приложение ходит через локальную копию (syncedAdapter).
  */
 
-const DAV = 'DAV:'
+/** Тег с любым префиксом пространства имён: «<d:href>», «<D:href>», «<href>». */
+const tag = (name: string) => `<(?:[\\w-]+:)?${name}\\b`
+const RESPONSE = new RegExp(`${tag('response')}[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?response>`, 'g')
+const HREF = new RegExp(`${tag('href')}[^>]*>([^<]*)<`)
+const COLLECTION = new RegExp(tag('collection'))
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+const unescapeXml = (s: string) =>
+  s.replace(/&(?:#x([0-9a-f]+)|#(\d+)|(\w+));/gi, (m, hex?: string, dec?: string, name?: string) =>
+    hex ? String.fromCodePoint(parseInt(hex, 16)) : dec ? String.fromCodePoint(Number(dec)) : (ENTITIES[name!] ?? m),
+  )
 
-/** Ответ PROPFIND Depth: 1 → содержимое папки. Сама папка — запись с самым коротким путём. */
-function parseListing(xml: string): Entry[] {
-  const doc = new DOMParser().parseFromString(xml, 'application/xml')
-  const items = [...doc.getElementsByTagNameNS(DAV, 'response')].map((r) => {
-    const href = r.getElementsByTagNameNS(DAV, 'href')[0]?.textContent ?? ''
+/**
+ * Ответ PROPFIND Depth: 1 → содержимое папки. Сама папка — запись с самым коротким путём.
+ * Разбираем регулярками, а не DOMParser: его нет в Node, где работает MCP-сервер.
+ */
+export function parseListing(xml: string): Entry[] {
+  const items = [...xml.matchAll(RESPONSE)].map(([, body]) => {
+    const href = unescapeXml(HREF.exec(body)?.[1] ?? '')
     const segments = new URL(href, 'http://x').pathname.split('/').filter(Boolean).map(decodeURIComponent)
-    const isDir = r.getElementsByTagNameNS(DAV, 'collection').length > 0
-    return { segments, isDir }
+    return { segments, isDir: COLLECTION.test(body) }
   })
   if (!items.length) return []
   const depth = Math.min(...items.map((i) => i.segments.length))

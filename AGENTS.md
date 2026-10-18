@@ -24,10 +24,11 @@ src/storage/    VaultAdapter implementations, storage server client, sync engine
 src/vault/      file format (format.ts), file operations (repo.ts), app state (store.ts)
 server/         typos-server.mjs (storage server, one file, JSDoc-typed JS) + integration tests
 src-tauri/      desktop backend (Rust): window, folder picker, file access
-mcp/            MCP server; reuses src/vault through NodeFsAdapter
+mcp/            MCP server; reuses src/vault through NodeFsAdapter (--vault) or DavAdapter (--link)
 ```
 
-All file access goes through `VaultAdapter` (`src/storage/VaultAdapter.ts`). UI and `repo.ts` never know which storage is open. Kinds: `browser` (IndexedDB), `folder` (File System Access in the browser, `TauriAdapter` on desktop), `remote` (`SyncedAdapter`: local IndexedDB copy + `SyncEngine` + `RemoteAdapter` transport), `memory` (tests).
+All file access goes through `VaultAdapter` (`src/storage/VaultAdapter.ts`). UI and `repo.ts` never know which storage is open. Kinds: `browser` (IndexedDB), `folder` (File System Access in the browser, `TauriAdapter` on desktop), `remote` (`SyncedAdapter`: local IndexedDB copy + `SyncEngine` + `RemoteAdapter` transport; `DavAdapter` talks to the server directly with no local copy, for the MCP server and tests), `memory` (tests).
+Code in `src/storage/` and `src/vault/` also runs in Node (MCP server, tests): no `DOMParser`, `window` or `document` there, except in clearly browser-only adapters.
 
 ## Language
 
@@ -70,7 +71,7 @@ Comment *why*, not what: one short Russian line above the non-obvious decision (
 ## Security invariants (don't break these)
 
 - **Vault paths** are relative, `/`-separated, with no `..`, `.`, `\`, `:` segments. Every adapter rejects anything else.
-- **Storage server**: never serve `.typos-server/` (key storage) under any spelling (`isStateDir`) or through a symlink (`insideState`); never follow links outside the vault (`insideRoot`); writes are atomic (`writeAtomic`) and serialized (`exclusive`); conditional writes use ETags. Validate every CLI number with `numberFlag`.
+- **Storage server**: never serve `.typos-server/` (key storage) under any spelling (`isStateDir`) or through a symlink (`insideState`). The MCP `NodeFsAdapter` has the same check (`isServerStateDir`); keep them in sync; never follow links outside the vault (`insideRoot`); writes are atomic (`writeAtomic`) and serialized (`exclusive`); conditional writes use ETags. Validate every CLI number with `numberFlag`.
 - **Desktop**: Rust file commands work only inside folders in the `Granted` set, which only the native folder dialog (`vault_pick`) or the saved choice (`vault_saved`) can add to. Never add a command that takes an arbitrary path from JS without `Granted::check`. Keep the window's capabilities minimal (`core:default`).
 - **HTML tools** run in a sandboxed iframe without `allow-same-origin` plus their own CSP (`src/features/tools/sandbox.ts`). Don't loosen either.
 - Connection links contain the device key. Never log them, and never put them in URLs that leave the device.
@@ -78,7 +79,7 @@ Comment *why*, not what: one short Russian line above the non-obvious decision (
 ## Tests
 
 - Vitest, files `*.test.ts` next to the code (`src/**`, `mcp/**`, `server/**`). Test names are Russian sentences that describe behaviour.
-- Storage-server and sync tests in `server/` start a real server on port 0 in a temp dir. Use `DavAdapter` (`server/davAdapter.ts`) to read and write the server directly, as "another device" or a file manager would.
+- Storage-server and sync tests in `server/` start a real server on port 0 in a temp dir. Use `DavAdapter` (`src/storage/davAdapter.ts`) to read and write the server directly, as "another device" or a file manager would.
 - Fix the code, not the test, unless the test is wrong. Every bug fix gets a test that would have caught it.
 
 ## Dependencies

@@ -5,8 +5,8 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
+import { DavAdapter } from '@/storage/davAdapter'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
-import { DavAdapter } from './davAdapter'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 let dir: string

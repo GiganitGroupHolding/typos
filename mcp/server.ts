@@ -1,27 +1,19 @@
-import { existsSync, statSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from '@/lib/subjectPalette'
 import type { SubjectColor, SubjectIcon } from '@/types'
-import { NodeFsAdapter } from './nodeAdapter'
+import { openVault } from './open'
 import { StudyVault } from './vault'
 
 /*
- * MCP-сервер TYPOS: Claude пишет конспекты, закреп и тулзы прямо в папку vault.
+ * MCP-сервер TYPOS: Claude пишет конспекты, закреп и тулзы прямо в хранилище.
  * Запуск: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "C:\путь\к\папке"
- * (или переменная STUDYNOTES_VAULT). Приложение подхватывает изменения, когда окно получает фокус.
+ *     или: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…" (сервер хранения; ссылку даёт команда link)
+ * Приложение с папкой подхватывает изменения, когда окно получает фокус; с сервером хранения — сразу.
  */
 
-function vaultPath(): string {
-  const i = process.argv.indexOf('--vault')
-  const p = i >= 0 ? process.argv[i + 1] : process.env.STUDYNOTES_VAULT
-  if (!p) throw new Error('Укажи папку конспектов: --vault "C:\\…\\conspects" или STUDYNOTES_VAULT')
-  if (!existsSync(p) || !statSync(p).isDirectory()) throw new Error(`Нет такой папки: ${p}`)
-  return p
-}
-
-const vault = new StudyVault(new NodeFsAdapter(vaultPath()))
+const vault = new StudyVault(await openVault(process.argv, process.env))
 
 const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой) и тулзы (HTML).
 

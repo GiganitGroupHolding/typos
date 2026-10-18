@@ -79,7 +79,8 @@ export class RemoteAdapter {
   async info(): Promise<RemoteInfo> {
     const res = await this.request(`${this.config.url}/.typos/info`, {}, [404])
     const info = res.status === 404 ? null : ((await res.json().catch(() => null)) as RemoteInfo | null)
-    if (!info?.protocol?.startsWith('typos-storage/')) throw new RemoteError('По этому адресу не сервер хранения TYPOS')
+    // со статусом: сервер ответил, это не «нет связи»
+    if (!info?.protocol?.startsWith('typos-storage/')) throw new RemoteError('По этому адресу не сервер хранения TYPOS', res.status)
     return info
   }
 
@@ -161,6 +162,17 @@ export class RemoteAdapter {
     const res = await this.request(this.fileUrl(path), { method: 'DELETE', headers }, [404, 412])
     return res.status === 412 ? 'conflict' : 'ok'
   }
+}
+
+/**
+ * Перед подключением: связь, ключ и то же ли хранилище по адресу, что в ссылке.
+ * Нет связи — RemoteError без status (как и у остальных запросов).
+ */
+export async function checkRemote(config: RemoteConfig): Promise<RemoteInfo> {
+  const info = await new RemoteAdapter(config).info()
+  if (config.vaultId && info.vaultId !== config.vaultId)
+    throw new Error('Ссылка от другого хранилища: сервер по этому адресу уже не тот. Возьми свежую ссылку командой link.')
+  return info
 }
 
 // ---------- сохранённое подключение ----------

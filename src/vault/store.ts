@@ -10,7 +10,7 @@ import {
   requestPermission,
   saveHandle,
 } from '@/storage/fsaAdapter'
-import { forgetRemoteConfig, loadRemoteConfig, RemoteAdapter, saveRemoteConfig } from '@/storage/remoteAdapter'
+import { checkRemote, forgetRemoteConfig, loadRemoteConfig, saveRemoteConfig } from '@/storage/remoteAdapter'
 import type { RemoteConfig } from '@/storage/remoteLink'
 import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
 import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
@@ -225,8 +225,7 @@ export const useVault = create<VaultState>()((set, get) => {
     },
 
     async connectRemote(config, migrate) {
-      const info = await new RemoteAdapter(config).info()
-      if (config.vaultId && info.vaultId !== config.vaultId) throw new Error('Ссылка от другого хранилища: сервер по этому адресу уже не тот. Возьми свежую ссылку командой link.')
+      const info = await checkRemote(config)
       // копия хранилища — по id с сервера: в старых ссылках его могло не быть
       const full = { ...config, name: info.name || config.name, vaultId: info.vaultId }
       await idle()

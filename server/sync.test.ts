@@ -4,11 +4,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { monitorConnection, useConnection } from '@/storage/connection'
+import { DavAdapter } from '@/storage/davAdapter'
 import { conflictCopy, fromBlob } from '@/storage/sync'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
 import { parseFrontmatter } from '@/vault/format'
 import * as repo from '@/vault/repo'
-import { DavAdapter } from './davAdapter'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 let dir: string

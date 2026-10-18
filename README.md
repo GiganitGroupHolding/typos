@@ -87,7 +87,7 @@ The desktop app works in any OS window, without Chrome or Edge. It needs [Rust a
 | `npm run desktop` | Starts the desktop app (Tauri) with hot reload |
 | `npm run desktop:build` | Builds the desktop installers |
 | `npm run test:rust` | Runs the tests of the desktop backend |
-| `npm run mcp` | Starts the MCP server that gives AI assistants access to the notes folder |
+| `npm run mcp -- --vault <folder>` | Starts the MCP server for AI assistants (or `--link typos://…` for a storage server) |
 
 ## How it works
 
@@ -142,7 +142,7 @@ src/
 └── vault/      file format and operations on the notes folder
 server/         storage server (one file) and its tests
 src-tauri/      desktop app: window and file access in Rust
-mcp/            MCP server for AI assistants
+mcp/            MCP server for AI assistants (folder or storage server)
 ```
 
 ## Storage server
@@ -173,6 +173,19 @@ Bad keys are rate-limited: 10 wrong keys in a minute block that address for a mi
 The app can run on `localhost` or on any address in your network, for example `npm run preview -- --host`. If the app is opened over `https://`, the server needs HTTPS too: pass `--cert` and `--key`, or put it behind a proxy such as Caddy and pass `--public-url https://notes.example.com`. Over plain `http://` on a network address the browser turns off the folder picker and offline install, but the storage server still works.
 
 The server keeps the vault as the same plain files and speaks a subset of WebDAV under `/files/`, so you can also mount it in a file manager (any user name, the key as the password). Keys are stored in `.typos-server/` inside the vault, readable only by the server's user. The server never serves that folder, under any spelling of its name or through a link.
+
+## MCP server
+
+The MCP server lets an AI assistant such as Claude read your notes and write new ones: notes, formula cards and tools, in the same format the app writes. It works with a folder on this computer or with a storage server.
+
+```bash
+# a notes folder on this computer
+npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "/path/to/notes"
+# a storage server: get a link for it with `link mcp` on the server
+npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…"
+```
+
+Instead of the flags you can set `STUDYNOTES_VAULT` or `STUDYNOTES_LINK`. With a link, every device sees the assistant's edits right away; with a folder, the app picks them up when its window gets focus. A separate device key (`link mcp`) lets you disconnect the assistant without touching your other devices. If the storage server is off when the assistant starts, the MCP server still starts and its tools report that the server can't be reached until it is back.
 
 ## Roadmap
 
