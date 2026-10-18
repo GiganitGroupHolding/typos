@@ -1,7 +1,7 @@
 /**
  * Единственная точка доступа к файлам vault.
  * Пути относительные, разделитель «/», без ведущего слэша: «Физика/Конспекты/Кинематика.md».
- * Реализации: браузер (IndexedDB), папка на диске (File System Access), память (тесты).
+ * Реализации: браузер (IndexedDB), папка на диске (File System Access), сервер хранения (remoteAdapter), память (тесты).
  */
 
 export type EntryKind = 'file' | 'dir'
@@ -12,7 +12,7 @@ export interface Entry {
 }
 
 export interface VaultAdapter {
-  readonly kind: 'browser' | 'folder' | 'memory'
+  readonly kind: 'browser' | 'folder' | 'remote' | 'memory'
   /** Человекочитаемое имя хранилища (имя папки или «Браузер»). */
   readonly label: string
   list(dir: string): Promise<Entry[]>
@@ -33,12 +33,20 @@ export const joinPath = (...parts: string[]) =>
     .filter(Boolean)
     .join('/')
 
+/** Где лежат конспекты, для подписей: «папка «Учёба»», «сервер «Дом»»; null — хранилище браузера. */
+export function storageLabel(adapter: VaultAdapter | null): string | null {
+  if (adapter?.kind === 'folder') return `папка «${adapter.label}»`
+  if (adapter?.kind === 'remote') return `сервер «${adapter.label}»`
+  return null
+}
+
 export const dirname = (path: string) => path.split('/').slice(0, -1).join('/')
 export const basename = (path: string) => path.split('/').pop() ?? ''
 
 /** Убирает запрещённые в Windows символы и лишние пробелы. */
 export function safeName(name: string, fallback = 'Без названия'): string {
   const cleaned = name
+    // oxlint-disable-next-line no-control-regex -- управляющие символы и надо вырезать
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()

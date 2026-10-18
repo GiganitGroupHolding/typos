@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, Check, RotateCcw, Shuffle, X } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,8 @@ import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
 import { plural } from '@/lib/format'
 import { dur, easeIn, easeOut, pageEnter, spring } from '@/lib/motion'
 import { Tex } from '@/lib/tex'
-import { usePinsOf, useSubject } from '@/vault/hooks'
 import type { Pin } from '@/types'
+import { usePinsOf, useSubject } from '@/vault/hooks'
 
 /**
  * «Повторение» перед экзаменом: карточки закрепа по одной.
@@ -111,7 +111,11 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
 
   if (!card)
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1, transition: spring }} className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1, transition: spring }}
+        className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
+      >
         <div className="flex size-16 items-center justify-center rounded-full bg-(--subject)/15 text-(--subject)">
           <Check className="size-8" />
         </div>
@@ -128,7 +132,13 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
   return (
     <div className="flex flex-1 flex-col">
       <div className="mb-4 flex items-center gap-3 text-[13px] text-muted-foreground tabular-nums">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+        <div
+          className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={done}
+        >
           <motion.div className="h-full origin-left rounded-full bg-(--subject)" animate={{ scaleX: done / total }} transition={spring} />
         </div>
         {done} / {total}

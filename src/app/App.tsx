@@ -49,6 +49,8 @@ function VaultGate({ children }: { children: React.ReactNode }) {
   const status = useVault((s) => s.status)
   const error = useVault((s) => s.error)
   const init = useVault((s) => s.init)
+  const remote = useVault((s) => s.adapter?.kind === 'remote')
+  const switchToBrowser = useVault((s) => s.switchToBrowser)
 
   useEffect(() => {
     void init()
@@ -61,6 +63,11 @@ function VaultGate({ children }: { children: React.ReactNode }) {
         <p className="text-[17px] font-semibold">Не удалось открыть конспекты</p>
         <p className="max-w-md text-sm text-muted-foreground">{error}</p>
         <Button onClick={() => void init()}>Попробовать снова</Button>
+        {remote && (
+          <Button variant="ghost" onClick={() => void switchToBrowser()}>
+            Открыть хранилище браузера
+          </Button>
+        )}
       </div>
     )
   // загрузка из IndexedDB — доли секунды, спиннер не показываем, чтобы не мигал

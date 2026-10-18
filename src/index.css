@@ -1,62 +1,63 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "./styles/tokens.css";
+/* классы ищем только в коде приложения: vault внутри проекта (server/vault) иначе перезагружал бы страницу при каждой правке */
+@import 'tailwindcss' source('../src');
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import './styles/tokens.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: 'Inter Variable', 'Segoe UI Variable', system-ui, sans-serif;
-    --font-heading: var(--font-sans);
-    --font-serif: 'PT Serif', Georgia, serif;
-    --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
-    /* логотип TYPOS */
-    --font-brand: 'Unbounded Variable', var(--font-sans);
+  --font-sans: 'Inter Variable', 'Segoe UI Variable', system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-serif: 'PT Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  /* логотип TYPOS */
+  --font-brand: 'Unbounded Variable', var(--font-sans);
 
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-list: var(--list);
-    --color-highlight: var(--highlight);
-    --color-selection: var(--selection);
-    --color-accent-pastel: var(--accent-pastel);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
-    --shadow-card: var(--shadow-card);
-    --shadow-float: var(--shadow-float);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-list: var(--list);
+  --color-highlight: var(--highlight);
+  --color-selection: var(--selection);
+  --color-accent-pastel: var(--accent-pastel);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
 }
 
 @layer base {
@@ -67,7 +68,7 @@
     @apply font-sans antialiased;
     caret-color: var(--highlight);
     accent-color: var(--highlight);
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: 'cv11', 'ss01';
   }
   body {
     @apply text-foreground;
@@ -76,7 +77,8 @@
   ::selection {
     background: var(--selection);
   }
-  button:not(:disabled), [role="button"]:not(:disabled) {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
     cursor: pointer;
   }
 }
@@ -87,9 +89,13 @@
   inherits: true;
   initial-value: 4;
 }
-html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
+html.accent-anim {
+  transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
 @media (prefers-reduced-motion: reduce) {
-  html.accent-anim { transition: none; }
+  html.accent-anim {
+    transition: none;
+  }
 }
 
 /* ---------- Фон — то, что видно сквозь стекло ----------
@@ -108,7 +114,9 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   /* бумага редактора: почти непрозрачная, аврора едва проступает */
   /* лист конспекта прозрачный: туманности сами разлетаются от колонки текста, а под ней
      шейдер гасит фон (liquid-shader.tsx, avoidText) */
-  .paper { background: transparent; }
+  .paper {
+    background: transparent;
+  }
 
   /* стеклянная полоса сверху: текст при прокрутке уходит под неё */
   .glass-bar {
@@ -118,7 +126,12 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     border-bottom: 0.5px solid var(--border);
   }
   @media (prefers-reduced-transparency: reduce) {
-    .paper, .glass-bar { background: var(--background); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .paper,
+    .glass-bar {
+      background: var(--background);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 }
 
@@ -139,16 +152,21 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
 
   /* размытие — на самом элементе, как у колонок: с псевдоэлементом внутри Chrome не видит,
      что под панелью, и стекло только тонирует, ничего не размывая */
-  .liquid, .liquid-2 {
+  .liquid,
+  .liquid-2 {
     position: relative;
     box-shadow: var(--liquid-edge);
     -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
     backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
   }
   /* первый слой — прозрачное стекло: своей заливки нет, только размытие того, что под ним, и кромка */
-  .liquid { background: transparent; }
+  .liquid {
+    background: transparent;
+  }
   /* всплывающие меню лежат поверх текста — заливка как у колонки, иначе текст под ними мешает читать */
-  .liquid.liquid-menu { background: var(--sidebar); }
+  .liquid.liquid-menu {
+    background: var(--sidebar);
+  }
   /* второй слой: плотнее и размытие сильнее */
   .liquid-2 {
     background: color-mix(in srgb, var(--sidebar), var(--card) 14%);
@@ -170,11 +188,20 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   :root {
     --lens-tint: rgb(255 255 255 / 0.16);
     --lens-shadow: 0 10px 28px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
-    --prism-alpha: 0.64;          /* блик под курсором */
-    --prism-corner-alpha: 0.32;   /* постоянная призма — только на скруглениях */
+    --prism-alpha: 0.64; /* блик под курсором */
+    --prism-corner-alpha: 0.32; /* постоянная призма — только на скруглениях */
     /* спектр повторяется по кругу, чтобы у блика было видно сразу несколько цветов */
-    --prism-spectrum: repeating-conic-gradient(from 200deg,
-      #ff6b6b 0deg, #ffb347 13deg, #fff176 26deg, #7ee8a2 39deg, #5ad1ff 52deg, #7d8bff 65deg, #d07bff 78deg, #ff6b6b 90deg);
+    --prism-spectrum: repeating-conic-gradient(
+      from 200deg,
+      #ff6b6b 0deg,
+      #ffb347 13deg,
+      #fff176 26deg,
+      #7ee8a2 39deg,
+      #5ad1ff 52deg,
+      #7d8bff 65deg,
+      #d07bff 78deg,
+      #ff6b6b 90deg
+    );
   }
   .dark {
     --lens-tint: rgb(255 255 255 / 0.035);
@@ -184,10 +211,16 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   }
   /* меню поверх текста: то же стекло, но, как Regular у Apple, над текстом сильнее рассеивает
      (frost в хуке) и чуть притемняет — текст под значками не спорит с ними */
-  .liquid-lens-menu { --lens-tint: rgb(255 255 255 / 0.38); }
-  .dark .liquid-lens-menu { --lens-tint: rgb(24 24 22 / 0.4); }
+  .liquid-lens-menu {
+    --lens-tint: rgb(255 255 255 / 0.38);
+  }
+  .dark .liquid-lens-menu {
+    --lens-tint: rgb(24 24 22 / 0.4);
+  }
   /* карточки — крупное стекло: тон как у колонки, под ним текст */
-  .liquid-lens-card { --lens-tint: var(--sidebar); }
+  .liquid-lens-card {
+    --lens-tint: var(--sidebar);
+  }
   .liquid-lens {
     position: relative;
     background: var(--lens-tint);
@@ -196,7 +229,7 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   /* постоянная призма — белая, только на скруглениях, вдоль сторон её нет.
      --prism-corners — маска-картинка «близость к углам», её рисует liquid-lens.tsx по форме элемента */
   .liquid-lens::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -209,16 +242,21 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
       var(--prism-corners, linear-gradient(transparent 0 0)),
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
-    mask-size: 100% 100%, auto, auto;
+    mask-size:
+      100% 100%,
+      auto,
+      auto;
     mask-composite: intersect, exclude, add;
   }
-  .dark .liquid-lens::after { mix-blend-mode: plus-lighter; }
+  .dark .liquid-lens::after {
+    mix-blend-mode: plus-lighter;
+  }
   /*
    * Блик под курсором: в центре белый, по краям пятна свет раскладывается в спектр.
    * Появляется только при наведении (data-lit ставит LensLight).
    */
   .liquid-lens::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -228,17 +266,31 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     opacity: 0;
     transition: opacity var(--dur-base) var(--ease-out);
     background:
-      radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #fff 0%, rgb(255 255 255 / 0.75) 20%, rgb(255 255 255 / 0) 48%),
+      radial-gradient(
+        var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%),
+        #fff 0%,
+        rgb(255 255 255 / 0.75) 20%,
+        rgb(255 255 255 / 0) 48%
+      ),
       var(--prism-spectrum);
     mask:
-      radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #000 0%, rgb(0 0 0 / 0.55) 55%, transparent 100%),
+      radial-gradient(
+        var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%),
+        #000 0%,
+        rgb(0 0 0 / 0.55) 55%,
+        transparent 100%
+      ),
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
     mask-composite: intersect, exclude, add;
   }
   /* на тёмном свет складывается со стеклом; на светлом сложение дало бы просто белое */
-  .dark .liquid-lens::before { mix-blend-mode: plus-lighter; }
-  .liquid-lens[data-lit]::before { opacity: var(--prism-alpha); }
+  .dark .liquid-lens::before {
+    mix-blend-mode: plus-lighter;
+  }
+  .liquid-lens[data-lit]::before {
+    opacity: var(--prism-alpha);
+  }
   /* свечение изнутри от точки нажатия */
   .lens-light {
     position: absolute;
@@ -256,9 +308,14 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     border-radius: 50%;
     background: radial-gradient(circle, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 70%);
   }
-  .liquid-lens > :not(.lens-light) { position: relative; z-index: 1; }
+  .liquid-lens > :not(.lens-light) {
+    position: relative;
+    z-index: 1;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .lens-light { display: none; }
+    .lens-light {
+      display: none;
+    }
   }
 
   .liquid-active {
@@ -268,13 +325,25 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   }
 
   /* под колонками зелёное пятно — вторичный текст темнее, чтобы держать 4.5:1 */
-  .liquid-column, .liquid-column-soft, .liquid-lava, .liquid-lens { --muted-foreground: #2c2b28; }
-  .dark .liquid-column, .dark .liquid-column-soft, .dark .liquid-lava, .dark .liquid-lens { --muted-foreground: #b8b5ac; }
+  .liquid-column,
+  .liquid-column-soft,
+  .liquid-lava,
+  .liquid-lens {
+    --muted-foreground: #2c2b28;
+  }
+  .dark .liquid-column,
+  .dark .liquid-column-soft,
+  .dark .liquid-lava,
+  .dark .liquid-lens {
+    --muted-foreground: #b8b5ac;
+  }
   .liquid-column {
     background: var(--sidebar);
     -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
     backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
-    box-shadow: inset -1px 0 0 rgb(255 255 255 / calc(var(--sheen) * 1.6)), inset 1px 1px 0 rgb(255 255 255 / calc(var(--sheen) * 1.2));
+    box-shadow:
+      inset -1px 0 0 rgb(255 255 255 / calc(var(--sheen) * 1.6)),
+      inset 1px 1px 0 rgb(255 255 255 / calc(var(--sheen) * 1.2));
   }
   .liquid-column-soft {
     background: var(--list);
@@ -284,11 +353,25 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .liquid, .liquid-2 { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
-    .liquid-column, .liquid-column-soft { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .liquid,
+    .liquid-2 {
+      background: var(--card);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .liquid-column,
+    .liquid-column-soft {
+      background: var(--card);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
   @media (prefers-contrast: more) {
-    .liquid, .liquid-2, .liquid-active { box-shadow: 0 0 0 1px var(--border); }
+    .liquid,
+    .liquid-2,
+    .liquid-active {
+      box-shadow: 0 0 0 1px var(--border);
+    }
   }
 }
 
@@ -299,17 +382,17 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
   .glass {
     position: relative;
     isolation: isolate;
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / var(--sheen)) 0, rgb(255 255 255 / 0) 42px),
-      var(--glass);
+    background: linear-gradient(180deg, rgb(255 255 255 / var(--sheen)) 0, rgb(255 255 255 / 0) 42px), var(--glass);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
     border: 0.5px solid var(--glass-edge);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / calc(var(--sheen) * 0.8)), 0 8px 30px var(--glass-shadow);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / calc(var(--sheen) * 0.8)),
+      0 8px 30px var(--glass-shadow);
   }
   /* зерно — отдельным слоем, чтобы стекло было матовым, а не глянцевым */
   .glass::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     z-index: -1;
@@ -326,14 +409,27 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass { background: var(--card); }
+    .glass {
+      background: var(--card);
+    }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .glass { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
-    .glass-panel { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--card); }
+    .glass {
+      background: var(--card);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .glass-panel {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: var(--card);
+    }
   }
   @media (prefers-contrast: more) {
-    .glass { background: var(--card); border-color: var(--border); }
+    .glass {
+      background: var(--card);
+      border-color: var(--border);
+    }
   }
 }
 
@@ -345,19 +441,58 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     max-width: 68ch;
     color: var(--foreground);
   }
-  .note-prose[data-font="golos"] { font-family: 'Golos Text Variable', var(--font-sans); }
-  .note-prose[data-font="serif"] { font-family: var(--font-serif); font-size: 18px; line-height: 1.65; }
+  .note-prose[data-font='golos'] {
+    font-family: 'Golos Text Variable', var(--font-sans);
+  }
+  .note-prose[data-font='serif'] {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.65;
+  }
 
-  .note-prose h1 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.5em; }
-  .note-prose h2 { font-size: 24px; line-height: 1.3; font-weight: 650; letter-spacing: -0.01em; margin: 1.6em 0 0.5em; }
-  .note-prose h3 { font-size: 20px; line-height: 1.35; font-weight: 600; margin: 1.4em 0 0.4em; }
-  .note-prose p { margin: 0 0 0.85em; }
-  .note-prose ul, .note-prose ol { margin: 0 0 0.85em; padding-left: 1.4em; }
-  .note-prose ul { list-style: disc; }
-  .note-prose ol { list-style: decimal; }
-  .note-prose li { margin: 0.2em 0; }
-  .note-prose li::marker { color: var(--muted-foreground); }
-  .note-prose strong { font-weight: 650; }
+  .note-prose h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5em;
+  }
+  .note-prose h2 {
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 1.6em 0 0.5em;
+  }
+  .note-prose h3 {
+    font-size: 20px;
+    line-height: 1.35;
+    font-weight: 600;
+    margin: 1.4em 0 0.4em;
+  }
+  .note-prose p {
+    margin: 0 0 0.85em;
+  }
+  .note-prose ul,
+  .note-prose ol {
+    margin: 0 0 0.85em;
+    padding-left: 1.4em;
+  }
+  .note-prose ul {
+    list-style: disc;
+  }
+  .note-prose ol {
+    list-style: decimal;
+  }
+  .note-prose li {
+    margin: 0.2em 0;
+  }
+  .note-prose li::marker {
+    color: var(--muted-foreground);
+  }
+  .note-prose strong {
+    font-weight: 650;
+  }
   .note-prose blockquote {
     border-left: 3px solid var(--highlight);
     padding: 0.1em 0 0.1em 1em;
@@ -379,98 +514,273 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
     background: var(--card);
     box-shadow: var(--shadow-card);
   }
-  .note-prose .katex { font-size: 1.08em; }
+  .note-prose .katex {
+    font-size: 1.08em;
+  }
 
   /* ---------- редактор Tiptap ---------- */
-  .note-prose .tiptap { outline: none; min-height: 50vh; }
-  .note-prose .tiptap > :first-child { margin-top: 0; }
-  .note-prose .tiptap a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
-  .note-prose .tiptap hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
-  .note-prose .tiptap pre {
-    font-family: var(--font-mono); font-size: 14px; line-height: 1.5;
-    background: var(--muted); border-radius: var(--radius); padding: 0.8em 1em; margin: 0 0 0.85em; overflow-x: auto;
+  .note-prose .tiptap {
+    outline: none;
+    min-height: 50vh;
   }
-  .note-prose .tiptap pre code { background: none; padding: 0; font-size: inherit; }
+  .note-prose .tiptap > :first-child {
+    margin-top: 0;
+  }
+  .note-prose .tiptap a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .note-prose .tiptap hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.5em 0;
+  }
+  .note-prose .tiptap pre {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--muted);
+    border-radius: var(--radius);
+    padding: 0.8em 1em;
+    margin: 0 0 0.85em;
+    overflow-x: auto;
+  }
+  .note-prose .tiptap pre code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
 
   /* таблицы: тонкая сетка, шапка на чуть тёмном фоне, широкие — прокручиваются */
-  .note-prose .tiptap .tableWrapper { overflow-x: auto; margin: 0 0 0.85em; }
-  .note-prose .tiptap table { border-collapse: collapse; table-layout: fixed; width: 100%; font-size: 15px; line-height: 1.45; }
-  .note-prose .tiptap th, .note-prose .tiptap td {
-    position: relative; border: 1px solid var(--border); padding: 0.4em 0.6em; vertical-align: top; text-align: left;
+  .note-prose .tiptap .tableWrapper {
+    overflow-x: auto;
+    margin: 0 0 0.85em;
   }
-  .note-prose .tiptap th { background: var(--muted); font-weight: 600; }
-  .note-prose .tiptap th > p, .note-prose .tiptap td > p { margin: 0; }
-  .note-prose .tiptap th[align="center"], .note-prose .tiptap td[align="center"] { text-align: center; }
-  .note-prose .tiptap th[align="right"], .note-prose .tiptap td[align="right"] { text-align: right; }
+  .note-prose .tiptap table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .note-prose .tiptap th,
+  .note-prose .tiptap td {
+    position: relative;
+    border: 1px solid var(--border);
+    padding: 0.4em 0.6em;
+    vertical-align: top;
+    text-align: left;
+  }
+  .note-prose .tiptap th {
+    background: var(--muted);
+    font-weight: 600;
+  }
+  .note-prose .tiptap th > p,
+  .note-prose .tiptap td > p {
+    margin: 0;
+  }
+  .note-prose .tiptap th[align='center'],
+  .note-prose .tiptap td[align='center'] {
+    text-align: center;
+  }
+  .note-prose .tiptap th[align='right'],
+  .note-prose .tiptap td[align='right'] {
+    text-align: right;
+  }
   .note-prose .tiptap .selectedCell::after {
-    content: ""; position: absolute; inset: 0; background: var(--selection); pointer-events: none;
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--selection);
+    pointer-events: none;
   }
-  .note-prose .tiptap img { max-width: 100%; border-radius: var(--radius); margin: 0.5em 0; }
+  .note-prose .tiptap img {
+    max-width: 100%;
+    border-radius: var(--radius);
+    margin: 0.5em 0;
+  }
 
   .tiptap .is-empty::before {
     content: attr(data-placeholder);
-    float: left; height: 0; pointer-events: none;
-    color: var(--muted-foreground); opacity: 0.55;
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--muted-foreground);
+    opacity: 0.55;
   }
-  .tiptap .ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+  .tiptap .ProseMirror-selectednode {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 
   /* формулы: кликабельны, редактируются во всплывающем окне */
-  .tiptap [data-type="inline-math"] {
-    cursor: pointer; border-radius: 4px; padding: 0 1px;
+  .tiptap [data-type='inline-math'] {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 1px;
     transition: background-color var(--dur-fast) var(--ease-out);
   }
-  .tiptap [data-type="inline-math"]:hover { background: var(--accent); }
-  .tiptap [data-type="block-math"] {
-    margin: 1em 0; padding: 0.75em 1em; overflow-x: auto; cursor: pointer;
-    border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-card);
+  .tiptap [data-type='inline-math']:hover {
+    background: var(--accent);
+  }
+  .tiptap [data-type='block-math'] {
+    margin: 1em 0;
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    cursor: pointer;
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: var(--shadow-card);
     transition: box-shadow var(--dur-fast) var(--ease-out);
   }
-  .tiptap [data-type="block-math"]:hover { box-shadow: var(--shadow-card), 0 0 0 1px var(--highlight); }
-  .tiptap [data-type="block-math"][data-latex=""]::after {
-    content: "Формула — нажми, чтобы ввести"; display: block; text-align: center;
-    color: var(--muted-foreground); font-size: 14px;
+  .tiptap [data-type='block-math']:hover {
+    box-shadow:
+      var(--shadow-card),
+      0 0 0 1px var(--highlight);
   }
-  .tiptap .inline-math-error, .tiptap .block-math-error { color: var(--destructive); font-family: var(--font-mono); font-size: 0.9em; }
+  .tiptap [data-type='block-math'][data-latex='']::after {
+    content: 'Формула — нажми, чтобы ввести';
+    display: block;
+    text-align: center;
+    color: var(--muted-foreground);
+    font-size: 14px;
+  }
+  .tiptap .inline-math-error,
+  .tiptap .block-math-error {
+    color: var(--destructive);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
 
   /* чек-листы */
-  .tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0.1em; }
-  .tiptap ul[data-type="taskList"] li { display: flex; gap: 0.55em; align-items: flex-start; }
-  .tiptap ul[data-type="taskList"] li > label { margin-top: 0.3em; user-select: none; }
-  .tiptap ul[data-type="taskList"] li > div { flex: 1; }
-  .tiptap ul[data-type="taskList"] input[type="checkbox"] { accent-color: var(--highlight); width: 1em; height: 1em; cursor: pointer; }
-  .tiptap ul[data-type="taskList"] li[data-checked="true"] > div { color: var(--muted-foreground); text-decoration: line-through; }
+  .tiptap ul[data-type='taskList'] {
+    list-style: none;
+    padding-left: 0.1em;
+  }
+  .tiptap ul[data-type='taskList'] li {
+    display: flex;
+    gap: 0.55em;
+    align-items: flex-start;
+  }
+  .tiptap ul[data-type='taskList'] li > label {
+    margin-top: 0.3em;
+    user-select: none;
+  }
+  .tiptap ul[data-type='taskList'] li > div {
+    flex: 1;
+  }
+  .tiptap ul[data-type='taskList'] input[type='checkbox'] {
+    accent-color: var(--highlight);
+    width: 1em;
+    height: 1em;
+    cursor: pointer;
+  }
+  .tiptap ul[data-type='taskList'] li[data-checked='true'] > div {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
 
   /* режим чтения: E-Ink/Paper — тёплая бумага, без отвлечений */
-  .note-reading { max-width: 64ch; }
-  .note-reading .tiptap { cursor: default; }
-  .note-reading .tiptap [data-type="inline-math"], .note-reading .tiptap [data-type="block-math"] { cursor: default; }
-  .note-reading .tiptap [data-type="block-math"] { box-shadow: none; background: transparent; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; }
+  .note-reading {
+    max-width: 64ch;
+  }
+  .note-reading .tiptap {
+    cursor: default;
+  }
+  .note-reading .tiptap [data-type='inline-math'],
+  .note-reading .tiptap [data-type='block-math'] {
+    cursor: default;
+  }
+  .note-reading .tiptap [data-type='block-math'] {
+    box-shadow: none;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
 
   /* подчёркнутый, зачёркнутый, маркер и цвета как в Notion */
-  .note-prose .tiptap u { text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
-  .note-prose .tiptap s { text-decoration-color: var(--muted-foreground); }
-  .note-prose .tiptap mark { background: var(--hl-default); color: inherit; border-radius: 0.25em; padding: 0.05em 0.15em; box-decoration-break: clone; }
-  .note-prose .tiptap [data-text-color="gray"] { color: var(--tc-gray); }
-  .note-prose .tiptap [data-text-color="brown"] { color: var(--tc-brown); }
-  .note-prose .tiptap [data-text-color="orange"] { color: var(--tc-orange); }
-  .note-prose .tiptap [data-text-color="yellow"] { color: var(--tc-yellow); }
-  .note-prose .tiptap [data-text-color="green"] { color: var(--tc-green); }
-  .note-prose .tiptap [data-text-color="blue"] { color: var(--tc-blue); }
-  .note-prose .tiptap [data-text-color="purple"] { color: var(--tc-purple); }
-  .note-prose .tiptap [data-text-color="pink"] { color: var(--tc-pink); }
-  .note-prose .tiptap [data-text-color="red"] { color: var(--tc-red); }
-  .note-prose .tiptap mark[data-color="gray"] { background: var(--hl-gray); }
-  .note-prose .tiptap mark[data-color="brown"] { background: var(--hl-brown); }
-  .note-prose .tiptap mark[data-color="orange"] { background: var(--hl-orange); }
-  .note-prose .tiptap mark[data-color="yellow"] { background: var(--hl-yellow); }
-  .note-prose .tiptap mark[data-color="green"] { background: var(--hl-green); }
-  .note-prose .tiptap mark[data-color="blue"] { background: var(--hl-blue); }
-  .note-prose .tiptap mark[data-color="purple"] { background: var(--hl-purple); }
-  .note-prose .tiptap mark[data-color="pink"] { background: var(--hl-pink); }
-  .note-prose .tiptap mark[data-color="red"] { background: var(--hl-red); }
+  .note-prose .tiptap u {
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+  }
+  .note-prose .tiptap s {
+    text-decoration-color: var(--muted-foreground);
+  }
+  .note-prose .tiptap mark {
+    background: var(--hl-default);
+    color: inherit;
+    border-radius: 0.25em;
+    padding: 0.05em 0.15em;
+    box-decoration-break: clone;
+  }
+  .note-prose .tiptap [data-text-color='gray'] {
+    color: var(--tc-gray);
+  }
+  .note-prose .tiptap [data-text-color='brown'] {
+    color: var(--tc-brown);
+  }
+  .note-prose .tiptap [data-text-color='orange'] {
+    color: var(--tc-orange);
+  }
+  .note-prose .tiptap [data-text-color='yellow'] {
+    color: var(--tc-yellow);
+  }
+  .note-prose .tiptap [data-text-color='green'] {
+    color: var(--tc-green);
+  }
+  .note-prose .tiptap [data-text-color='blue'] {
+    color: var(--tc-blue);
+  }
+  .note-prose .tiptap [data-text-color='purple'] {
+    color: var(--tc-purple);
+  }
+  .note-prose .tiptap [data-text-color='pink'] {
+    color: var(--tc-pink);
+  }
+  .note-prose .tiptap [data-text-color='red'] {
+    color: var(--tc-red);
+  }
+  .note-prose .tiptap mark[data-color='gray'] {
+    background: var(--hl-gray);
+  }
+  .note-prose .tiptap mark[data-color='brown'] {
+    background: var(--hl-brown);
+  }
+  .note-prose .tiptap mark[data-color='orange'] {
+    background: var(--hl-orange);
+  }
+  .note-prose .tiptap mark[data-color='yellow'] {
+    background: var(--hl-yellow);
+  }
+  .note-prose .tiptap mark[data-color='green'] {
+    background: var(--hl-green);
+  }
+  .note-prose .tiptap mark[data-color='blue'] {
+    background: var(--hl-blue);
+  }
+  .note-prose .tiptap mark[data-color='purple'] {
+    background: var(--hl-purple);
+  }
+  .note-prose .tiptap mark[data-color='pink'] {
+    background: var(--hl-pink);
+  }
+  .note-prose .tiptap mark[data-color='red'] {
+    background: var(--hl-red);
+  }
 
   /* MathLive в окне формулы */
-  .math-field { display: block; width: 100%; font-size: 20px; background: transparent; border: 0; outline: none; color: var(--foreground); }
+  .math-field {
+    display: block;
+    width: 100%;
+    font-size: 20px;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--foreground);
+  }
 }
 
 /*
@@ -479,19 +789,48 @@ html.accent-anim { transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
  */
 /* имя — только на время перехода: элемент с view-transition-name не даёт стеклу внутри себя
    размывать фон (лава под карточками, правой панелью и кнопками сверху была бы чёткой) */
-:root:active-view-transition #main { view-transition-name: main; }
-::view-transition-old(main) { animation: vt-out calc(var(--dur-base) * 0.65) var(--ease-in) both; }
-::view-transition-new(main) { animation: vt-in var(--dur-base) var(--ease-out) both; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--dur-fast); }
-@keyframes vt-out { to { opacity: 0; } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }
+:root:active-view-transition #main {
+  view-transition-name: main;
+}
+::view-transition-old(main) {
+  animation: vt-out calc(var(--dur-base) * 0.65) var(--ease-in) both;
+}
+::view-transition-new(main) {
+  animation: vt-in var(--dur-base) var(--ease-out) both;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-fast);
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
 
 /* Скроллбары потише */
 @layer utilities {
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { scrollbar-width: none; }
-  .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
 }

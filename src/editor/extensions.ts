@@ -1,12 +1,12 @@
 import { Extension, InputRule } from '@tiptap/core'
 import Image from '@tiptap/extension-image'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
-import { TableKit } from '@tiptap/extension-table'
 import { BlockMath, InlineMath } from '@tiptap/extension-mathematics'
+import { TableKit } from '@tiptap/extension-table'
 import { Markdown } from '@tiptap/markdown'
-import StarterKit from '@tiptap/starter-kit'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
+import StarterKit from '@tiptap/starter-kit'
 import { ColorHighlight, LastColor, TextColor } from './colors'
 
 export const katexOptions = { throwOnError: false, strict: 'ignore' as const }

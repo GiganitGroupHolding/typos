@@ -1,11 +1,17 @@
 import { ArrowDown, ArrowUp, Maximize2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useUi } from '@/app/store'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toastUndo } from '@/lib/undo'
 import { cn } from '@/lib/utils'
-import { useVault } from '@/vault/store'
 import type { Pin } from '@/types'
+import { useVault } from '@/vault/store'
 import { openPinEditor } from './PinEditorDialog'
 
 /** Меню карточки закрепа. «Выше/Ниже» — клавиатурная альтернатива перетаскиванию. */
@@ -30,7 +36,13 @@ export function PinActions({ pin, siblings, className }: { pin: Pin; siblings: P
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label={`Действия: ${pin.title}`} className={cn(className)} onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Действия: ${pin.title}`}
+          className={cn(className)}
+          onClick={(e) => e.stopPropagation()}
+        >
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>

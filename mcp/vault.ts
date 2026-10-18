@@ -61,7 +61,8 @@ export class StudyVault {
     const existing = d.subjects.find((s) => norm(s.name) === norm(input.name))
     if (existing) return { id: existing.id, name: existing.name, created: false }
     const used = new Set(d.subjects.map((s) => s.color))
-    const color = input.color ?? SUBJECT_COLOR_IDS.find((c) => !used.has(c)) ?? SUBJECT_COLOR_IDS[d.subjects.length % SUBJECT_COLOR_IDS.length]
+    const color =
+      input.color ?? SUBJECT_COLOR_IDS.find((c) => !used.has(c)) ?? SUBJECT_COLOR_IDS[d.subjects.length % SUBJECT_COLOR_IDS.length]
     const order = Math.max(-1, ...d.subjects.map((s) => s.order)) + 1
     const s = await repo.createSubject(this.a, { name: input.name, color, icon: input.icon ?? 'book' }, order)
     return { id: s.id, name: s.name, created: true }
@@ -76,7 +77,13 @@ export class StudyVault {
       notes: d.notes
         .filter((n) => n.subjectId === s.id)
         .sort((x, y) => y.updated.localeCompare(x.updated))
-        .map((n) => ({ id: n.id, title: n.title, updated: n.updated, excerpt: n.excerpt, ...(n.meta.source ? { source: n.meta.source } : {}) })),
+        .map((n) => ({
+          id: n.id,
+          title: n.title,
+          updated: n.updated,
+          excerpt: n.excerpt,
+          ...(n.meta.source ? { source: n.meta.source } : {}),
+        })),
       pins: d.pins.filter((p) => p.subjectId === s.id).map((p) => ({ id: p.id, title: p.title, tex: p.tex, text: p.text, order: p.order })),
       tools: d.tools.filter((t) => t.subjectId === s.id).map((t) => ({ id: t.id, name: t.name, icon: t.icon })),
     }
@@ -140,7 +147,9 @@ export class StudyVault {
         const rel = await this.saveImage(s, src)
         out = out.replace(whole, `![${alt}](${rel})`)
       } catch (e) {
-        warnings.push(`Картинка не скачалась (${src.slice(0, 80)}): ${(e as Error).message}. В приложении внешние ссылки на картинки не показываются.`)
+        warnings.push(
+          `Картинка не скачалась (${src.slice(0, 80)}): ${(e as Error).message}. В приложении внешние ссылки на картинки не показываются.`,
+        )
       }
     }
     return out
@@ -203,7 +212,10 @@ export class StudyVault {
       if (!terms.every((t) => hay.includes(t))) return
       const score = terms.reduce((sum, t) => sum + hay.split(t).length - 1 + (norm(title).includes(t) ? 5 : 0), 0)
       const at = Math.max(0, hay.indexOf(terms[0]) - 60)
-      const snippet = `${at > 0 ? '…' : ''}${`${title}\n${text}`.slice(at, at + 180).replace(/\s+/g, ' ').trim()}…`
+      const snippet = `${at > 0 ? '…' : ''}${`${title}\n${text}`
+        .slice(at, at + 180)
+        .replace(/\s+/g, ' ')
+        .trim()}…`
       hits.push({ kind, id, subject: name(subjectId), title, snippet, score })
     }
     for (const n of d.notes) consider('note', n.id, n.subjectId, n.title, n.body)
@@ -245,7 +257,10 @@ export function replaceSection(body: string, section: string, markdown: string):
     return h && norm(h[2]) === norm(section)
   })
   if (start < 0) {
-    const all = lines.map(heading).filter(Boolean).map((h) => h![2])
+    const all = lines
+      .map(heading)
+      .filter(Boolean)
+      .map((h) => h![2])
     throw new Error(`Нет раздела «${section}». Заголовки: ${all.join(' | ')}`)
   }
   const level = heading(lines[start])![1].length
@@ -285,7 +300,8 @@ export function checkMarkdown(md: string): string[] {
       tryTex(tex, `Строка ${i + 1}`)
       return ''
     })
-    if (/(?<!\\)\$/.test(leftover)) warnings.push(`Строка ${i + 1}: непарный «$» — редактор не поймёт формулу. Для знака доллара пиши «\\$».`)
+    if (/(?<!\\)\$/.test(leftover))
+      warnings.push(`Строка ${i + 1}: непарный «$» — редактор не поймёт формулу. Для знака доллара пиши «\\$».`)
   })
   return warnings
 }
@@ -315,7 +331,8 @@ async function loadImage(source: string): Promise<Buffer> {
     return buf
   }
   const file = path.resolve(source)
-  if (!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file)) throw new Error('Локальный файл должен быть картинкой (png, jpg, gif, webp, svg…)')
+  if (!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file))
+    throw new Error('Локальный файл должен быть картинкой (png, jpg, gif, webp, svg…)')
   if ((await fs.stat(file)).size > MAX_IMAGE) throw new Error('Картинка больше 25 МБ')
   return fs.readFile(file)
 }
@@ -325,6 +342,10 @@ async function toWebImage(buf: Buffer): Promise<{ data: Buffer; ext: string }> {
   const meta = await sharp(buf, { animated: true }).metadata()
   if (meta.format === 'svg') return { data: buf, ext: 'svg' }
   if (meta.format === 'gif' && (meta.pages ?? 1) > 1) return { data: buf, ext: 'gif' }
-  const data = await sharp(buf).rotate().resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true }).webp({ quality: 90 }).toBuffer()
+  const data = await sharp(buf)
+    .rotate()
+    .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 90 })
+    .toBuffer()
   return { data, ext: 'webp' }
 }

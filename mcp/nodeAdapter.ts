@@ -11,6 +11,12 @@ import type { Entry, VaultAdapter } from '@/storage/VaultAdapter'
 
 const isMissing = (e: unknown) => (e as NodeJS.ErrnoException)?.code === 'ENOENT'
 
+/**
+ * Ключи сервера хранения, если vault — его папка. Под любым написанием: на macOS и Windows «.TYPOS-SERVER» — та же папка.
+ * Держи в согласии с STATE_DIR и isStateDir в server/typos-server.mjs (сервер без зависимостей, импортировать оттуда нельзя).
+ */
+const isServerStateDir = (name: string) => name.toLowerCase().replace(/[. ]+$/, '') === '.typos-server'
+
 export class NodeFsAdapter implements VaultAdapter {
   readonly kind = 'folder' as const
   readonly label: string
@@ -24,7 +30,8 @@ export class NodeFsAdapter implements VaultAdapter {
   /** Относительный путь vault («Физика/Конспекты/x.md») → абсолютный внутри корня. */
   abs(rel: string): string {
     const parts = rel.split('/').filter(Boolean)
-    if (parts.some((p) => p === '..' || p.includes('\\') || p.includes(':'))) throw new Error(`Недопустимый путь: ${rel}`)
+    if (parts.some((p) => p === '..' || p.includes('\\') || p.includes(':')) || (parts.length && isServerStateDir(parts[0])))
+      throw new Error(`Недопустимый путь: ${rel}`)
     const p = path.resolve(this.root, ...parts)
     if (p !== this.root && !p.startsWith(this.root + path.sep)) throw new Error(`Путь вне хранилища: ${rel}`)
     return p
@@ -32,8 +39,11 @@ export class NodeFsAdapter implements VaultAdapter {
 
   async list(dir: string): Promise<Entry[]> {
     try {
+      const atRoot = !dir.split('/').some(Boolean)
       const items = await fs.readdir(this.abs(dir), { withFileTypes: true })
-      return items.map((d) => ({ name: d.name, kind: d.isDirectory() ? 'dir' : 'file' }))
+      return items
+        .filter((d) => !(atRoot && isServerStateDir(d.name)))
+        .map((d) => ({ name: d.name, kind: d.isDirectory() ? 'dir' : 'file' }))
     } catch (e) {
       if (isMissing(e)) return []
       throw e

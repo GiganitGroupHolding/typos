@@ -1,5 +1,5 @@
-import { motion } from 'motion/react'
 import { FileText, Folder, Loader2, Pin, RotateCcw, Trash2, Wrench, type LucideIcon } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -80,7 +80,12 @@ export function TrashPage() {
       ) : !items.length ? (
         <p className="mt-8 rounded-3xl border border-dashed px-6 py-14 text-center text-[15px] text-muted-foreground">Корзина пуста</p>
       ) : (
-        <motion.ul variants={listParent} initial="hidden" animate="show" className="mt-8 divide-y overflow-hidden rounded-2xl border bg-card shadow-card">
+        <motion.ul
+          variants={listParent}
+          initial="hidden"
+          animate="show"
+          className="mt-8 divide-y overflow-hidden rounded-2xl border bg-card shadow-card"
+        >
           {items.map((item) => {
             const { icon: Icon, label } = KIND[item.kind]
             return (
@@ -109,7 +114,10 @@ export function TrashPage() {
           <DialogHeader>
             <DialogTitle>Удалить навсегда?</DialogTitle>
             <DialogDescription>
-              {confirm?.length === 1 ? `«${confirm[0].name}» исчезнет с диска.` : `Все ${plural(confirm?.length ?? 0, ['объект', 'объекта', 'объектов'])} исчезнут с диска.`} Это нельзя отменить.
+              {confirm?.length === 1
+                ? `«${confirm[0].name}» исчезнет с диска.`
+                : `Все ${plural(confirm?.length ?? 0, ['объект', 'объекта', 'объектов'])} исчезнут с диска.`}{' '}
+              Это нельзя отменить.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -5,10 +5,10 @@ import { create } from 'zustand'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-import { useVault } from '@/vault/store'
-import type { SubjectColor, SubjectIcon } from '@/types'
 import { SUBJECT_COLORS, SUBJECT_ICONS } from '@/lib/subjectPalette'
+import { cn } from '@/lib/utils'
+import type { SubjectColor, SubjectIcon } from '@/types'
+import { useVault } from '@/vault/store'
 import { SubjectBadge, subjectIcons } from './visuals'
 
 /** Открыть диалог можно откуда угодно: openNewSubject() / openEditSubject(id). */
@@ -53,7 +53,9 @@ export function NewSubjectDialog() {
         navigate(`/s/${s.id}`)
       }
     } catch (err) {
-      toast.error(editing ? 'Не удалось сохранить предмет' : 'Не удалось создать предмет', { description: err instanceof Error ? err.message : String(err) })
+      toast.error(editing ? 'Не удалось сохранить предмет' : 'Не удалось создать предмет', {
+        description: err instanceof Error ? err.message : String(err),
+      })
     } finally {
       setBusy(false)
     }
@@ -65,7 +67,9 @@ export function NewSubjectDialog() {
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle>{editing ? 'Предмет' : 'Новый предмет'}</DialogTitle>
-            <DialogDescription>{editing ? 'Новое название станет и именем папки на диске.' : 'На диске появится папка с этим названием.'}</DialogDescription>
+            <DialogDescription>
+              {editing ? 'Новое название станет и именем папки на диске.' : 'На диске появится папка с этим названием.'}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center gap-3">
@@ -74,7 +78,14 @@ export function NewSubjectDialog() {
               <label htmlFor="subject-name" className="mb-1 block text-[13px] font-medium">
                 Название
               </label>
-              <Input id="subject-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Матанализ" maxLength={80} />
+              <Input
+                id="subject-name"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Матанализ"
+                maxLength={80}
+              />
             </div>
           </div>
 
@@ -114,7 +125,9 @@ export function NewSubjectDialog() {
                     onClick={() => setIcon(i)}
                     className={cn(
                       'flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
-                      icon === i ? 'border-highlight bg-accent text-highlight' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                      icon === i
+                        ? 'border-highlight bg-accent text-highlight'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                     )}
                   >
                     <Icon className="size-5" />

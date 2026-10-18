@@ -1,5 +1,5 @@
-import { motion } from 'motion/react'
 import { ChevronDown, FileUp, Maximize2, Plus, SquarePen } from 'lucide-react'
+import { motion } from 'motion/react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -108,7 +108,10 @@ export function ListColumn() {
     <aside
       aria-label={`Содержимое предмета «${subject.name}»`}
       {...drop.handlers}
-      className={cn('liquid-column-soft relative hidden w-[300px] shrink-0 flex-col border-r md:flex', drop.over && 'ring-2 ring-highlight ring-inset')}
+      className={cn(
+        'liquid-column-soft relative hidden w-[300px] shrink-0 flex-col border-r md:flex',
+        drop.over && 'ring-2 ring-highlight ring-inset',
+      )}
     >
       <header className="flex items-center gap-2.5 px-4 pt-4 pb-3">
         <SubjectBadge subject={subject} />
@@ -150,7 +153,9 @@ export function ListColumn() {
                 data-active={noteId === n.id || undefined}
                 className="block rounded-lg px-3 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
               >
-                <div className={cn('truncate text-[14px] font-semibold', !n.title && 'text-muted-foreground')}>{n.title || 'Без названия'}</div>
+                <div className={cn('truncate text-[14px] font-semibold', !n.title && 'text-muted-foreground')}>
+                  {n.title || 'Без названия'}
+                </div>
                 <div className="mt-0.5 flex gap-2 text-[13px] text-muted-foreground">
                   <span className="shrink-0 tabular-nums">{relativeTime(n.updated)}</span>
                   <span className="truncate">{n.excerpt || 'Нет текста'}</span>
@@ -230,7 +235,12 @@ export function ListColumn() {
 function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
   const createNote = useCreateNote()
   const content = {
-    notes: { title: 'Конспектов пока нет', hint: 'Нажми «Новый конспект» или Alt N', action: 'Новый конспект', run: () => createNote(subjectId) },
+    notes: {
+      title: 'Конспектов пока нет',
+      hint: 'Нажми «Новый конспект» или Alt N',
+      action: 'Новый конспект',
+      run: () => createNote(subjectId),
+    },
     pins: {
       title: 'Закреп пуст',
       hint: 'Сюда кладут формулы и определения, которые нужны всегда под рукой',

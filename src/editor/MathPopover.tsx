@@ -150,9 +150,7 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
             >
               <div ref={fieldHost} className="min-h-12 rounded-lg border bg-background px-2 py-1.5" />
               {mlState === 'loading' && <p className="mt-2 text-[12px] text-muted-foreground">Загружаю визуальный редактор…</p>}
-              {mlState === 'error' && (
-                <p className="mt-2 text-[12px] text-destructive">Не удалось загрузить MathLive. Пиши в LaTeX.</p>
-              )}
+              {mlState === 'error' && <p className="mt-2 text-[12px] text-destructive">Не удалось загрузить MathLive. Пиши в LaTeX.</p>}
               {mlState === 'ready' && (
                 <p className="mt-2 flex items-center gap-1.5 text-[12px] text-muted-foreground">
                   <Keyboard className="size-3.5" /> Дроби: «/», степень: «^», индекс: «_», корень: «sqrt»

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Окно приложения: только ядро. Папку выбирает и запоминает Rust (src/vault.rs)",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

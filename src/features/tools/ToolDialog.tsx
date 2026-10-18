@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input'
 import { toolIconLabels, toolIcons } from '@/features/subjects/visuals'
 import { errorText, submitOnCtrlEnter } from '@/lib/undo'
 import { cn } from '@/lib/utils'
+import type { ToolIcon } from '@/types'
 import { guessToolName } from '@/vault/repo'
 import { useVault } from '@/vault/store'
-import type { ToolIcon } from '@/types'
 
 interface Target {
   subjectId: string
@@ -111,7 +111,9 @@ export function ToolDialog() {
           <DialogHeader>
             <DialogTitle>{tool ? 'Тулза' : 'Новая тулза'}</DialogTitle>
             <DialogDescription>
-              {tool ? 'Название и иконка.' : 'HTML-файл артефакта — например, калькулятор, который сделал Claude. Работает в песочнице, без доступа к конспектам.'}
+              {tool
+                ? 'Название и иконка.'
+                : 'HTML-файл артефакта — например, калькулятор, который сделал Claude. Работает в песочнице, без доступа к конспектам.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -184,7 +186,14 @@ export function ToolDialog() {
             <label htmlFor="tool-name" className="mb-1 block text-[13px] font-medium">
               Название
             </label>
-            <Input id="tool-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Калькулятор интегралов" maxLength={80} autoFocus={!!tool} />
+            <Input
+              id="tool-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Калькулятор интегралов"
+              maxLength={80}
+              autoFocus={!!tool}
+            />
           </div>
 
           <fieldset>
@@ -205,7 +214,9 @@ export function ToolDialog() {
                     }}
                     className={cn(
                       'flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
-                      icon === i ? 'border-highlight bg-accent text-highlight' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                      icon === i
+                        ? 'border-highlight bg-accent text-highlight'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                     )}
                   >
                     <Icon className="size-5" />

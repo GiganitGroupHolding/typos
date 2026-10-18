@@ -83,8 +83,7 @@ export const useUi = create<UiState>()(
         set((s) => {
           const id = `${kind}:${refId}`
           const z = Math.max(0, ...s.windows.map((w) => w.z)) + 1
-          if (s.windows.some((w) => w.id === id))
-            return { windows: s.windows.map((w) => (w.id === id ? { ...w, z } : w)) }
+          if (s.windows.some((w) => w.id === id)) return { windows: s.windows.map((w) => (w.id === id ? { ...w, z } : w)) }
           return { windows: [...s.windows, { id, kind, refId, slot: s.windows.length % 6, z }] }
         }),
       closeWindow: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),

@@ -120,7 +120,15 @@ interface Options {
  *   <div ref={lens.attach} style={lens.style} className={cn(lens.className, …)}>{lens.extras}…</div>
  * Радиус скругления берётся из стилей самого элемента.
  */
-export function useLiquidLens({ bezel = 14, refraction = 16, dispersion = 0.08, frost = 1, hidden, variant = 'bar', fallback = '' }: Options = {}) {
+export function useLiquidLens({
+  bezel = 14,
+  refraction = 16,
+  dispersion = 0.08,
+  frost = 1,
+  hidden,
+  variant = 'bar',
+  fallback = '',
+}: Options = {}) {
   const id = `lens-${useId().replace(/:/g, '')}`
   // callback-ref: элемент может появиться позже первого рендера
   const [el, attach] = useState<HTMLElement | null>(null)
@@ -275,7 +283,17 @@ export function LensLight({ host: el }: { host: HTMLElement | null }) {
 }
 
 /** Блок с линзой — для мест, где хук неудобно подключать к готовому элементу. */
-export function LensBox({ lens: opts, className, style, children }: { lens?: Options; className?: string; style?: CSSProperties; children?: React.ReactNode }) {
+export function LensBox({
+  lens: opts,
+  className,
+  style,
+  children,
+}: {
+  lens?: Options
+  className?: string
+  style?: CSSProperties
+  children?: React.ReactNode
+}) {
   const lens = useLiquidLens(opts)
   return (
     <div ref={lens.attach} style={{ ...style, ...lens.style }} className={[lens.className, className].filter(Boolean).join(' ')}>

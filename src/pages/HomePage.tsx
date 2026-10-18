@@ -1,16 +1,17 @@
-import { motion } from 'motion/react'
 import { FolderPlus } from 'lucide-react'
+import { motion } from 'motion/react'
 import { Link } from 'react-router'
-import { LensBox, useLiquidLens } from '@/components/ui/liquid-lens'
 import { LiquidButton } from '@/components/ui/liquid-glass-button'
+import { LensBox, useLiquidLens } from '@/components/ui/liquid-lens'
 import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
 import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
-import { useRecentNotes, useSubjects } from '@/vault/hooks'
-import { useVault } from '@/vault/store'
 import { greeting, plural, relativeTime } from '@/lib/format'
 import { listItem, listParent, pageEnter } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { storageLabel } from '@/storage/VaultAdapter'
 import type { Subject } from '@/types'
+import { useRecentNotes, useSubjects } from '@/vault/hooks'
+import { useVault } from '@/vault/store'
 
 const CARD_LENS = { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4, variant: 'card', fallback: 'liquid liquid-lava' } as const
 
@@ -45,8 +46,7 @@ export function HomePage() {
     <motion.div {...pageEnter} className="mx-auto w-full max-w-5xl px-6 py-10 md:px-10">
       <h1 className="text-[32px] leading-tight font-bold tracking-tight">{greeting()}</h1>
       <p className="mt-1 text-[15px] text-muted-foreground">
-        {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} ·{' '}
-        {storage?.kind === 'folder' ? `папка «${storage.label}»` : 'хранятся в браузере'}
+        {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} · {storageLabel(storage) ?? 'хранятся в браузере'}
       </p>
 
       {!subjects.length && (
@@ -59,7 +59,12 @@ export function HomePage() {
         </div>
       )}
 
-      <motion.ul variants={listParent} initial="hidden" animate="show" className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <motion.ul
+        variants={listParent}
+        initial="hidden"
+        animate="show"
+        className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
         {subjects.map((s) => (
           <motion.li key={s.id} variants={listItem}>
             <SubjectCard subject={s}>
@@ -69,7 +74,10 @@ export function HomePage() {
                 {plural(count(notes, s.id), ['конспект', 'конспекта', 'конспектов'])} · {count(pins, s.id)} в закрепе ·{' '}
                 {plural(count(tools, s.id), ['тулза', 'тулзы', 'тулз'])}
               </div>
-              <div aria-hidden className="mt-4 h-1 w-10 origin-left rounded-full bg-(--subject) transition-transform duration-(--dur-slow) ease-(--ease-out) group-hover:scale-x-150" />
+              <div
+                aria-hidden
+                className="mt-4 h-1 w-10 origin-left rounded-full bg-(--subject) transition-transform duration-(--dur-slow) ease-(--ease-out) group-hover:scale-x-150"
+              />
             </SubjectCard>
           </motion.li>
         ))}
@@ -78,13 +86,21 @@ export function HomePage() {
       {!!recent.length && <h2 className="mt-12 mb-3 text-[20px] font-semibold tracking-tight">Недавние</h2>}
       {!!recent.length && (
         <LensBox lens={CARD_LENS} className="rounded-[var(--radius-surface)]">
-          <motion.ul variants={listParent} initial="hidden" animate="show" className="divide-y rounded-[inherit] [&>li:first-child>a]:rounded-t-[inherit] [&>li:last-child>a]:rounded-b-[inherit] [&>li]:rounded-[inherit]">
+          <motion.ul
+            variants={listParent}
+            initial="hidden"
+            animate="show"
+            className="divide-y rounded-[inherit] [&>li:first-child>a]:rounded-t-[inherit] [&>li:last-child>a]:rounded-b-[inherit] [&>li]:rounded-[inherit]"
+          >
             {recent.map((n) => {
               const s = subjectOf(n.subjectId)
               if (!s) return null
               return (
                 <motion.li key={n.id} variants={listItem}>
-                  <Link to={`/s/${s.id}/n/${n.id}`} className="flex items-center gap-3 px-4 py-3 outline-none hover:bg-accent focus-visible:bg-accent">
+                  <Link
+                    to={`/s/${s.id}/n/${n.id}`}
+                    className="flex items-center gap-3 px-4 py-3 outline-none hover:bg-accent focus-visible:bg-accent"
+                  >
                     <SubjectBadge subject={s} size="sm" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[15px] font-medium">{n.title || 'Без названия'}</div>

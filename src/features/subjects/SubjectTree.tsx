@@ -1,12 +1,12 @@
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { ChevronRight, FileText, Pin, Wrench } from 'lucide-react'
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { SidebarMenu, SidebarMenuButton } from '@/components/ui/sidebar'
-import { useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/vault/hooks'
 import { dur, easeOut, spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { Subject, SubjectTab } from '@/types'
+import { useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/vault/hooks'
 import { SubjectBadge } from './visuals'
 
 /*
@@ -53,8 +53,7 @@ function SubjectNode({ subject }: { subject: Subject }) {
     pins: usePinsOf(subject.id).length,
     tools: useToolsOf(subject.id).length,
   }
-  const currentTab: SubjectTab =
-    (params.get('tab') as SubjectTab) ?? (pathname.includes('/t/') ? 'tools' : 'notes')
+  const currentTab: SubjectTab = (params.get('tab') as SubjectTab) ?? (pathname.includes('/t/') ? 'tools' : 'notes')
 
   return (
     <motion.li layout="position" transition={spring} className="relative list-none">
