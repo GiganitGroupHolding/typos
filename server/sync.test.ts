@@ -4,11 +4,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { monitorConnection, useConnection } from '@/storage/connection'
-import { RemoteAdapter } from '@/storage/remoteAdapter'
-import { conflictCopy } from '@/storage/sync'
+import { conflictCopy, fromBlob } from '@/storage/sync'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
 import { parseFrontmatter } from '@/vault/format'
 import * as repo from '@/vault/repo'
+import { DavAdapter } from './davAdapter'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 let dir: string
@@ -29,7 +29,7 @@ afterEach(async () => {
 })
 
 const config = () => ({ url: `http://127.0.0.1:${port}`, token, name: 'Тест', vaultId: srv.state.vaultId })
-const direct = () => new RemoteAdapter(config())
+const direct = () => new DavAdapter(config())
 /** Устройство со своей локальной копией (scope — отдельная база IndexedDB). */
 async function device(scope: string) {
   const d = new SyncedAdapter(config(), scope)
@@ -183,6 +183,22 @@ describe('синхронизация с локальной копией', () => 
     } finally {
       stop()
     }
+  })
+})
+
+describe('текстовые файлы в локальной копии', () => {
+  const bytes = async (v: string | Blob) => new Uint8Array(await new Blob([v]).arrayBuffer())
+
+  it('строка обратно в байты даёт ровно те же байты: BOM не теряется, не-UTF-8 остаётся Blob', async () => {
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x41])
+    const value = await fromBlob('a.txt', new Blob([bom]))
+    expect(typeof value).toBe('string')
+    expect(await bytes(value)).toEqual(bom)
+
+    const cp1251 = new Uint8Array([0xcf, 0xf0, 0xe8])
+    const raw = await fromBlob('b.txt', new Blob([cp1251]))
+    expect(raw).toBeInstanceOf(Blob)
+    expect(await bytes(raw)).toEqual(cp1251)
   })
 })
 

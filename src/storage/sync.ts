@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { getHtmlMeta, setHtmlMeta } from '@/vault/repo'
 import { genId, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from '@/vault/format'
+import { getHtmlMeta, setHtmlMeta } from '@/vault/repo'
 import type { FlatStore } from './flatAdapter'
 import { RemoteError, type RemoteAdapter } from './remoteAdapter'
 import { basename, dirname, joinPath } from './VaultAdapter'
@@ -63,8 +63,18 @@ export interface EngineHooks {
 
 const TEXT_FILE = /\.(md|json|html?|txt|css|js|svg)$/i
 const toBlob = (v: string | Blob) => (typeof v === 'string' ? new Blob([v]) : v)
-/** В локальной копии текстовые файлы — строками (так их быстрее читать), остальное — Blob. */
-export const fromBlob = async (path: string, blob: Blob) => (TEXT_FILE.test(path) ? await blob.text() : blob)
+// BOM оставляем в строке, битый UTF-8 — ошибка: строка обратно в байты должна дать ровно те же байты, иначе ложный конфликт
+const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+
+/** В локальной копии текстовые файлы — строками (так их быстрее читать), остальное и текст не в UTF-8 — Blob. */
+export async function fromBlob(path: string, blob: Blob): Promise<string | Blob> {
+  if (!TEXT_FILE.test(path)) return blob
+  try {
+    return utf8.decode(await blob.arrayBuffer())
+  } catch {
+    return blob
+  }
+}
 
 async function sameBytes(a: Blob, b: Blob) {
   if (a.size !== b.size) return false
@@ -79,7 +89,12 @@ async function sameBytes(a: Blob, b: Blob) {
  * Наша версия файла, который на сервере успели изменить: «Имя (конфликт 18.10 14-05).md».
  * У конспектов, карточек и тулз новый id и пометка в заголовке, чтобы в приложении это были две разные записи.
  */
-export function conflictCopy(path: string, value: string | Blob, taken: Set<string>, when = new Date()): { path: string; value: string | Blob } {
+export function conflictCopy(
+  path: string,
+  value: string | Blob,
+  taken: Set<string>,
+  when = new Date(),
+): { path: string; value: string | Blob } {
   const pad = (n: number) => String(n).padStart(2, '0')
   const label = `конфликт ${pad(when.getDate())}.${pad(when.getMonth() + 1)} ${pad(when.getHours())}-${pad(when.getMinutes())}`
   const name = basename(path)
@@ -95,7 +110,8 @@ export function conflictCopy(path: string, value: string | Blob, taken: Set<stri
     const marked = body.replace(/^(#{1,6} .*)$/m, `$1 (${label})`)
     return { path: copy, value: serializeFrontmatter({ ...meta, id: genId() }, marked) }
   }
-  if (/\.html?$/i.test(path) && getHtmlMeta(value, 'studynotes-id')) return { path: copy, value: setHtmlMeta(value, 'studynotes-id', genId()) }
+  if (/\.html?$/i.test(path) && getHtmlMeta(value, 'studynotes-id'))
+    return { path: copy, value: setHtmlMeta(value, 'studynotes-id', genId()) }
   return { path: copy, value }
 }
 
@@ -144,7 +160,11 @@ export class SyncEngine {
       try {
         do {
           this.again = false
-          for (let i = 0; i < 3 && (await this.pass()); i++);
+          // проход просит ещё один (копии конфликтов, правки во время прохода) — до трёх подряд
+          let passes = 0
+          while ((await this.pass()) && ++passes < 3) {
+            // следующий проход
+          }
         } while (this.again)
         useSync.setState({ lastSync: Date.now() })
       } finally {
@@ -263,7 +283,8 @@ export class SyncEngine {
     }
     // здесь удалили, на сервере правили — тоже правка важнее: берём серверную.
     // Одинаковое содержимое — просто запоминаем версию. Цвет и порядок предмета — берём с сервера.
-    if (mine === undefined || (await sameBytes(toBlob(mine), got.blob)) || basename(path) === SUBJECT_META) return this.adopt(path, got, rev, ctx)
+    if (mine === undefined || (await sameBytes(toBlob(mine), got.blob)) || basename(path) === SUBJECT_META)
+      return this.adopt(path, got, rev, ctx)
     const copy = conflictCopy(path, mine, ctx.taken)
     ctx.taken.add(copy.path)
     await this.adopt(path, got, rev, ctx, async () => {

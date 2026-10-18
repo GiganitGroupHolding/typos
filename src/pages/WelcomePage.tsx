@@ -1,23 +1,24 @@
-import { motion } from 'motion/react'
+import { isTauri } from '@tauri-apps/api/core'
 import { ArrowLeft, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { Nebula } from '@/app/layout/Nebula'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { LiquidButton } from '@/components/ui/liquid-glass-button'
+import { plural } from '@/lib/format'
+import { listItem, listParent } from '@/lib/motion'
 import { createBrowserAdapter } from '@/storage/browserAdapter'
 import { fsaSupported } from '@/storage/fsaAdapter'
-import { isTauri } from '@/storage/tauriAdapter'
+import { blockedAsMixedContent, MIXED_CONTENT_HINT, parseRemoteLink } from '@/storage/remoteLink'
 import { useSync } from '@/storage/sync'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
-import { blockedAsMixedContent, parseRemoteLink } from '@/storage/remoteLink'
-import { listItem, listParent } from '@/lib/motion'
-import { plural } from '@/lib/format'
+import { storageLabel } from '@/storage/VaultAdapter'
 import { countNotes } from '@/vault/repo'
 import { useVault } from '@/vault/store'
-import { Nebula } from '@/app/layout/Nebula'
 
 /** Хранилище: подключить папку на диске, сервер хранения или остаться в браузере. */
 export function WelcomePage() {
@@ -71,14 +72,16 @@ export function WelcomePage() {
       return
     }
     if (blockedAsMixedContent(config)) {
-      setLinkError('Приложение открыто по https, а сервер — по http: браузер такое блокирует. Запусти сервер с --cert/--key или открой приложение по http.')
+      setLinkError(MIXED_CONTENT_HINT)
       return
     }
     setBusy(true)
     try {
       const res = await connectRemote(config, migrate && inBrowser && !!browserNotes)
       toast.success('Сервер подключён', {
-        description: res.copied ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.` : 'Конспекты теперь сохраняются на сервер.',
+        description: res.copied
+          ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.`
+          : 'Конспекты теперь сохраняются на сервер.',
       })
       setLink('')
       navigate('/')
@@ -91,13 +94,18 @@ export function WelcomePage() {
 
   const disconnect = async () => {
     setBusy(true)
-    await switchToBrowser()
-    setBusy(false)
-    setConfirmDisconnect(false)
-    toast(inRemote ? 'Сервер отключён' : 'Папка отключена', {
-      description: `${inRemote ? 'Файлы на сервере' : 'Файлы в папке'} остались на месте. Открыто хранилище браузера.`,
-    })
-    navigate('/')
+    try {
+      await switchToBrowser()
+      toast(inRemote ? 'Сервер отключён' : 'Папка отключена', {
+        description: `${inRemote ? 'Файлы на сервере' : 'Файлы в папке'} остались на месте. Открыто хранилище браузера.`,
+      })
+      navigate('/')
+    } catch (e) {
+      toast.error('Не получилось отключить', { description: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setBusy(false)
+      setConfirmDisconnect(false)
+    }
   }
 
   return (
@@ -105,14 +113,22 @@ export function WelcomePage() {
       <div aria-hidden className="ambient">
         <Nebula />
       </div>
-      <motion.div variants={listParent} initial="hidden" animate="show" className="glass w-full max-w-md rounded-[var(--radius-surface)] p-8">
+      <motion.div
+        variants={listParent}
+        initial="hidden"
+        animate="show"
+        className="glass w-full max-w-md rounded-[var(--radius-surface)] p-8"
+      >
         {status === 'ready' && (
           <Link to="/" className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-3.5" /> Назад
           </Link>
         )}
         <div className="text-center">
-          <motion.span variants={listItem} className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-card">
+          <motion.span
+            variants={listItem}
+            className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-card"
+          >
             К
           </motion.span>
           <motion.h1 variants={listItem} className="mt-5 text-[24px] font-bold tracking-tight">
@@ -132,8 +148,10 @@ export function WelcomePage() {
             <MonitorSmartphone className="size-4 shrink-0 text-muted-foreground" />
           )}
           <span className="min-w-0 flex-1">
-            Сейчас: <b className="font-semibold">{inFolder ? `папка «${adapter.label}»` : inRemote ? `сервер «${adapter.label}»` : 'хранилище браузера'}</b>
-            {adapter instanceof SyncedAdapter && <span className="block truncate text-[12px] text-muted-foreground">{adapter.config.url}</span>}
+            Сейчас: <b className="font-semibold">{storageLabel(adapter) ?? 'хранилище браузера'}</b>
+            {adapter instanceof SyncedAdapter && (
+              <span className="block truncate text-[12px] text-muted-foreground">{adapter.config.url}</span>
+            )}
           </span>
           {!inBrowser && (
             <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmDisconnect(true)}>
@@ -152,18 +170,32 @@ export function WelcomePage() {
         </motion.ul>
 
         {!supported && (
-          <motion.p variants={listItem} role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/30 px-3 py-2.5 text-[13px] text-destructive">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" /> Здесь нельзя работать с папкой на диске: нужен Edge или Chrome и адрес localhost или https. Можно подключить сервер хранения.
+          <motion.p
+            variants={listItem}
+            role="alert"
+            className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/30 px-3 py-2.5 text-[13px] text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" /> Здесь нельзя работать с папкой на диске: нужен Edge или Chrome и адрес
+            localhost или https. Можно подключить сервер хранения.
           </motion.p>
         )}
 
         {inBrowser && !!browserNotes && (
-          <motion.label variants={listItem} className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-[14px]">
-            <input type="checkbox" checked={migrate} onChange={(e) => setMigrate(e.target.checked)} className="mt-1 size-4 accent-(--highlight)" />
+          <motion.label
+            variants={listItem}
+            className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-[14px]"
+          >
+            <input
+              type="checkbox"
+              checked={migrate}
+              onChange={(e) => setMigrate(e.target.checked)}
+              className="mt-1 size-4 accent-(--highlight)"
+            />
             <span>
               Перенести то, что уже есть в браузере
               <span className="block text-[13px] text-muted-foreground">
-                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и тулзами. Файлы с такими же именами на новом месте не перезапишутся.
+                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и тулзами. Файлы с такими же именами на новом
+                месте не перезапишутся.
               </span>
             </span>
           </motion.label>
@@ -193,7 +225,8 @@ export function WelcomePage() {
             <Server className="size-4 text-highlight" /> {inRemote ? 'Другой сервер хранения' : 'Сервер хранения'}
           </label>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Запусти на сервере <code className="font-mono text-[12px]">node typos-server.mjs --dir ./vault</code> и вставь ссылку typos://, которую он напечатает.
+            Запусти на сервере <code className="font-mono text-[12px]">node typos-server.mjs --dir ./vault</code> и вставь ссылку typos://,
+            которую он напечатает.
           </p>
           <div className="mt-3 flex gap-2">
             <Input
@@ -225,14 +258,15 @@ export function WelcomePage() {
       <Dialog open={confirmDisconnect} onOpenChange={(o) => !o && setConfirmDisconnect(false)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{inRemote ? `Отключиться от сервера «${adapter.label}»?` : `Отключить папку «${adapter?.label}»?`}</DialogTitle>
+            <DialogTitle>{inRemote ? `Отключиться от сервера «${adapter?.label}»?` : `Отключить папку «${adapter?.label}»?`}</DialogTitle>
             <DialogDescription>
               {inRemote
                 ? 'Конспекты останутся на сервере — подключиться снова можно той же ссылкой.'
                 : 'Файлы останутся в папке — подключить её снова можно в любой момент.'}{' '}
               {inRemote && pending > 0 && (
                 <b className="font-semibold text-foreground">
-                  {plural(pending, ['правка ещё не отправлена', 'правки ещё не отправлены', 'правок ещё не отправлено'])} — они останутся на этом устройстве и уйдут на сервер, когда подключишься снова.{' '}
+                  {plural(pending, ['правка ещё не отправлена', 'правки ещё не отправлены', 'правок ещё не отправлено'])} — они останутся на
+                  этом устройстве и уйдут на сервер, когда подключишься снова.{' '}
                 </b>
               )}
               Приложение откроет хранилище браузера: там то, что было до подключения

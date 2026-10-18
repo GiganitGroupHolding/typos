@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { loadVault } from '@/vault/repo'
 import { sampleVault } from '@/test/sampleVault'
+import { loadVault } from '@/vault/repo'
 import { buildDocs, createIndex, normalize, plainText, search, snippet } from './searchIndex'
 
 const index = async () => {

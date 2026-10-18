@@ -5,15 +5,14 @@ import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sideb
 import { FloatingWindows } from '@/features/pins/FloatingWindows'
 import { PinEditorDialog } from '@/features/pins/PinEditorDialog'
 import { PinsDrawer } from '@/features/pins/PinsDrawer'
-import { ToolDialog } from '@/features/tools/ToolDialog'
 import { CommandPalette } from '@/features/search/CommandPalette'
 import { ClearSubjectsDialog } from '@/features/subjects/ClearSubjectsDialog'
 import { NewSubjectDialog } from '@/features/subjects/NewSubjectDialog'
+import { ToolDialog } from '@/features/tools/ToolDialog'
 import { cn } from '@/lib/utils'
-import { useSubject } from '@/vault/hooks'
-import { monitorConnection, useConnection } from '@/storage/connection'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
 import { basename } from '@/storage/VaultAdapter'
+import { useSubject } from '@/vault/hooks'
 import { useVault } from '@/vault/store'
 import { useAccentSync } from '../accent'
 import { useUi } from '../store'
@@ -21,8 +20,8 @@ import { useHotkeys } from '../useHotkeys'
 import { AppSidebar } from './AppSidebar'
 import { ConnectionBanner } from './ConnectionBanner'
 import { ListColumn } from './ListColumn'
-import { TopBar } from './TopBar'
 import { Nebula } from './Nebula'
+import { TopBar } from './TopBar'
 
 /** Режим фокуса прячет обе левые колонки; выход — возвращает сайдбар. */
 function FocusSync() {
@@ -46,40 +45,21 @@ function useRefreshOnFocus() {
   }, [])
 }
 
-/**
- * Синхронизация локальной копии и слежение за связью, пока открыт сервер хранения.
- * Связь вернулась или сервер сообщил об изменениях — сразу синхронизируем. Возвращает «остановить».
- */
-function startServerSync(adapter: SyncedAdapter) {
-  const { engine } = adapter
-  engine.hooks.isOffline = () => useConnection.getState().status !== 'online'
-  engine.hooks.onConflict = (path, copy) =>
-    toast.warning('Файл правили в двух местах', {
-      description: `«${basename(path)}» изменили и здесь, и на другом устройстве, пока не было связи. Обе версии сохранены, вторая — «${basename(copy)}».`,
-      duration: 15_000,
-    })
-  adapter.onChanged = () => void useVault.getState().refresh()
-  adapter.start()
-  const stopMonitor = monitorConnection(adapter.remote, {
-    onChange: (status, prev) => {
-      if (status !== 'online') return
-      engine.schedule(0)
-      if (prev === 'offline') toast.success('Связь с сервером восстановлена', { id: 'connection' })
-    },
-    onServerChange: () => engine.schedule(150),
-  })
-  return () => {
-    stopMonitor()
-    adapter.stop()
-    adapter.onChanged = undefined
-    engine.hooks = { onPulled: engine.hooks.onPulled }
-  }
-}
-
+/** Пока открыт сервер хранения — синхронизация в фоне; о конфликтах и вернувшейся связи говорим тостом. */
 function useServerSync() {
   const adapter = useVault((s) => s.adapter)
   useEffect(() => {
-    if (adapter instanceof SyncedAdapter) return startServerSync(adapter)
+    if (!(adapter instanceof SyncedAdapter)) return
+    adapter.start({
+      onChanged: () => void useVault.getState().refresh(),
+      onConflict: (path, copy) =>
+        toast.warning('Файл правили в двух местах', {
+          description: `«${basename(path)}» изменили и здесь, и на другом устройстве, пока не было связи. Обе версии сохранены, вторая — «${basename(copy)}».`,
+          duration: 15_000,
+        }),
+      onReconnected: () => toast.success('Связь с сервером восстановлена', { id: 'connection' }),
+    })
+    return () => adapter.stop()
   }, [adapter])
 }
 

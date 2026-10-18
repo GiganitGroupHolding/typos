@@ -38,3 +38,6 @@ export function parseRemoteLink(text: string): RemoteConfig {
 /** Страница по https не может ходить на http-сервер — браузер блокирует такие запросы. */
 export const blockedAsMixedContent = (config: RemoteConfig, pageProtocol = globalThis.location?.protocol) =>
   pageProtocol === 'https:' && config.url.startsWith('http:')
+
+export const MIXED_CONTENT_HINT =
+  'Приложение открыто по https, а сервер — по http: браузер такое блокирует. Запусти сервер с --cert/--key или открой приложение по http.'

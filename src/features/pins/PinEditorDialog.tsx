@@ -4,8 +4,8 @@ import { create } from 'zustand'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { errorText, submitOnCtrlEnter } from '@/lib/undo'
 import { Tex } from '@/lib/tex'
+import { errorText, submitOnCtrlEnter } from '@/lib/undo'
 import { useVault } from '@/vault/store'
 
 interface Target {
@@ -74,7 +74,14 @@ export function PinEditorDialog() {
             <label htmlFor="pin-title" className="mb-1 block text-[13px] font-medium">
               Название
             </label>
-            <Input id="pin-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Формула Крамера" maxLength={80} />
+            <Input
+              id="pin-title"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Формула Крамера"
+              maxLength={80}
+            />
           </div>
 
           <div>

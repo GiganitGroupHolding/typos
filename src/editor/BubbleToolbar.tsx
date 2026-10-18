@@ -1,6 +1,6 @@
+import { NodeSelection } from '@tiptap/pm/state'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import { NodeSelection } from '@tiptap/pm/state'
 import {
   Baseline,
   Bold,
@@ -58,7 +58,11 @@ function turnInto(e: Editor, id: BlockId) {
   const c = e.chain().focus()
   // сначала снимаем обёртки (списки, цитату), потом ставим нужный тип
   if (id === 'paragraph') return c.clearNodes().setParagraph().run()
-  if (id === 'h1' || id === 'h2' || id === 'h3') return c.clearNodes().setHeading({ level: Number(id[1]) as 1 | 2 | 3 }).run()
+  if (id === 'h1' || id === 'h2' || id === 'h3')
+    return c
+      .clearNodes()
+      .setHeading({ level: Number(id[1]) as 1 | 2 | 3 })
+      .run()
   if (id === 'bullet') return c.clearNodes().toggleBulletList().run()
   if (id === 'ordered') return c.clearNodes().toggleOrderedList().run()
   if (id === 'task') return c.clearNodes().toggleTaskList().run()
@@ -66,9 +70,7 @@ function turnInto(e: Editor, id: BlockId) {
   if (id === 'code') return c.clearNodes().toggleCodeBlock().run()
   // весь блок (обычно код с LaTeX из ответа нейросети) → блочная формула
   const { $from } = e.state.selection
-  const latex = $from.parent.textContent
-    .trim()
-    .replace(/^(?:\$\$|\\\[)\s*([\s\S]*?)\s*(?:\$\$|\\\])$/, '$1')
+  const latex = $from.parent.textContent.trim().replace(/^(?:\$\$|\\\[)\s*([\s\S]*?)\s*(?:\$\$|\\\])$/, '$1')
   const depth = $from.depth
   return c
     .command(({ tr, state }) => {
@@ -80,7 +82,19 @@ function turnInto(e: Editor, id: BlockId) {
 
 const keep = (e: React.MouseEvent) => e.preventDefault()
 
-function Btn({ icon: Icon, label, active, onClick, className }: { icon: LucideIcon; label: string; active?: boolean; onClick: () => void; className?: string }) {
+function Btn({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  className,
+}: {
+  icon: LucideIcon
+  label: string
+  active?: boolean
+  onClick: () => void
+  className?: string
+}) {
   return (
     <button
       type="button"
@@ -130,7 +144,8 @@ export function BubbleToolbar({
       link: e.isActive('link'),
       href: (e.getAttributes('link').href as string | undefined) ?? '',
       textColor: (e.getAttributes('textColor').color as NoteColor | undefined) ?? null,
-      bgColor: (e.isActive('highlight') ? ((e.getAttributes('highlight').color as NoteColor | undefined) ?? 'default') : null) as NoteColor | 'default' | null,
+      bgColor: (e.isActive('highlight') ? ((e.getAttributes('highlight').color as NoteColor | undefined) ?? 'default') : null) as
+        NoteColor | 'default' | null,
       block: currentBlock(e),
     }),
   })
@@ -152,7 +167,11 @@ export function BubbleToolbar({
   const applyLink = () => {
     const href = url.trim()
     if (!href) c().extendMarkRange('link').unsetLink().run()
-    else c().extendMarkRange('link').setLink({ href: /^[a-z][\w+.-]*:/i.test(href) ? href : `https://${href}` }).run()
+    else
+      c()
+        .extendMarkRange('link')
+        .setLink({ href: /^[a-z][\w+.-]*:/i.test(href) ? href : `https://${href}` })
+        .run()
     setPanel(null)
   }
 
@@ -198,49 +217,49 @@ export function BubbleToolbar({
           </button>
           {s.block !== 'code' && (
             <>
-            <Sep />
-            <Btn icon={Bold} label="Жирный · Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
-            <Btn icon={Italic} label="Курсив · Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
-            <Btn icon={Underline} label="Подчёркнутый · Ctrl U" active={s.underline} onClick={() => c().toggleUnderline().run()} />
-            <Btn icon={Strikethrough} label="Зачёркнутый · Ctrl Shift S" active={s.strike} onClick={() => c().toggleStrike().run()} />
-            <Btn icon={Code} label="Код · Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
-            <Sep />
-            <Btn
-              icon={Link2}
-              label="Ссылка · Ctrl K"
-              active={s.link || panel === 'link'}
-              onClick={() => {
-                setUrl(s.href)
-                toggle('link')
-              }}
-            />
-            <Btn icon={Radical} label="В формулу · Ctrl Shift E" onClick={onFormula} />
-            <button
-              type="button"
-              title="Цвет · Ctrl Shift H — последний"
-              aria-label="Цвет текста и фона"
-              aria-expanded={panel === 'color'}
-              onMouseDown={keep}
-              onClick={() => toggle('color')}
-              className="flex h-8 items-center gap-0.5 rounded-lg px-1.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span
-                className="flex size-5 items-center justify-center rounded-md"
-                style={{ background: s.bgColor && s.bgColor !== 'default' ? `var(--hl-${s.bgColor})` : undefined }}
+              <Sep />
+              <Btn icon={Bold} label="Жирный · Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
+              <Btn icon={Italic} label="Курсив · Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
+              <Btn icon={Underline} label="Подчёркнутый · Ctrl U" active={s.underline} onClick={() => c().toggleUnderline().run()} />
+              <Btn icon={Strikethrough} label="Зачёркнутый · Ctrl Shift S" active={s.strike} onClick={() => c().toggleStrike().run()} />
+              <Btn icon={Code} label="Код · Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
+              <Sep />
+              <Btn
+                icon={Link2}
+                label="Ссылка · Ctrl K"
+                active={s.link || panel === 'link'}
+                onClick={() => {
+                  setUrl(s.href)
+                  toggle('link')
+                }}
+              />
+              <Btn icon={Radical} label="В формулу · Ctrl Shift E" onClick={onFormula} />
+              <button
+                type="button"
+                title="Цвет · Ctrl Shift H — последний"
+                aria-label="Цвет текста и фона"
+                aria-expanded={panel === 'color'}
+                onMouseDown={keep}
+                onClick={() => toggle('color')}
+                className="flex h-8 items-center gap-0.5 rounded-lg px-1.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Baseline className="size-4" style={{ color: s.textColor ? `var(--tc-${s.textColor})` : undefined }} />
-              </span>
-              <ChevronDown className="size-3 text-muted-foreground" />
-            </button>
-            <Sep />
-            <Btn
-              icon={Pin}
-              label="В закреп"
-              onClick={() => {
-                const text = selectionText()
-                if (text) onPin(text)
-              }}
-            />
+                <span
+                  className="flex size-5 items-center justify-center rounded-md"
+                  style={{ background: s.bgColor && s.bgColor !== 'default' ? `var(--hl-${s.bgColor})` : undefined }}
+                >
+                  <Baseline className="size-4" style={{ color: s.textColor ? `var(--tc-${s.textColor})` : undefined }} />
+                </span>
+                <ChevronDown className="size-3 text-muted-foreground" />
+              </button>
+              <Sep />
+              <Btn
+                icon={Pin}
+                label="В закреп"
+                onClick={() => {
+                  const text = selectionText()
+                  if (text) onPin(text)
+                }}
+              />
             </>
           )}
         </div>
@@ -384,7 +403,19 @@ function ColorRow({
   )
 }
 
-function Swatch({ color, label, active, kind, onClick }: { color?: NoteColor; label: string; active: boolean; kind: 'text' | 'bg'; onClick: () => void }) {
+function Swatch({
+  color,
+  label,
+  active,
+  kind,
+  onClick,
+}: {
+  color?: NoteColor
+  label: string
+  active: boolean
+  kind: 'text' | 'bg'
+  onClick: () => void
+}) {
   return (
     <button
       type="button"

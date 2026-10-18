@@ -1,8 +1,9 @@
 import { createStore, del, delMany, entries, get, keys, set, update, type UseStore } from 'idb-keyval'
+import { monitorConnection, useConnection } from './connection'
 import { FlatAdapter, type FlatStore } from './flatAdapter'
 import { RemoteAdapter } from './remoteAdapter'
 import type { RemoteConfig } from './remoteLink'
-import { fromBlob, SyncEngine, touched, useSync, type MetaEntry, type MetaStore, type Replica } from './sync'
+import { fromBlob, SyncEngine, touched, useSync, type EngineHooks, type MetaEntry, type MetaStore, type Replica } from './sync'
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
 /**
@@ -11,8 +12,9 @@ import type { Entry, VaultAdapter } from './VaultAdapter'
  * Копия своя у каждого хранилища (по vaultId) и не трогает обычное хранилище браузера.
  */
 
-/** Служебные ключи в базе сведений — не пути файлов. */
-const READY_KEY = '\u0000ready'
+/** Служебные ключи в базе сведений начинаются с этого символа — путь файла с него начинаться не может. */
+const INTERNAL = '\u0000'
+const READY_KEY = `${INTERNAL}ready`
 
 function idbFiles(store: UseStore): FlatStore {
   return {
@@ -30,8 +32,18 @@ function idbMeta(store: UseStore): MetaStore {
     update: (p, fn) => update<MetaEntry>(p, fn, store),
     del: (p) => del(p, store),
     entries: async () =>
-      (await entries<IDBValidKey, MetaEntry>(store)).filter(([k]) => !String(k).startsWith('\u0000')).map(([k, v]) => [String(k), v]),
+      (await entries<IDBValidKey, MetaEntry>(store)).filter(([k]) => !String(k).startsWith(INTERNAL)).map(([k, v]) => [String(k), v]),
   }
+}
+
+/** Что приложение хочет знать, пока хранилище открыто. */
+export interface SyncHooks {
+  /** Локальная копия поменялась не из этой вкладки (сервер или другая вкладка) — перечитать. */
+  onChanged?: () => void
+  /** Файл правили и здесь, и на сервере: наша версия сохранена копией. */
+  onConflict?: EngineHooks['onConflict']
+  /** Связь с сервером вернулась после обрыва. */
+  onReconnected?: () => void
 }
 
 export class SyncedAdapter implements VaultAdapter {
@@ -42,6 +54,8 @@ export class SyncedAdapter implements VaultAdapter {
   readonly engine: SyncEngine
   /** Локальная копия поменялась не из этой вкладки (сервер или другая вкладка) — перечитать. */
   onChanged?: () => void
+  /** Хуки движка, которые нужны самому адаптеру при любом запуске. */
+  private readonly ownHooks: EngineHooks = { onPulled: () => this.changed(true) }
 
   private readonly files: FlatStore
   private readonly metaStore: UseStore
@@ -50,6 +64,7 @@ export class SyncedAdapter implements VaultAdapter {
   private queue: Promise<unknown> = Promise.resolve()
   private channel?: BroadcastChannel
   private periodic?: ReturnType<typeof setInterval>
+  private stopMonitor?: () => void
 
   /** scope — отдельная копия того же хранилища (в тестах — «второе устройство»). */
   constructor(config: RemoteConfig, scope = '') {
@@ -62,7 +77,7 @@ export class SyncedAdapter implements VaultAdapter {
     this.local = new FlatAdapter(this.files, 'remote', config.name)
     this.replica = { files: this.files, meta: idbMeta(this.metaStore), lock: (job) => this.lock(job) }
     this.engine = new SyncEngine(this.replica, this.remote)
-    this.engine.hooks.onPulled = () => this.changed(true)
+    this.engine.hooks = { ...this.ownHooks }
   }
 
   /** Копия уже хоть раз синхронизирована — можно открывать без сети. */
@@ -76,10 +91,28 @@ export class SyncedAdapter implements VaultAdapter {
     await set(READY_KEY, true, this.metaStore)
   }
 
-  /** Фоновая синхронизация, пока хранилище открыто. */
-  start() {
+  /**
+   * Фоновая синхронизация и слежение за связью, пока хранилище открыто.
+   * Связь вернулась или сервер сообщил об изменениях — синхронизируем сразу.
+   */
+  start(hooks: SyncHooks = {}) {
+    this.stop()
+    this.onChanged = hooks.onChanged
+    this.engine.hooks = {
+      ...this.ownHooks,
+      onConflict: hooks.onConflict,
+      isOffline: () => useConnection.getState().status !== 'online',
+    }
     this.channel = typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel(`typos-sync-${this.config.vaultId}`)
     if (this.channel) this.channel.onmessage = () => this.onChanged?.()
+    this.stopMonitor = monitorConnection(this.remote, {
+      onChange: (status, prev) => {
+        if (status !== 'online') return
+        this.engine.schedule(0)
+        if (prev === 'offline') hooks.onReconnected?.()
+      },
+      onServerChange: () => this.engine.schedule(150),
+    })
     // страховка на случай пропущенных событий сервера
     this.periodic = setInterval(() => this.engine.schedule(0), 60_000)
     this.engine.schedule(0)
@@ -87,10 +120,14 @@ export class SyncedAdapter implements VaultAdapter {
   }
 
   stop() {
+    this.stopMonitor?.()
+    this.stopMonitor = undefined
     clearInterval(this.periodic)
     this.engine.cancel()
     this.channel?.close()
     this.channel = undefined
+    this.onChanged = undefined
+    this.engine.hooks = { ...this.ownHooks }
   }
 
   private lock<T>(job: () => Promise<T>): Promise<T> {

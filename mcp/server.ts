@@ -145,7 +145,8 @@ server.registerTool(
   'create_pin',
   {
     title: 'Карточка в закреп',
-    description: 'Шпаргалка предмета: одна формула (LaTeX без $) и короткий простой текст под ней. Для нескольких формул — aligned/gathered в одном tex.',
+    description:
+      'Шпаргалка предмета: одна формула (LaTeX без $) и короткий простой текст под ней. Для нескольких формул — aligned/gathered в одном tex.',
     inputSchema: {
       subject,
       title: z.string().min(1),
@@ -172,7 +173,8 @@ server.registerTool(
   'import_tool',
   {
     title: 'Добавить тулзу',
-    description: 'Кладёт самодостаточный HTML (калькулятор, решатель, тренажёр) в «Инструменты» предмета. В приложении он работает в песочнице без доступа к данным.',
+    description:
+      'Кладёт самодостаточный HTML (калькулятор, решатель, тренажёр) в «Инструменты» предмета. В приложении он работает в песочнице без доступа к данным.',
     inputSchema: {
       subject,
       name: z.string().min(1),
@@ -181,8 +183,13 @@ server.registerTool(
     },
     annotations: write,
   },
-  run((a: { subject: string; name: string; html: string; icon?: 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table' }) =>
-    vault.importTool(a),
+  run(
+    (a: {
+      subject: string
+      name: string
+      html: string
+      icon?: 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table'
+    }) => vault.importTool(a),
   ),
 )
 

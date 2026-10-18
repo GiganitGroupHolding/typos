@@ -1,14 +1,10 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import { createStore, del, get, set } from 'idb-keyval'
+import { invoke } from '@tauri-apps/api/core'
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
 /**
  * Папка на диске в десктопном приложении (Tauri): файлы читает и пишет Rust (src-tauri/src/vault.rs).
- * Разрешений браузера нет — путь к папке просто запоминается.
+ * Папку выбирают в системном диалоге; Rust запоминает её сам и пускает только в выбранные папки.
  */
-
-export { isTauri }
 
 /** Rust так сообщает, что файла нет. */
 const MISSING = 'ENOENT'
@@ -76,17 +72,11 @@ export class TauriAdapter implements VaultAdapter {
   }
 }
 
-// ---------- запомненная папка ----------
+// ---------- выбор и запомненная папка ----------
 
-const settings = createStore('studynotes-settings', 'kv')
-const PATH_KEY = 'vaultPath'
-
-export const loadSavedPath = () => get<string>(PATH_KEY, settings).catch(() => undefined)
-export const savePath = (path: string) => set(PATH_KEY, path, settings)
-export const forgetPath = () => del(PATH_KEY, settings)
-
+/** Папка, выбранная в прошлый раз; null — не выбирали. */
+export const loadSavedPath = () => call<string | null>('vault_saved')
 /** Системный диалог выбора папки. null — пользователь передумал. */
-export async function pickFolderPath(): Promise<string | null> {
-  const path = await open({ directory: true, title: 'Папка для конспектов' })
-  return typeof path === 'string' ? path : null
-}
+export const pickFolderPath = () => call<string | null>('vault_pick')
+export const savePath = (root: string) => call<void>('vault_remember', { root })
+export const forgetPath = () => call<void>('vault_forget')

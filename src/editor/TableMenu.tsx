@@ -1,7 +1,6 @@
-import type { Editor } from '@tiptap/react'
-import { useEditorState } from '@tiptap/react'
-import { BubbleMenu } from '@tiptap/react/menus'
 import { PluginKey } from '@tiptap/pm/state'
+import { useEditorState, type Editor } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import { BetweenHorizontalEnd, BetweenVerticalEnd, PanelTop, Trash2, type LucideIcon } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
@@ -19,7 +18,19 @@ function tableDom(editor: Editor): HTMLElement | null {
   return null
 }
 
-function Action({ icon: Icon, label, title, onClick, danger }: { icon?: LucideIcon; label: string; title?: string; onClick: () => void; danger?: boolean }) {
+function Action({
+  icon: Icon,
+  label,
+  title,
+  onClick,
+  danger,
+}: {
+  icon?: LucideIcon
+  label: string
+  title?: string
+  onClick: () => void
+  danger?: boolean
+}) {
   return (
     <button
       type="button"

@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /*
  * Сервер хранения TYPOS: папка vault на своём сервере, приложение подключается по ссылке.
- * Один файл, без зависимостей, Node 18+. Скопируй на сервер и запусти:
+ * Один файл, без зависимостей, Node 18+ (правки прямо в папке устройства видят сразу с Node 20). Скопируй на сервер и запусти:
  *
  *   node typos-server.mjs --dir ./vault              запустить и показать ссылку подключения
  *   node typos-server.mjs link --dir ./vault         показать ссылку снова
  *   node typos-server.mjs link phone --dir ./vault   отдельный ключ для устройства (чтобы отключать по одному)
  *   node typos-server.mjs revoke phone --dir ./vault отключить устройство
+ *   node typos-server.mjs --help                     все команды и флаги
  *
  * Протокол — подмножество WebDAV под /files/ (папку можно подключить и в проводнике),
- * плюс /.typos/info, /.typos/manifest и /.typos/events (поток: приложение сразу видит, что сервер пропал). Аккаунтов нет: доступ по ключу из ссылки.
- * Все ключи открывают одно и то же хранилище. Хранятся в .typos-server/server.json внутри vault (наружу не отдаётся).
+ * плюс /.typos/info, /.typos/manifest и /.typos/events (поток: приложение сразу видит, что сервер пропал).
+ * Аккаунтов нет: доступ по ключу из ссылки. Все ключи открывают одно и то же хранилище.
+ * Ключи лежат в .typos-server/server.json внутри vault; эту папку сервер не отдаёт ни под каким написанием и ни по какой ссылке.
  */
-
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createReadStream, promises as fs, watch as watchFs } from 'node:fs'
 import http from 'node:http'
@@ -32,7 +33,7 @@ const TMP_RE = /\.[0-9a-f]{8}\.tmp$/
 const DEVICE_RE = /^[\p{L}\p{N}_.-]{1,40}$/u
 
 /**
- * @typedef {{ name: string, token?: string, hash?: string, created: string }} Device
+ * @typedef {{ name: string, token: string, created: string }} Device
  * @typedef {{ port: number, host: string, tls: boolean, publicUrl?: string }} Listen
  * @typedef {{ vaultId: string, name: string, devices: Device[], listen?: Listen }} ServerState
  * @typedef {{ etag: string, size: number, mtime: string }} ManifestFile
@@ -48,6 +49,28 @@ class HttpError extends Error {
 
 /** @param {unknown} e */
 const isMissing = (e) => /** @type {NodeJS.ErrnoException} */ (e)?.code === 'ENOENT'
+
+/**
+ * Служебная папка под любым написанием: на macOS и Windows «.TYPOS-SERVER» и «.typos-server.» — та же папка.
+ * @param {string} name
+ */
+const isStateDir = (name) => name.toLowerCase().replace(/[. ]+$/, '') === STATE_DIR
+
+/**
+ * Пишет во временный «имя.1a2b3c4d.tmp» и переименовывает — никто не прочитает файл наполовину.
+ * @param {string} file @param {string | Buffer} data @param {number} [mode]
+ */
+async function writeAtomic(file, data, mode) {
+  await fs.mkdir(path.dirname(file), { recursive: true })
+  const tmp = `${file}.${randomBytes(4).toString('hex')}.tmp`
+  try {
+    await fs.writeFile(tmp, data, { mode })
+    await fs.rename(tmp, file)
+  } catch (e) {
+    await fs.rm(tmp, { force: true })
+    throw e
+  }
+}
 
 // ---------- состояние: id хранилища, имя, ключи устройств ----------
 
@@ -70,16 +93,16 @@ export async function loadState(root) {
 /** @param {string} file @param {unknown} data */
 async function writeJson(file, data) {
   await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 })
-  const tmp = `${file}.${randomBytes(4).toString('hex')}.tmp`
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 })
-  await fs.rename(tmp, file)
+  await writeAtomic(file, JSON.stringify(data, null, 2) + '\n', 0o600)
 }
 
 /** @param {string} root @param {string} [name] @returns {Promise<ServerState>} */
 export async function ensureState(root, name) {
   const s = await loadState(root)
   if (s && (!name || s.name === name)) return s
-  const next = s ? { ...s, name: /** @type {string} */ (name) } : { vaultId: randomBytes(8).toString('hex'), name: name || path.basename(path.resolve(root)), devices: [] }
+  const next = s
+    ? { ...s, name: /** @type {string} */ (name) }
+    : { vaultId: randomBytes(8).toString('hex'), name: name || path.basename(path.resolve(root)), devices: [] }
   await writeJson(statePath(root), next)
   return next
 }
@@ -97,7 +120,7 @@ export const DEFAULT_DEVICE = 'default'
 export async function deviceKey(root, device = DEFAULT_DEVICE) {
   const state = await ensureState(root)
   const existing = state.devices.find((d) => d.name === device)
-  if (existing?.token) return { state, token: existing.token, created: false }
+  if (existing) return { state, token: existing.token, created: false }
   return { ...(await rotateDevice(root, device)), created: !existing }
 }
 
@@ -164,7 +187,8 @@ export function connectionTargets(l) {
   const proto = l.tls ? 'https' : 'http'
   /** @param {string} h @param {string} [iface] */
   const target = (h, iface) => ({ label: addressKind(h, iface), base: `${proto}://${h.includes(':') ? `[${h}]` : h}:${l.port}` })
-  if (l.host && l.host !== '0.0.0.0' && l.host !== '::') return [target(l.host.startsWith('127.') || l.host === '::1' ? 'localhost' : l.host)]
+  if (l.host && l.host !== '0.0.0.0' && l.host !== '::')
+    return [target(l.host.startsWith('127.') || l.host === '::1' ? 'localhost' : l.host)]
   const found = Object.entries(os.networkInterfaces())
     .filter(([name]) => !VIRTUAL_IF.test(name))
     .flatMap(([name, list]) => (list ?? []).map((i) => ({ ...i, name })))
@@ -188,7 +212,7 @@ function vaultParts(pathname) {
     throw new HttpError(400, 'Битый путь')
   }
   if (parts.some((p) => p === '.' || p === '..' || /[\\/:\0]/.test(p))) throw new HttpError(400, 'Недопустимый путь')
-  if (parts[0] === STATE_DIR) throw new HttpError(404)
+  if (parts.length && isStateDir(parts[0])) throw new HttpError(404)
   return parts
 }
 
@@ -231,6 +255,9 @@ const contentType = (name) => CONTENT_TYPES[path.extname(name).toLowerCase()] ??
  * }} ServerOptions
  */
 
+/** @param {string} ip */
+const isLoopback = (ip) => ip === '::1' || ip.startsWith('127.') || ip.startsWith('::ffff:127.')
+
 /** @param {ServerOptions} opts */
 export async function startServer(opts) {
   const root = path.resolve(opts.dir)
@@ -240,6 +267,11 @@ export async function startServer(opts) {
   const origins = opts.origins ?? []
   const log = opts.log ?? (() => {})
   let state = await ensureState(root, opts.name)
+  const stateReal = await fs.realpath(path.join(root, STATE_DIR))
+  /** @param {string} real */
+  const insideRoot = (real) => real === rootReal || real.startsWith(rootReal + path.sep)
+  /** @param {string} real */
+  const insideState = (real) => real === stateReal || real.startsWith(stateReal + path.sep)
 
   // ключи можно добавить и отозвать командой, пока сервер работает — перечитываем server.json при изменении
   let stateMtime = (await fs.stat(statePath(root))).mtimeMs
@@ -264,8 +296,16 @@ export async function startServer(opts) {
     seenDirty = false
     await writeJson(seenPath(root), seen).catch((e) => log(`seen.json: ${e.message}`))
   }
-  const seenTimer = setInterval(() => void flushSeen(), 60_000)
-  seenTimer.unref()
+  /** Подбор ключа: 10 ошибок за минуту — минута паузы для этого адреса. */
+  /** @type {Map<string, { fails: number, last: number, until: number }>} */
+  const failures = new Map()
+
+  const housekeeping = setInterval(() => {
+    void flushSeen()
+    const now = Date.now()
+    for (const [ip, f] of failures) if (f.until <= now && now - f.last > 60_000) failures.delete(ip)
+  }, 60_000)
+  housekeeping.unref()
 
   // открытые потоки /.typos/events: пульс держит связь, отозванному ключу — сразу сообщаем и закрываем
   /** @type {Set<{ res: http.ServerResponse, device: string }>} */
@@ -285,27 +325,42 @@ export async function startServer(opts) {
     // рекурсивное слежение есть в Node 20+ (на Linux); без него — только изменения через сам сервер
     watcher = watchFs(rootReal, { recursive: true }, (_event, name) => {
       const rel = String(name ?? '')
-      if (rel.split(path.sep)[0] === STATE_DIR || TMP_RE.test(rel)) return
+      if (isStateDir(rel.split(path.sep)[0]) || TMP_RE.test(rel)) return
       notifyChange()
     })
     watcher.on('error', () => watcher?.close())
   } catch {
-    log('слежение за папкой недоступно в этой версии Node — изменения, сделанные мимо сервера, устройства увидят при следующей синхронизации')
+    log(
+      'слежение за папкой недоступно в этой версии Node — изменения, сделанные мимо сервера, устройства увидят при следующей синхронизации',
+    )
   }
 
   const heartbeat = setInterval(async () => {
     if (!streams.size) return
-    const devices = new Set((await currentState()).devices.map((d) => d.name))
-    for (const s of streams) {
-      if (devices.has(s.device)) s.res.write(': ping\n\n')
-      else s.res.end('event: revoked\ndata: {}\n\n')
+    try {
+      const devices = new Set((await currentState()).devices.map((d) => d.name))
+      for (const s of streams) {
+        if (devices.has(s.device)) s.res.write(': ping\n\n')
+        else s.res.end('event: revoked\ndata: {}\n\n')
+      }
+    } catch (e) {
+      // битый server.json не должен ронять сервер: пульс пропустим, потоки закроются по таймауту
+      log(`пульс: ${e instanceof Error ? e.message : e}`)
     }
   }, opts.heartbeatMs ?? 10_000)
   heartbeat.unref()
 
-  /** Подбор ключа: 10 ошибок за минуту — минута паузы для этого адреса. */
-  /** @type {Map<string, { fails: number, last: number, until: number }>} */
-  const failures = new Map()
+  /**
+   * Адрес клиента для счётчика неверных ключей. За прокси (--public-url) все запросы приходят с localhost —
+   * тогда берём адрес, который дописал сам прокси: последний в X-Forwarded-For (первые клиент может подделать).
+   * @param {http.IncomingMessage} req
+   */
+  const clientIp = (req) => {
+    const peer = req.socket.remoteAddress ?? ''
+    const forwarded = req.headers['x-forwarded-for']
+    if (!opts.publicUrl || !isLoopback(peer) || typeof forwarded !== 'string') return peer
+    return forwarded.split(',').at(-1)?.trim() || peer
+  }
 
   /** @param {http.IncomingMessage} req @returns {Promise<string | null>} */
   const authenticate = async (req) => {
@@ -318,9 +373,9 @@ export async function startServer(opts) {
     }
     if (!token) return null
     const hash = Buffer.from(hashToken(token), 'hex')
+    // сравниваем хэши: одинаковая длина для timingSafeEqual и время не зависит от совпавших символов
     for (const d of (await currentState()).devices) {
-      const stored = Buffer.from(d.token ? hashToken(d.token) : (d.hash ?? ''), 'hex')
-      if (stored.length === hash.length && timingSafeEqual(stored, hash)) return d.name
+      if (timingSafeEqual(Buffer.from(hashToken(d.token), 'hex'), hash)) return d.name
     }
     return null
   }
@@ -340,14 +395,19 @@ export async function startServer(opts) {
     etags.set(abs, { key: statKey(st), etag })
     return etag
   }
+  /** Файл или папку удалили или перенесли — их ETag больше не нужны. @param {string} abs */
+  const forgetEtags = (abs) => {
+    for (const key of etags.keys()) if (key === abs || key.startsWith(abs + path.sep)) etags.delete(key)
+  }
 
-  /** Абсолютный путь внутри корня; ссылки, ведущие наружу, не пускает. @param {string[]} parts */
+  /** Абсолютный путь внутри корня; ссылки, ведущие наружу или в служебную папку, не пускает. @param {string[]} parts */
   const resolve = async (parts) => {
     const abs = path.join(rootReal, ...parts)
     for (let probe = abs; ; probe = path.dirname(probe)) {
       try {
         const real = await fs.realpath(probe)
-        if (real !== rootReal && !real.startsWith(rootReal + path.sep)) throw new HttpError(403, 'Путь вне хранилища')
+        if (!insideRoot(real)) throw new HttpError(403, 'Путь вне хранилища')
+        if (insideState(real)) throw new HttpError(404)
         return abs
       } catch (e) {
         if (!isMissing(e)) throw e
@@ -400,23 +460,10 @@ export async function startServer(opts) {
       req.on('error', reject)
     })
 
-  /** @param {string} abs @param {Buffer} data */
-  const writeAtomic = async (abs, data) => {
-    await fs.mkdir(path.dirname(abs), { recursive: true })
-    const tmp = `${abs}.${randomBytes(4).toString('hex')}.tmp`
-    try {
-      await fs.writeFile(tmp, data)
-      await fs.rename(tmp, abs)
-    } catch (e) {
-      await fs.rm(tmp, { force: true })
-      throw e
-    }
-  }
-
   /** @param {string} dir @param {string} name */
-  const hidden = (dir, name) => (dir === rootReal && name === STATE_DIR) || TMP_RE.test(name)
+  const hidden = (dir, name) => (dir === rootReal && isStateDir(name)) || TMP_RE.test(name)
 
-  /** Содержимое папки без служебного и без ссылок, ведущих за корень. @param {string} abs */
+  /** Содержимое папки без служебного и без ссылок, ведущих за корень или в служебную папку. @param {string} abs */
   const children = async (abs) => {
     const out = []
     for (const d of await fs.readdir(abs, { withFileTypes: true })) {
@@ -424,7 +471,7 @@ export async function startServer(opts) {
       const childAbs = path.join(abs, d.name)
       if (d.isSymbolicLink()) {
         const real = await fs.realpath(childAbs).catch(() => null)
-        if (!real || (real !== rootReal && !real.startsWith(rootReal + path.sep))) continue
+        if (!real || !insideRoot(real) || insideState(real)) continue
       }
       const st = await statOrNull(childAbs)
       if (st && (st.isFile() || st.isDirectory())) out.push({ name: d.name, abs: childAbs, st })
@@ -541,11 +588,18 @@ export async function startServer(opts) {
           if (!st) throw new HttpError(404)
           if (st.isFile()) checkPreconditions(req, await etagOf(abs, st))
           await fs.rm(abs, { recursive: true, force: true })
+          forgetEtags(abs)
           // синхронизация удаляет файлы по одному; опустевшие папки (предмет ушёл в корзину) убираем следом.
           // rmdir не трогает непустую папку — файл, который кто-то успел туда положить, не пропадёт
           if (req.headers['x-typos-prune']) {
             for (let dir = path.dirname(abs); dir.startsWith(rootReal + path.sep); dir = path.dirname(dir)) {
-              if (!(await fs.rmdir(dir).then(() => true, () => false))) break
+              if (
+                !(await fs.rmdir(dir).then(
+                  () => true,
+                  () => false,
+                ))
+              )
+                break
             }
           }
         })
@@ -573,7 +627,8 @@ export async function startServer(opts) {
         if (at < 0) throw new HttpError(400, 'Destination вне /files/')
         const destParts = vaultParts(destPath.slice(at))
         if (!parts.length || !destParts.length) throw new HttpError(403)
-        if (destParts.length > parts.length && parts.every((p, i) => destParts[i] === p)) throw new HttpError(403, 'Нельзя переместить папку в саму себя')
+        if (destParts.length > parts.length && parts.every((p, i) => destParts[i] === p))
+          throw new HttpError(403, 'Нельзя переместить папку в саму себя')
         const destAbs = await resolve(destParts)
         const overwrite = String(req.headers.overwrite ?? 'T').toUpperCase() !== 'F'
         const status = await exclusive(async () => {
@@ -586,9 +641,11 @@ export async function startServer(opts) {
           if (destSt && !sameFile) {
             if (!overwrite) throw new HttpError(412, 'Уже существует')
             await fs.rm(destAbs, { recursive: true, force: true })
+            forgetEtags(destAbs)
           }
           await fs.mkdir(path.dirname(destAbs), { recursive: true })
           await fs.rename(abs, destAbs)
+          forgetEtags(abs)
           return destSt && !sameFile ? 204 : 201
         })
         res.writeHead(status, { 'Content-Length': 0 }).end()
@@ -624,7 +681,8 @@ export async function startServer(opts) {
     }
     // страница для проверки сертификата: открыл в браузере, принял — можно возвращаться в TYPOS
     if (url.pathname === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
-      const page = '<!doctype html><meta charset="utf-8"><title>TYPOS storage</title><p>Сервер хранения TYPOS работает. Можно вернуться в приложение.</p>'
+      const page =
+        '<!doctype html><meta charset="utf-8"><title>TYPOS storage</title><p>Сервер хранения TYPOS работает. Можно вернуться в приложение.</p>'
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(req.method === 'HEAD' ? undefined : page)
       return
     }
@@ -634,7 +692,7 @@ export async function startServer(opts) {
       return
     }
 
-    const ip = req.socket.remoteAddress ?? ''
+    const ip = clientIp(req)
     const now = Date.now()
     const f = failures.get(ip)
     if (f && f.until > now) throw new HttpError(429, 'Слишком много неверных ключей, подожди минуту')
@@ -690,7 +748,10 @@ export async function startServer(opts) {
 
   const tls = Boolean(opts.cert && opts.key)
   const server = tls
-    ? https.createServer({ cert: await fs.readFile(/** @type {string} */ (opts.cert)), key: await fs.readFile(/** @type {string} */ (opts.key)) }, listener)
+    ? https.createServer(
+        { cert: await fs.readFile(/** @type {string} */ (opts.cert)), key: await fs.readFile(/** @type {string} */ (opts.key)) },
+        listener,
+      )
     : http.createServer(listener)
   const host = opts.host ?? '0.0.0.0'
   await new Promise((done, fail) => {
@@ -717,7 +778,7 @@ export async function startServer(opts) {
     },
     targets: () => connectionTargets(listen),
     async close() {
-      clearInterval(seenTimer)
+      clearInterval(housekeeping)
       clearInterval(heartbeat)
       clearTimeout(changeTimer)
       watcher?.close()
@@ -747,6 +808,17 @@ function parseArgs(argv) {
   return { positional, flags }
 }
 
+/**
+ * Числовой флаг; неверное значение — ошибка, а не NaN (с NaN предел размера молча пропускал пустые файлы).
+ * @param {Record<string, string>} flags @param {string} name @param {number} min @param {number} max
+ */
+function numberFlag(flags, name, min, max) {
+  if (flags[name] === undefined) return undefined
+  const n = Number(flags[name])
+  if (!Number.isFinite(n) || n < min || n > max) throw new Error(`--${name}: нужно число от ${min} до ${max}, а не «${flags[name]}»`)
+  return n
+}
+
 const HELP = `Сервер хранения TYPOS
 
   node typos-server.mjs [serve] --dir <папка>   запустить сервер и показать ссылку
@@ -763,6 +835,7 @@ const HELP = `Сервер хранения TYPOS
   --name <имя>          как хранилище называется в приложении
   --cert, --key <файл>  HTTPS (нужен, если приложение открыто по https)
   --public-url <url>    внешний адрес, если сервер за прокси: https://notes.example.com
+                        (тогда адрес клиента берётся из X-Forwarded-For от прокси на этом же компьютере)
   --origin <url,...>    пускать только эти адреса приложения (по умолчанию любые)
   --max-size <МБ>       предел размера файла, по умолчанию 50
   --no-link             не печатать ссылку при запуске (без терминала, например в systemd, она и так не печатается)
@@ -786,7 +859,7 @@ function printLinks(state, token, targets, dir, device) {
 /** @param {Record<string, string>} flags @param {Listen | undefined} saved @returns {Listen} */
 const listenFromFlags = (flags, saved) => ({
   ...(saved ?? { port: DEFAULT_PORT, host: '0.0.0.0', tls: false }),
-  ...(flags.port ? { port: Number(flags.port) } : {}),
+  ...(flags.port ? { port: /** @type {number} */ (numberFlag(flags, 'port', 1, 65535)) } : {}),
   ...(flags.host ? { host: flags.host } : {}),
   ...(flags['public-url'] ? { publicUrl: flags['public-url'] } : {}),
 })
@@ -800,16 +873,20 @@ async function main() {
   const root = path.resolve(dir)
 
   if (command === 'serve') {
+    const maxSizeMb = numberFlag(flags, 'max-size', 1, 4096)
     const srv = await startServer({
       dir: root,
-      port: flags.port ? Number(flags.port) : undefined,
+      port: numberFlag(flags, 'port', 0, 65535),
       host: flags.host,
       name: flags.name,
       publicUrl: flags['public-url'],
       cert: flags.cert,
       key: flags.key,
-      origins: flags.origin?.split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean),
-      maxSize: flags['max-size'] ? Number(flags['max-size']) * 1024 * 1024 : undefined,
+      origins: flags.origin
+        ?.split(',')
+        .map((s) => s.trim().replace(/\/+$/, ''))
+        .filter(Boolean),
+      maxSize: maxSizeMb === undefined ? undefined : maxSizeMb * 1024 * 1024,
       log: flags.quiet ? undefined : (line) => console.error(`[${new Date().toISOString()}] ${line}`),
     })
     const listen = /** @type {Listen} */ (srv.state.listen)
@@ -819,8 +896,10 @@ async function main() {
     console.log(`  доступ: ${everywhere ? 'этот компьютер и вся сеть' : listen.host} · порт ${srv.port}${listen.tls ? ' · HTTPS' : ''}`)
     // первый запуск — заводим ключ; дальше показываем тот же
     const hasDefault = srv.state.devices.some((d) => d.name === DEFAULT_DEVICE) || !srv.state.devices.length
-    if (!hasDefault) console.log(`\nОбщего ключа нет (отозван). Ссылка для устройства: node typos-server.mjs link <имя> --dir ${JSON.stringify(dir)}`)
-    else if (flags['no-link'] || !process.stdout.isTTY) console.log(`\nСсылка подключения: node typos-server.mjs link --dir ${JSON.stringify(dir)}`)
+    if (!hasDefault)
+      console.log(`\nОбщего ключа нет (отозван). Ссылка для устройства: node typos-server.mjs link <имя> --dir ${JSON.stringify(dir)}`)
+    else if (flags['no-link'] || !process.stdout.isTTY)
+      console.log(`\nСсылка подключения: node typos-server.mjs link --dir ${JSON.stringify(dir)}`)
     else {
       const { state, token } = await deviceKey(root)
       printLinks(state, token, srv.targets(), dir, DEFAULT_DEVICE)
@@ -831,8 +910,9 @@ async function main() {
       await srv.close()
       process.exit(0)
     }
-    process.on('SIGINT', stop)
-    process.on('SIGTERM', stop)
+    // once: второй Ctrl+C завершает сразу, не дожидаясь закрытия
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
     return
   }
 
@@ -858,7 +938,8 @@ async function main() {
     if (!state?.devices.length) return console.log('Устройств нет. Добавить: link <имя>')
     /** @type {Record<string, string>} */
     const seen = await fs.readFile(seenPath(root), 'utf8').then(JSON.parse, () => ({}))
-    for (const d of state.devices) console.log(`${d.name.padEnd(20)} добавлено ${d.created.slice(0, 10)} · заходило ${seen[d.name] ?? 'ещё нет'}`)
+    for (const d of state.devices)
+      console.log(`${d.name.padEnd(20)} добавлено ${d.created.slice(0, 10)} · заходило ${seen[d.name] ?? 'ещё нет'}`)
     return
   }
 

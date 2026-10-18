@@ -1,3 +1,4 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { create } from 'zustand'
 import { createBrowserAdapter } from '@/storage/browserAdapter'
 import {
@@ -10,9 +11,9 @@ import {
   saveHandle,
 } from '@/storage/fsaAdapter'
 import { forgetRemoteConfig, loadRemoteConfig, RemoteAdapter, saveRemoteConfig } from '@/storage/remoteAdapter'
-import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
-import { forgetPath, isTauri, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
 import type { RemoteConfig } from '@/storage/remoteLink'
+import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
+import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
 import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
 import { extractExcerpt, extractTitle, sameBody } from './format'
@@ -77,8 +78,8 @@ const isBlank = (body: string) => body.replace(/^#{1,6}\s*$/gm, '').trim() === '
 let initRun: Promise<void> | null = null
 let browser: VaultAdapter | null = null
 const browserAdapter = () => (browser ??= createBrowserAdapter())
-/** Забыть папку на диске (браузерную и десктопную). */
-const forgetFolder = () => Promise.all([forgetHandle(), forgetPath()])
+/** Забыть папку на диске: в десктопном приложении её помнит Rust, в браузере — хэндл в IndexedDB. */
+const forgetFolder = () => (isTauri() ? forgetPath() : forgetHandle())
 
 /** Сохранения одной заметки идут строго по очереди (переименование файла не гоняется само с собой). */
 const queues = new Map<string, Promise<unknown>>()
@@ -218,6 +219,7 @@ export const useVault = create<VaultState>()((set, get) => {
       const copied = migrate ? await repo.copyVault(browserAdapter(), folder) : 0
       await remember()
       await forgetRemoteConfig()
+      resetSyncState()
       await open(folder)
       return { copied }
     },

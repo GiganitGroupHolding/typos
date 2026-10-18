@@ -19,9 +19,11 @@ import {
 } from '@/components/ui/sidebar'
 import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
 import { SubjectTree } from '@/features/subjects/SubjectTree'
+import { upperFirst } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { useConnection } from '@/storage/connection'
 import { useSync } from '@/storage/sync'
-import { cn } from '@/lib/utils'
+import { storageLabel } from '@/storage/VaultAdapter'
 import { useVault } from '@/vault/store'
 import { shuffleBackground } from '../accent'
 import { useInstallPrompt } from '../pwa'
@@ -99,11 +101,7 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel>Предметы</SidebarGroupLabel>
-          <SidebarGroupAction
-            title="Новый предмет"
-            aria-label="Новый предмет"
-            onClick={openNewSubject}
-          >
+          <SidebarGroupAction title="Новый предмет" aria-label="Новый предмет" onClick={openNewSubject}>
             <Plus />
           </SidebarGroupAction>
           <SidebarGroupContent>
@@ -134,9 +132,12 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <Link to="/welcome">
                 {storage?.kind === 'remote' ? <Server /> : <FolderOpen />}
-                <span className="truncate">{storage?.kind === 'folder' ? `Папка «${storage.label}»` : storage?.kind === 'remote' ? `Сервер «${storage.label}»` : 'В браузере · подключить папку'}</span>
+                <span className="truncate">{upperFirst(storageLabel(storage) ?? 'в браузере · подключить папку')}</span>
                 {storage?.kind === 'remote' && pending > 0 && (
-                  <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums" title="Правки, которые ещё не ушли на сервер">
+                  <span
+                    className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums"
+                    title="Правки, которые ещё не ушли на сервер"
+                  >
                     ↑{pending}
                   </span>
                 )}

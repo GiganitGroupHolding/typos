@@ -5,8 +5,8 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
-import { RemoteAdapter } from '@/storage/remoteAdapter'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
+import { DavAdapter } from './davAdapter'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 let dir: string
@@ -34,5 +34,5 @@ it('картинки ходят между устройствами в обе с
   await b.engine.syncNow()
   const got = await b.readBlob('Физика/Конспекты/assets/x.webp')
   expect(new Uint8Array(await got!.arrayBuffer())).toEqual(bytes)
-  expect(await new RemoteAdapter(config).exists('Физика/Конспекты/assets/x.webp')).toBe(true)
+  expect(await new DavAdapter(config).exists('Физика/Конспекты/assets/x.webp')).toBe(true)
 })

@@ -1,4 +1,5 @@
-import { createStore, del, get, set } from 'idb-keyval'
+import { del, get, set } from 'idb-keyval'
+import { settingsStore } from './settings'
 import { basename, dirname, type Entry, type VaultAdapter } from './VaultAdapter'
 
 /**
@@ -113,14 +114,13 @@ export class FsaAdapter implements VaultAdapter {
 
 // ---------- хранение хэндла и права ----------
 
-const settings = createStore('studynotes-settings', 'kv')
 const HANDLE_KEY = 'vaultHandle'
 
 export const fsaSupported = () => typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
 
-export const loadSavedHandle = () => get<FileSystemDirectoryHandle>(HANDLE_KEY, settings).catch(() => undefined)
-export const saveHandle = (h: FileSystemDirectoryHandle) => set(HANDLE_KEY, h, settings)
-export const forgetHandle = () => del(HANDLE_KEY, settings)
+export const loadSavedHandle = () => get<FileSystemDirectoryHandle>(HANDLE_KEY, settingsStore).catch(() => undefined)
+export const saveHandle = (h: FileSystemDirectoryHandle) => set(HANDLE_KEY, h, settingsStore)
+export const forgetHandle = () => del(HANDLE_KEY, settingsStore)
 
 export async function hasPermission(h: FileSystemDirectoryHandle) {
   return (await h.queryPermission({ mode: 'readwrite' })) === 'granted'

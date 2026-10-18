@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Окно приложения: ядро и диалог выбора папки",
+  "description": "Окно приложения: только ядро. Папку выбирает и запоминает Rust (src/vault.rs)",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default"]
 }

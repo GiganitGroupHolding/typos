@@ -38,9 +38,15 @@ export function ConnectionBanner() {
       role="status"
       className="glass absolute top-14 left-1/2 z-30 flex w-[min(34rem,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-2xl border border-destructive/30 px-4 py-2.5 shadow-float"
     >
-      {status === 'offline' ? <WifiOff className="size-4 shrink-0 text-destructive" /> : <KeyRound className="size-4 shrink-0 text-destructive" />}
+      {status === 'offline' ? (
+        <WifiOff className="size-4 shrink-0 text-destructive" />
+      ) : (
+        <KeyRound className="size-4 shrink-0 text-destructive" />
+      )}
       <div className="min-w-0 flex-1 text-[13px]">
-        <p className="font-semibold">{status === 'offline' ? `Нет связи с сервером «${label}»` : `Сервер «${label}» не принимает ключ этого устройства`}</p>
+        <p className="font-semibold">
+          {status === 'offline' ? `Нет связи с сервером «${label}»` : `Сервер «${label}» не принимает ключ этого устройства`}
+        </p>
         <p className="text-muted-foreground">
           {status === 'offline'
             ? `Правки сохраняются на этом устройстве${pending ? ` (ждут отправки: ${plural(pending, ['файл', 'файла', 'файлов'])})` : ''} и уйдут на сервер, когда связь вернётся.${seconds ? ` Повтор через ${seconds} с.` : ' Подключаюсь…'}`

@@ -1,17 +1,20 @@
 import 'fake-indexeddb/auto'
+import { execFile } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
+import { promisify } from 'node:util'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createBrowserAdapter } from '@/storage/browserAdapter'
 import { monitorConnection, useConnection, type ConnectionStatus } from '@/storage/connection'
 import { RemoteAdapter } from '@/storage/remoteAdapter'
-import type { SyncedAdapter } from '@/storage/syncedAdapter'
 import { parseRemoteLink } from '@/storage/remoteLink'
+import type { SyncedAdapter } from '@/storage/syncedAdapter'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import * as repo from '@/vault/repo'
 import { useVault } from '@/vault/store'
+import { DavAdapter } from './davAdapter'
 import { buildLink, connectionTargets, deviceKey, revokeDevice, rotateDevice, startServer, STATE_DIR } from './typos-server.mjs'
 
 let dir: string
@@ -31,7 +34,7 @@ afterEach(async () => {
   await fs.rm(dir, { recursive: true, force: true })
 })
 
-const adapter = () => new RemoteAdapter({ url: base, token, name: 'Тест', vaultId: srv.state.vaultId })
+const adapter = () => new DavAdapter({ url: base, token, name: 'Тест', vaultId: srv.state.vaultId })
 const call = (p: string, init: RequestInit & { headers?: Record<string, string> } = {}) =>
   fetch(base + p, { ...init, headers: { Authorization: `Bearer ${token}`, ...init.headers } })
 
@@ -51,7 +54,9 @@ describe('ссылка подключения', () => {
     const link = buildLink({ base: 'https://notes.example.com:8443/typos/', token: 'abc', name: 'Дом', vaultId: 'v1' })
     expect(link).toMatch(/^typos:\/\/notes\.example\.com:8443\/typos\?/)
     expect(parseRemoteLink(link)).toEqual({ url: 'https://notes.example.com:8443/typos', token: 'abc', name: 'Дом', vaultId: 'v1' })
-    expect(parseRemoteLink(`  ${buildLink({ base: 'http://192.168.1.10:8787', token: 't', name: 'x', vaultId: 'v' })}\n`).url).toBe('http://192.168.1.10:8787')
+    expect(parseRemoteLink(`  ${buildLink({ base: 'http://192.168.1.10:8787', token: 't', name: 'x', vaultId: 'v' })}\n`).url).toBe(
+      'http://192.168.1.10:8787',
+    )
   })
 
   it('ссылку можно показать снова, rotate выдаёт новую', async () => {
@@ -64,7 +69,9 @@ describe('ссылка подключения', () => {
   it('подписывает адреса: localhost всегда первым', () => {
     const all = connectionTargets({ port: 8787, host: '0.0.0.0', tls: false })
     expect(all[0]).toEqual({ label: expect.stringMatching(/этом же компьютере/), base: 'http://localhost:8787' })
-    expect(connectionTargets({ port: 8787, host: '127.0.0.1', tls: true })).toEqual([{ label: expect.stringMatching(/localhost/), base: 'https://localhost:8787' }])
+    expect(connectionTargets({ port: 8787, host: '127.0.0.1', tls: true })).toEqual([
+      { label: expect.stringMatching(/localhost/), base: 'https://localhost:8787' },
+    ])
     expect(connectionTargets({ port: 8787, host: '192.168.1.10', tls: false })[0].label).toMatch(/локальной сети/)
     expect(connectionTargets({ port: 8787, host: '0.0.0.0', tls: false, publicUrl: 'https://notes.example.com' })).toHaveLength(1)
   })
@@ -114,7 +121,12 @@ describe('сервер хранения', () => {
     await a.writeText('A/y.md', '2')
     await expect(a.move('A/x.md', 'A/y.md')).rejects.toThrow(/Уже существует/)
     await a.move('A', 'B/C')
-    expect(await a.list('B/C')).toEqual(expect.arrayContaining([{ name: 'x.md', kind: 'file' }, { name: 'y.md', kind: 'file' }]))
+    expect(await a.list('B/C')).toEqual(
+      expect.arrayContaining([
+        { name: 'x.md', kind: 'file' },
+        { name: 'y.md', kind: 'file' },
+      ]),
+    )
     expect(await a.exists('A')).toBe(false)
     expect(await a.list('B')).toEqual([{ name: 'C', kind: 'dir' }])
   })
@@ -147,10 +159,46 @@ describe('сервер хранения', () => {
     expect(Object.keys(manifest.files).some((f) => f.startsWith(STATE_DIR))).toBe(false)
   })
 
+  it('служебная папка закрыта под любым написанием и по ссылке', async () => {
+    for (const name of ['.TYPOS-SERVER', '.Typos-Server', '.typos-server.', '.typos-server%20']) {
+      expect(await rawStatus(`/files/${name}/server.json`)).toBe(404)
+    }
+    await fs.symlink(path.join(dir, STATE_DIR), path.join(dir, 'keys'))
+    expect((await call('/files/keys/server.json')).status).toBe(404)
+    expect((await adapter().list('')).map((e) => e.name)).not.toContain('keys')
+  })
+
+  it('за прокси неверные ключи считаются по адресу клиента, а не прокси', async () => {
+    await srv.close()
+    srv = await startServer({ dir, port: 0, host: '127.0.0.1', publicUrl: 'https://notes.example.com' })
+    base = `http://127.0.0.1:${srv.port}`
+    const from = (ip: string, key = 'wrong') =>
+      call('/.typos/info', { headers: { Authorization: `Bearer ${key}`, 'X-Forwarded-For': `1.1.1.1, ${ip}` } })
+    for (let i = 0; i < 10; i++) expect((await from('203.0.113.7')).status).toBe(401)
+    expect((await from('203.0.113.7')).status).toBe(429)
+    // другой клиент за тем же прокси не заблокирован
+    expect((await from('198.51.100.2', token)).status).toBe(200)
+  })
+
+  it('неверный числовой флаг — ошибка, а не молча NaN', async () => {
+    const run = promisify(execFile)
+    const cli = path.join(import.meta.dirname, 'typos-server.mjs')
+    await expect(run(process.execPath, [cli, '--dir', dir, '--max-size', '50mb'])).rejects.toMatchObject({
+      stderr: expect.stringMatching(/--max-size/),
+    })
+    await expect(run(process.execPath, [cli, 'link', '--dir', dir, '--port', 'x'])).rejects.toMatchObject({
+      stderr: expect.stringMatching(/--port/),
+    })
+  })
+
   it('CORS: предзапрос без ключа, ответ с Origin приложения', async () => {
     const pre = await fetch(`${base}/files/x.md`, {
       method: 'OPTIONS',
-      headers: { Origin: 'http://192.168.1.5:4173', 'Access-Control-Request-Method': 'PUT', 'Access-Control-Request-Headers': 'authorization' },
+      headers: {
+        Origin: 'http://192.168.1.5:4173',
+        'Access-Control-Request-Method': 'PUT',
+        'Access-Control-Request-Headers': 'authorization',
+      },
     })
     expect(pre.status).toBe(204)
     expect(pre.headers.get('access-control-allow-origin')).toBe('http://192.168.1.5:4173')
@@ -195,7 +243,9 @@ describe('хранилище браузера при подключении се
   })
 
   it('ссылка от другого хранилища не подключается', async () => {
-    await expect(useVault.getState().connectRemote({ url: base, token, name: 'Тест', vaultId: 'other' }, false)).rejects.toThrow(/другого хранилища/)
+    await expect(useVault.getState().connectRemote({ url: base, token, name: 'Тест', vaultId: 'other' }, false)).rejects.toThrow(
+      /другого хранилища/,
+    )
     expect(useVault.getState().adapter?.kind).not.toBe('remote')
   })
 })
@@ -245,10 +295,15 @@ describe('связь с сервером', () => {
 
   it('сервер молчит дольше пульса — связь считается потерянной', async () => {
     // здоровается и замолкает навсегда: так выглядит пропавшая сеть
-    const silent = http.createServer((_req, res) => res.writeHead(200, { 'Content-Type': 'text/event-stream' }).write('event: hello\ndata: {}\n\n'))
+    const silent = http.createServer((_req, res) =>
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' }).write('event: hello\ndata: {}\n\n'),
+    )
     await new Promise<void>((r) => silent.listen(0, '127.0.0.1', r))
     const port = (silent.address() as { port: number }).port
-    const stop = monitorConnection(new RemoteAdapter({ url: `http://127.0.0.1:${port}`, token, name: 'x', vaultId: '' }), { idleMs: 200, retryMs: [5000] })
+    const stop = monitorConnection(new RemoteAdapter({ url: `http://127.0.0.1:${port}`, token, name: 'x', vaultId: '' }), {
+      idleMs: 200,
+      retryMs: [5000],
+    })
     try {
       await statusBecomes('online')
       await statusBecomes('offline', 2000)
@@ -267,7 +322,7 @@ describe('связь с сервером', () => {
       await srv.close()
       await statusBecomes('offline')
       expect(useConnection.getState().retryAt).toBeGreaterThan(Date.now())
-      await expect(a.readText('x.md')).rejects.toThrow(/не отвечает/)
+      await expect(a.get('x.md')).rejects.toThrow(/не отвечает/)
     } finally {
       stop()
       srv = await startServer({ dir, port: 0, host: '127.0.0.1' })

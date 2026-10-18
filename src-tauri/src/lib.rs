@@ -4,7 +4,12 @@ mod vault;
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
+    .manage(vault::Granted::default())
     .invoke_handler(tauri::generate_handler![
+      vault::vault_saved,
+      vault::vault_pick,
+      vault::vault_remember,
+      vault::vault_forget,
       vault::vault_list,
       vault::vault_read,
       vault::vault_write_text,

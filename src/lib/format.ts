@@ -12,11 +12,15 @@ export function relativeTime(iso: string): string {
 }
 
 export function plural(n: number, [one, few, many]: [string, string, string]): string {
-  const m10 = n % 10, m100 = n % 100
+  const m10 = n % 10,
+    m100 = n % 100
   if (m10 === 1 && m100 !== 11) return `${n} ${one}`
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return `${n} ${few}`
   return `${n} ${many}`
 }
+
+/** «папка …» → «Папка …» для начала строки. */
+export const upperFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function greeting(d = new Date()): string {
   const h = d.getHours()
