@@ -240,10 +240,13 @@ export const useVault = create<VaultState>()((set, get) => {
       // копия хранилища — по id с сервера: в старых ссылках его могло не быть
       const full = { ...config, name: info.name || config.name, vaultId: info.vaultId }
       await idle()
+      // переносим то, что открыто сейчас: папку на диске или хранилище браузера
+      const current = get().adapter
+      const source = current && current.kind !== 'remote' ? current : browserAdapter()
       resetSyncState()
       const synced = new SyncedAdapter(full)
       await synced.initialSync()
-      const copied = migrate ? await repo.copyVault(browserAdapter(), synced) : 0
+      const copied = migrate ? await repo.copyVault(source, synced) : 0
       // перенесённое сразу на сервер; не вышло — уйдёт фоном
       if (copied) await synced.engine.syncNow().catch(() => {})
       await saveRemoteConfig(full)

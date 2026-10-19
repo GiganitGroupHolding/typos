@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { useNote, useSubject, useTool } from '@/vault/hooks'
 import { useUi } from '../store'
+import { WindowControls } from './WindowControls'
 
 export function TopBar() {
   const { subjectId, noteId, toolId } = useParams()
@@ -22,7 +23,8 @@ export function TopBar() {
   const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
 
   return (
-    <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+    // в десктоп-версии панель — шапка окна: за пустое место окно тянется, двойной щелчок разворачивает
+    <div data-tauri-drag-region className="flex h-12 shrink-0 items-center gap-1 px-2">
       <Tooltip>
         <TooltipTrigger asChild>
           <SidebarTrigger aria-label="Показать или скрыть предметы" />
@@ -30,7 +32,11 @@ export function TopBar() {
         <TooltipContent>Предметы · Ctrl B</TooltipContent>
       </Tooltip>
 
-      <nav aria-label="Путь" className="flex min-w-0 flex-1 items-center gap-1 px-1 text-[13px] text-muted-foreground">
+      <nav
+        data-tauri-drag-region
+        aria-label="Путь"
+        className="flex min-w-0 flex-1 items-center gap-1 px-1 text-[13px] text-muted-foreground"
+      >
         {subject ? (
           <>
             <Link
@@ -98,6 +104,7 @@ export function TopBar() {
           <TooltipContent>Закреп · Ctrl J</TooltipContent>
         </Tooltip>
       </div>
+      <WindowControls />
     </div>
   )
 }

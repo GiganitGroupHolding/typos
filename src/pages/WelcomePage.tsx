@@ -32,6 +32,7 @@ export function WelcomePage() {
   const [link, setLink] = useState('')
   const [linkError, setLinkError] = useState<string | null>(null)
   const [browserNotes, setBrowserNotes] = useState<number | null>(null)
+  const [folderNotes, setFolderNotes] = useState<number | null>(null)
   const [migrate, setMigrate] = useState(true)
   const [busy, setBusy] = useState(false)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
@@ -45,6 +46,12 @@ export function WelcomePage() {
     void init()
     countNotes(createBrowserAdapter()).then(setBrowserNotes, () => setBrowserNotes(0))
   }, [init])
+
+  // открыта папка — при подключении сервера предложим перенести её
+  useEffect(() => {
+    if (adapter?.kind !== 'folder') return
+    countNotes(adapter).then(setFolderNotes, () => setFolderNotes(0))
+  }, [adapter])
 
   const connect = async () => {
     setBusy(true)
@@ -77,10 +84,10 @@ export function WelcomePage() {
     }
     setBusy(true)
     try {
-      const res = await connectRemote(config, migrate && inBrowser && !!browserNotes)
+      const res = await connectRemote(config, migrate && ((inBrowser && !!browserNotes) || (inFolder && !!folderNotes)))
       toast.success('Сервер подключён', {
         description: res.copied
-          ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.`
+          ? `Перенесено файлов: ${res.copied}. ${inFolder ? 'В папке всё осталось как было.' : 'В браузере осталась копия.'}`
           : 'Конспекты теперь сохраняются на сервер.',
       })
       setLink('')
@@ -196,6 +203,27 @@ export function WelcomePage() {
               <span className="block text-[13px] text-muted-foreground">
                 {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и проектами. Файлы с такими же именами на новом
                 месте не перезапишутся.
+              </span>
+            </span>
+          </motion.label>
+        )}
+
+        {inFolder && !!folderNotes && (
+          <motion.label
+            variants={listItem}
+            className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-[14px]"
+          >
+            <input
+              type="checkbox"
+              checked={migrate}
+              onChange={(e) => setMigrate(e.target.checked)}
+              className="mt-1 size-4 accent-(--highlight)"
+            />
+            <span>
+              При подключении сервера перенести папку «{adapter?.label}»
+              <span className="block text-[13px] text-muted-foreground">
+                {plural(folderNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом, проектами и картами. Файлы с такими же именами на
+                сервере не перезапишутся, в папке всё останется как было.
               </span>
             </span>
           </motion.label>

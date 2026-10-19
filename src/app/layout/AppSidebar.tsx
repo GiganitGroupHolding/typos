@@ -51,8 +51,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r-0">
-      <SidebarHeader className="gap-3 px-3 pt-4">
-        <div className="flex items-center gap-2 px-1">
+      <SidebarHeader data-tauri-drag-region className="gap-3 px-3 pt-4">
+        <div data-tauri-drag-region className="flex items-center gap-2 px-1">
           {/* логотип — кнопка «перемешать фон» */}
           <motion.button
             type="button"

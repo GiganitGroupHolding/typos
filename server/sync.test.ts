@@ -7,8 +7,10 @@ import { monitorConnection, useConnection } from '@/storage/connection'
 import { DavAdapter } from '@/storage/davAdapter'
 import { conflictCopy, fromBlob } from '@/storage/sync'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
+import { sampleVault } from '@/test/sampleVault'
 import { parseFrontmatter } from '@/vault/format'
 import * as repo from '@/vault/repo'
+import { useVault } from '@/vault/store'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 let dir: string
@@ -212,5 +214,18 @@ describe('копия при конфликте', () => {
     const { meta, body } = parseFrontmatter(copy.value as string)
     expect(meta.id).not.toBe('abc123')
     expect(body).toMatch(/^# Кинематика \(конфликт 18\.10 14-05\)/)
+  })
+})
+
+describe('подключение сервера', () => {
+  it('открыта папка — её конспекты переносятся на сервер, в папке ничего не меняется', async () => {
+    const folder = sampleVault()
+    const before = await repo.loadVault(folder)
+    useVault.setState({ ...before, adapter: folder, status: 'ready' })
+    const { copied } = await useVault.getState().connectRemote(config(), true)
+    expect(copied).toBeGreaterThan(0)
+    const server = await repo.loadVault(direct())
+    expect(server.notes.map((n) => n.title).sort()).toEqual(before.notes.map((n) => n.title).sort())
+    expect((await repo.loadVault(folder)).notes).toHaveLength(before.notes.length)
   })
 })

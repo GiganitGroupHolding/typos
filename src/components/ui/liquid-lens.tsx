@@ -19,6 +19,27 @@ export const lensSupported =
   !/Firefox|FxiOS|CriOS/.test(navigator.userAgent) &&
   !(typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-transparency: reduce)').matches)
 
+/*
+ * Пока прокручивают, линзы заменяются простым размытием (см. index.css, :root[data-scrolling]):
+ * SVG-фильтр пересчитывается на каждом кадре для всего видимого стекла — на главной это 10 карточек,
+ * и кадр растягивался до 22 мс против 6 мс без линз. Преломление возвращается через 150 мс после остановки.
+ */
+if (lensSupported && typeof document !== 'undefined') {
+  let timer = 0
+  document.addEventListener(
+    'scroll',
+    () => {
+      if (!timer) document.documentElement.dataset.scrolling = ''
+      clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        timer = 0
+        delete document.documentElement.dataset.scrolling
+      }, 150)
+    },
+    { capture: true, passive: true },
+  )
+}
+
 /**
  * Карта смещения: R — сдвиг по x, G — по y, 128 = на месте.
  * У кромки (в полосе bezel) пиксель берётся глубже внутри — так выглядит выпуклый край линзы.

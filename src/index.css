@@ -226,6 +226,11 @@ html.accent-anim {
     background: var(--lens-tint);
     box-shadow: var(--lens-shadow);
   }
+  /* прокрутка: вместо дорогого фильтра-линзы — лёгкое размытие с той же живостью цвета (liquid-lens.tsx) */
+  :root[data-scrolling] .liquid-lens {
+    backdrop-filter: blur(3px) saturate(1.35) !important;
+    -webkit-backdrop-filter: blur(3px) saturate(1.35) !important;
+  }
   /* постоянная призма — белая, только на скруглениях, вдоль сторон её нет.
      --prism-corners — маска-картинка «близость к углам», её рисует liquid-lens.tsx по форме элемента */
   .liquid-lens::after {
