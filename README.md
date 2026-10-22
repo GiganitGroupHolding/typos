@@ -187,6 +187,8 @@ npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…"
 
 Instead of the flags you can set `STUDYNOTES_VAULT` or `STUDYNOTES_LINK`. With a link, every device sees the assistant's edits right away; with a folder, the app picks them up when its window gets focus. A separate device key (`link mcp`) lets you disconnect the assistant without touching your other devices. If the storage server is off when the assistant starts, the MCP server still starts and its tools report that the server can't be reached until it is back.
 
+For a remote MCP endpoint on Railway with OAuth, see [Remote MCP on Railway](docs/mcp-railway.md). The local stdio mode remains available.
+
 ## Roadmap
 
 - [x] Desktop build with Tauri

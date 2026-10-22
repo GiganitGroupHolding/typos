@@ -1,0 +1,13 @@
+.git
+.jj
+node_modules
+dist
+dev-dist
+vault
+server/vault
+**/.typos-server
+.env
+.env.*
+*.local
+*.log
+src-tauri/target

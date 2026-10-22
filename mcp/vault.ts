@@ -23,8 +23,11 @@ export type UpdateMode = 'replace' | 'append' | 'replace_section'
 export class StudyVault {
   readonly a: VaultAdapter
 
-  constructor(adapter: VaultAdapter) {
+  readonly remote: boolean
+
+  constructor(adapter: VaultAdapter, options: { remote?: boolean } = {}) {
     this.a = adapter
+    this.remote = options.remote ?? false
   }
 
   private load = () => repo.loadVault(this.a)
@@ -144,6 +147,7 @@ export class StudyVault {
     let out = md
     for (const [whole, alt, src] of md.matchAll(re)) {
       try {
+        if (this.remote && !src.startsWith('data:')) throw new Error('Передай картинку через add_image в формате data:image/…;base64')
         const rel = await this.saveImage(s, src)
         out = out.replace(whole, `![${alt}](${rel})`)
       } catch (e) {
@@ -157,6 +161,8 @@ export class StudyVault {
 
   /** Картинка в «<Предмет>/Конспекты/assets/» (webp, до 2400 px). Возвращает путь для Markdown. */
   async addImage(input: { subject: string; source: string; alt?: string }) {
+    if (this.remote && !input.source.startsWith('data:'))
+      throw new Error('Удалённый MCP принимает картинки только в формате data:image/…;base64')
     const s = this.subject(await this.load(), input.subject)
     const rel = await this.saveImage(s, input.source)
     return { markdown: `![${input.alt ?? ''}](${rel})`, path: joinPath(s.dir, NOTES_DIR, rel) }
