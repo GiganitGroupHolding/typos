@@ -38,9 +38,11 @@ interface VaultState extends repo.VaultData {
   grantAccess: () => Promise<boolean>
   /** Выбрать папку. migrate — скопировать в неё то, что лежит в браузере. */
   connectFolder: (migrate: boolean) => Promise<{ copied: number } | null>
-  /** Подключить сервер хранения по ссылке (с локальной копией). migrate — скопировать на сервер то, что лежит в браузере. */
+  /** Подключить сервер хранения по ссылке (с локальной копией). migrate — скопировать на сервер то, что открыто сейчас (папку или браузер). */
   connectRemote: (config: RemoteConfig, migrate: boolean) => Promise<{ copied: number }>
   switchToBrowser: () => Promise<void>
+  /** Скопировать всё открытое хранилище в выбранную папку с заменой файлов; само хранилище не меняется. null — папку не выбрали. */
+  copyToFolder: () => Promise<{ copied: number; folder: string } | null>
   createSubject: (input: SubjectInput) => Promise<Subject>
   updateSubject: (id: string, input: SubjectInput) => Promise<void>
   trashSubject: (id: string) => Promise<Undo>
@@ -253,6 +255,25 @@ export const useVault = create<VaultState>()((set, get) => {
       await forgetFolder()
       await open(synced)
       return { copied }
+    },
+
+    async copyToFolder() {
+      const source = need()
+      let folder: VaultAdapter
+      if (isTauri()) {
+        const path = await pickFolderPath()
+        if (!path) return null
+        folder = new TauriAdapter(path)
+      } else {
+        const handle = await pickFolder()
+        if (!handle) return null
+        if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
+        folder = new FsaAdapter(handle)
+      }
+      // сначала дописать начатые сохранения, чтобы в копию попала последняя версия
+      await idle()
+      const copied = await repo.copyVault(source, folder, '', { overwrite: true })
+      return { copied, folder: folder.label }
     },
 
     async switchToBrowser() {

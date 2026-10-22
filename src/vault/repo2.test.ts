@@ -134,3 +134,27 @@ describe('предметы и корзина', () => {
     expect(n.title).toBe('Лекция 10 октября')
   })
 })
+
+describe('копия хранилища', () => {
+  it('с заменой — файлы с теми же путями перезаписываются, лишние в папке остаются, корзина не копируется', async () => {
+    const { a } = await sample()
+    const folder = sampleVault()
+    const note = 'Физика/Конспекты/Кинематика точки.md'
+    await folder.writeText(note, '# старая версия')
+    await folder.writeText('Своё/заметка.md', '# только в папке')
+    await a.writeText('.studynotes/trash/x/старьё.md', '# в корзине')
+    const copied = await repo.copyVault(a, folder, '', { overwrite: true })
+    expect(copied).toBeGreaterThan(0)
+    expect(await folder.readText(note)).toBe(await a.readText(note))
+    expect(await folder.readText('Своё/заметка.md')).toBe('# только в папке')
+    expect(await folder.exists('.studynotes/trash/x/старьё.md')).toBe(false)
+  })
+
+  it('без замены — существующие файлы не трогаются', async () => {
+    const { a } = await sample()
+    const folder = sampleVault()
+    await folder.writeText('Физика/Конспекты/Кинематика точки.md', '# моя версия')
+    await repo.copyVault(a, folder)
+    expect(await folder.readText('Физика/Конспекты/Кинематика точки.md')).toBe('# моя версия')
+  })
+})

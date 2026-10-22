@@ -513,14 +513,15 @@ export async function countNotes(a: VaultAdapter) {
 }
 
 /** Копирует всё из одного хранилища в другое, не перезаписывая существующие файлы. Корзину пропускает. */
-export async function copyVault(from: VaultAdapter, to: VaultAdapter, dir = ''): Promise<number> {
+/** Копия хранилища без корзины. overwrite — файлы с теми же путями заменяются, иначе остаются как были. */
+export async function copyVault(from: VaultAdapter, to: VaultAdapter, dir = '', opts: { overwrite?: boolean } = {}): Promise<number> {
   let copied = 0
   for (const e of await from.list(dir)) {
     const path = joinPath(dir, e.name)
     if (path === TRASH_DIR) continue
     if (e.kind === 'dir') {
-      copied += await copyVault(from, to, path)
-    } else if (!(await to.exists(path))) {
+      copied += await copyVault(from, to, path, opts)
+    } else if (opts.overwrite || !(await to.exists(path))) {
       const blob = await from.readBlob(path)
       if (blob) {
         await to.writeBlob(path, blob)

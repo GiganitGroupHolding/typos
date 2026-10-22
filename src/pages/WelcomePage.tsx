@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core'
-import { ArrowLeft, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from 'lucide-react'
+import { ArrowLeft, FolderDown, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -29,6 +29,7 @@ export function WelcomePage() {
   const connectFolder = useVault((s) => s.connectFolder)
   const connectRemote = useVault((s) => s.connectRemote)
   const switchToBrowser = useVault((s) => s.switchToBrowser)
+  const copyToFolder = useVault((s) => s.copyToFolder)
   const [link, setLink] = useState('')
   const [linkError, setLinkError] = useState<string | null>(null)
   const [browserNotes, setBrowserNotes] = useState<number | null>(null)
@@ -36,6 +37,7 @@ export function WelcomePage() {
   const [migrate, setMigrate] = useState(true)
   const [busy, setBusy] = useState(false)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const [confirmCopy, setConfirmCopy] = useState(false)
   const pending = useSync((s) => s.pending)
   const supported = fsaSupported() || isTauri()
   const inFolder = adapter?.kind === 'folder'
@@ -94,6 +96,20 @@ export function WelcomePage() {
       navigate('/')
     } catch (e) {
       setLinkError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copyServer = async () => {
+    setConfirmCopy(false)
+    setBusy(true)
+    try {
+      const res = await copyToFolder()
+      if (!res) return
+      toast.success(`Скопировано в папку «${res.folder}»`, { description: `Файлов: ${res.copied}. Работа по-прежнему идёт с сервером.` })
+    } catch (e) {
+      toast.error('Не получилось скопировать в папку', { description: e instanceof Error ? e.message : String(e) })
     } finally {
       setBusy(false)
     }
@@ -166,6 +182,20 @@ export function WelcomePage() {
             </Button>
           )}
         </motion.div>
+
+        {inRemote && (
+          <motion.div variants={listItem} className="mt-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy || !supported}
+              onClick={() => setConfirmCopy(true)}
+              className="w-full justify-start"
+            >
+              <FolderDown /> Скопировать всё с сервера в папку…
+            </Button>
+          </motion.div>
+        )}
 
         <motion.ul variants={listItem} className="mt-3 space-y-2 text-[14px]">
           <li className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
@@ -282,6 +312,27 @@ export function WelcomePage() {
           )}
         </motion.form>
       </motion.div>
+
+      <Dialog open={confirmCopy} onOpenChange={(o) => !o && setConfirmCopy(false)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Скопировать сервер в папку?</DialogTitle>
+            <DialogDescription>
+              Все конспекты, закреп, проекты и карты с сервера «{adapter?.label}» запишутся в папку, которую ты выберешь. Файлы с такими же
+              именами в ней <b className="font-semibold text-foreground">заменятся</b> версиями с сервера, остальные останутся как были.
+              Приложение продолжит работать с сервером.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmCopy(false)}>
+              Отмена
+            </Button>
+            <Button disabled={busy} onClick={copyServer}>
+              <FolderDown /> Выбрать папку
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmDisconnect} onOpenChange={(o) => !o && setConfirmDisconnect(false)}>
         <DialogContent className="sm:max-w-sm">
