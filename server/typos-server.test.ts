@@ -151,7 +151,7 @@ describe('сервер хранения', () => {
     expect(await rawStatus('/files/..%2fsecret.txt')).toBe(400)
     expect(await rawStatus('/files/a%5c..%5csecret.txt')).toBe(400)
     expect((await call(`/files/${STATE_DIR}/server.json`)).status).toBe(404)
-    await fs.symlink(path.dirname(dir), path.join(dir, 'escape'))
+    await fs.symlink(path.dirname(dir), path.join(dir, 'escape'), process.platform === 'win32' ? 'junction' : 'dir')
     expect((await call('/files/escape/secret.txt')).status).toBe(403)
     const names = (await adapter().list('')).map((e) => e.name)
     expect(names).not.toContain(STATE_DIR)
@@ -163,7 +163,7 @@ describe('сервер хранения', () => {
     for (const name of ['.TYPOS-SERVER', '.Typos-Server', '.typos-server.', '.typos-server%20']) {
       expect(await rawStatus(`/files/${name}/server.json`)).toBe(404)
     }
-    await fs.symlink(path.join(dir, STATE_DIR), path.join(dir, 'keys'))
+    await fs.symlink(path.join(dir, STATE_DIR), path.join(dir, 'keys'), process.platform === 'win32' ? 'junction' : 'dir')
     expect((await call('/files/keys/server.json')).status).toBe(404)
     expect((await adapter().list('')).map((e) => e.name)).not.toContain('keys')
   })

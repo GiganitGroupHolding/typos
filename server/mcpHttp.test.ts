@@ -10,7 +10,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import sharp from 'sharp'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { DavAdapter } from '@/storage/davAdapter'
-import { createHttpMcpServer, httpConfig, type HttpConfig } from '../mcp/http'
+import { createHttpMcpServer, createTokenVerifier, httpConfig, type HttpConfig } from '../mcp/http'
 import { deviceKey, startServer } from './typos-server.mjs'
 
 const keys = await generateKeyPair('ES256')
@@ -55,7 +55,7 @@ beforeEach(async () => {
   })
   const jwksUrl = new URL(await listen(jwks))
   config = { resource: new URL('http://127.0.0.1/mcp'), issuer: 'https://auth.example.com/', jwksUrl, subject: 'owner' }
-  http = createHttpMcpServer(adapter, config)
+  http = createHttpMcpServer(adapter, config, createTokenVerifier(config))
   config.resource = new URL(`${await listen(http)}/mcp`)
 })
 

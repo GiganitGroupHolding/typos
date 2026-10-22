@@ -9,5 +9,5 @@ COPY mcp ./mcp
 COPY src ./src
 
 ENV NODE_ENV=production
-USER node
-CMD ["npm", "run", "mcp:http"]
+ENV MCP_AUTH_DATA_DIR=/data/auth
+CMD ["node", "mcp/container.mjs"]

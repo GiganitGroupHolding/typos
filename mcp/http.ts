@@ -1,17 +1,32 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { createServer, type IncomingMessage, type RequestListener, type ServerResponse } from 'node:http'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import { createMcpServer } from './tools'
 
-export interface HttpConfig {
+export interface HttpResourceConfig {
   resource: URL
   issuer: string
+  scopes?: string[]
+}
+
+export interface HttpConfig extends HttpResourceConfig {
   jwksUrl: URL
   subject: string
 }
 
-/** HTTP-режим запускается только с явно настроенной авторизацией владельца. */
+/** Публичный MCP не принимает адреса с ключами, параметрами или незашифрованным HTTP. */
+export function publicMcpUrl(env: NodeJS.ProcessEnv): URL {
+  const value = env.MCP_PUBLIC_URL?.trim()
+  if (!value) throw new Error('Задай MCP_PUBLIC_URL в настройках MCP-сервиса')
+  const url = new URL(value)
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
+    throw new Error('MCP_PUBLIC_URL должен быть HTTPS-адресом без ключей и параметров')
+  if (url.pathname !== '/mcp') throw new Error('MCP_PUBLIC_URL должен заканчиваться на /mcp')
+  return url
+}
+
+/** Внешний OAuth остаётся доступен для установок с собственным провайдером. */
 export function httpConfig(env: NodeJS.ProcessEnv): HttpConfig {
   const required = (name: string) => {
     const value = env[name]?.trim()
@@ -24,8 +39,7 @@ export function httpConfig(env: NodeJS.ProcessEnv): HttpConfig {
       throw new Error(`${name} должен быть HTTPS-адресом без ключей и параметров`)
     return url
   }
-  const resource = https('MCP_PUBLIC_URL')
-  if (resource.pathname !== '/mcp') throw new Error('MCP_PUBLIC_URL должен заканчиваться на /mcp')
+  const resource = publicMcpUrl(env)
   const issuer = required('MCP_AUTH_ISSUER')
   https('MCP_AUTH_ISSUER')
   return { resource, issuer, jwksUrl: https('MCP_AUTH_JWKS_URL'), subject: required('MCP_AUTH_SUBJECT') }
@@ -46,7 +60,12 @@ export function createTokenVerifier(config: HttpConfig, key: JWTVerifyGetKey = c
 }
 
 /** Stateless-транспорт не хранит сессии и проверяет авторизацию каждого запроса. */
-export function createHttpMcpServer(adapter: VaultAdapter, config: HttpConfig, verifyToken = createTokenVerifier(config)) {
+export function createHttpMcpServer(
+  adapter: VaultAdapter,
+  config: HttpResourceConfig,
+  verifyToken: (token: string) => Promise<unknown>,
+  authHandler?: RequestListener,
+) {
   const json = (res: ServerResponse, status: number, data: unknown) => {
     res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
     res.end(JSON.stringify(data))
@@ -63,11 +82,14 @@ export function createHttpMcpServer(adapter: VaultAdapter, config: HttpConfig, v
       return json(res, 200, {
         resource: config.resource.href,
         authorization_servers: [config.issuer],
-        scopes_supported: ['typos'],
+        scopes_supported: config.scopes ?? ['typos'],
         bearer_methods_supported: ['header'],
       })
     }
-    if (req.url !== '/mcp') return json(res, 404, { error: 'Не найдено' })
+    if (req.url !== '/mcp') {
+      if (authHandler) return authHandler(req, res)
+      return json(res, 404, { error: 'Не найдено' })
+    }
     const token = req.headers.authorization?.match(/^Bearer ([^\s]+)$/i)?.[1]
     try {
       if (!token) throw new Error('Нет ключа доступа')

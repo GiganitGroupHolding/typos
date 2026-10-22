@@ -1,119 +1,130 @@
 # Remote MCP on Railway
 
-The remote MCP service uses Streamable HTTP at `/mcp`. The existing stdio command,
-`npm run mcp -- --vault <folder>`, continues to work unchanged.
+Run MCP as a separate Railway service connected to your existing TYPOS storage
+server. ChatGPT connects to its HTTPS `/mcp` endpoint; the desktop app and your
+computer do not need to be running. Everyone hosts their own MCP and vault.
 
-## Architecture
+The local stdio command and desktop plugin keep working independently.
 
-Run MCP as a **separate service** in the Railway project containing the storage
-server. MCP connects to the existing storage service using `STUDYNOTES_LINK` and
-`DavAdapter`. Keep the vault on the storage service's persistent Volume; MCP does
-not need another Volume or direct access to that disk.
+## Single-owner login
 
-This is a single-owner service. It accepts only the configured OAuth subject and
-does not implement multi-user vault routing. Each HTTP request has its own
-stateless MCP instance. No sticky sessions or stored MCP sessions are required.
+Set `MCP_AUTH_MODE=owner` to use the built-in OAuth authorization server. No
+external identity provider, account registration or hosted frontend is needed.
+When connecting an AI client, enter your separate owner key on the TYPOS consent
+page and approve access to that client's displayed callback address. This grants
+read and write access to the entire configured vault.
 
-## OAuth prerequisite
+The server implements authorization code flow with mandatory PKCE S256, dynamic
+client registration, resource binding, refresh-token rotation and revocation.
+Callbacks must use HTTPS. Clients can use `none` or `client_secret_post` token
+endpoint authentication. Public registration does not grant access to notes.
 
-Use an external OAuth authorization server. This application is a protected
-resource server, not an OAuth authorization server or a login page. Before public
-deployment configure a provider that supports:
+Generate a random owner key into a new private file **outside the repository**:
 
-- OAuth discovery, authorization code flow and PKCE S256;
-- a client registration usable by ChatGPT (manual registration or provider-supported
-  dynamic registration), with the redirect URI shown by ChatGPT;
-- signed JWT **access tokens**, using RS256 or ES256 and published JWKS;
-- the exact public MCP URL as the token audience/resource, scope `typos`, and the
-  owner's subject as `sub`;
-- `exp`, `iat`, `iss`, `aud`, `sub` and a space-separated `scope` claim.
+```powershell
+npm run mcp:owner-key -- C:\Users\you\typos-mcp-owner.txt
+```
 
-Do not use an ID token as an API access token. Configure the provider to issue
-access tokens for this resource and grant consent to this client. A provider that
-only issues opaque tokens needs a separate introspection implementation and is
-not supported here. Verify resource/audience handling with your provider before
-assuming ChatGPT compatibility.
+The file contains the key. The command prints only the file location and
+`MCP_OWNER_PASSWORD_HASH` to put in Railway. Keep the original key in your password
+manager; do not paste it into chats, Git or Railway variables. The generated
+32-byte key is independent of the storage device key in `STUDYNOTES_LINK`.
 
-The server verifies JWT signatures and claims against the configured issuer and
-JWKS, including the owner's exact subject. It rejects missing, expired, incorrectly
-signed or incorrectly scoped tokens. There is no unauthenticated development
-mode or shared-secret login. Tokens are not forwarded to the storage server.
+Only the scrypt hash is needed to check the owner key. Access and refresh tokens
+are stored as hashes in `oauth.json`; registered clients and their credentials
+are also persisted. The file is atomically replaced before tokens are returned.
+In-flight consent requests and authorization codes are short-lived and kept only
+in memory. Restarting during a login requires starting that login again.
 
-## Railway service
+Access tokens last one hour. Refresh tokens rotate and expire thirty days after
+initial consent. Reusing a previously rotated refresh token revokes its entire
+grant. Changing the owner hash or public MCP URL revokes existing grants on the
+next start. To reset all clients and grants, stop MCP, remove its `oauth.json`
+from the auth volume, and restart; this does not touch notes.
 
-1. Add a service from this repository without changing the existing storage
-   service. Select **Dockerfile** as builder and set its path to `Dockerfile.mcp`
-   in the new service's settings. Do not apply this Dockerfile to the storage
-   service. The image uses Node.js 24 and installs the frozen npm lockfile.
-2. Generate an HTTPS domain for MCP. Set its healthcheck path to `/healthz`.
-   Railway supplies `PORT`; the process listens on `0.0.0.0`.
-3. Set the variables below in the MCP service. Enter the connection link securely
-   in Railway; never paste it into logs, Git, screenshots or chat.
-4. Deploy the service. The process refuses to start without the OAuth settings.
-   `/healthz` reports process health only; authenticated MCP calls are needed to
-   validate the storage connection.
+Run **one replica** against the auth directory. The file store and pending login
+requests are not designed for multiple workers. Public endpoints have request
+limits; consent allows ten attempts per fifteen minutes across the single-owner
+service. An attacker can temporarily exhaust those limits, so this is not a
+multi-tenant hosting service. Stored clients and grants are capped at 100 each;
+client registrations expire after ninety days.
+
+## Railway setup
+
+1. Create a separate MCP service from this repository. Set its Dockerfile path to
+   `Dockerfile.mcp`, generate an HTTPS domain, and set healthcheck to `/healthz`.
+   Leave the existing storage service and its vault volume unchanged.
+2. Attach a new persistent volume at `/data` to the MCP service. This volume
+   contains authorization state only. Keep one replica.
+3. Set these variables on the MCP service:
 
 | Variable | Value |
 | --- | --- |
-| `MCP_PUBLIC_URL` | Exact HTTPS endpoint, e.g. `https://your-mcp.up.railway.app/mcp` |
-| `MCP_AUTH_ISSUER` | Exact issuer from the provider's discovery metadata, including trailing slash if present |
-| `MCP_AUTH_JWKS_URL` | HTTPS `jwks_uri` from that metadata |
-| `MCP_AUTH_SUBJECT` | Your account's exact `sub` from that provider |
-| `STUDYNOTES_LINK` | Dedicated MCP device link created by the existing storage server |
+| `MCP_AUTH_MODE` | `owner` |
+| `MCP_PUBLIC_URL` | Exact HTTPS endpoint, such as `https://your-mcp.up.railway.app/mcp` |
+| `MCP_OWNER_PASSWORD_HASH` | Output of `mcp:owner-key`; never the original key |
+| `MCP_AUTH_DATA_DIR` | `/data/auth` |
+| `RAILWAY_RUN_UID` | `0` for volume preparation; the entrypoint drops to UID/GID 1000 before starting MCP |
+| `STUDYNOTES_LINK` | A device connection link for your existing storage server |
+| `PORT` | Railway's listening port; defaults to `3000` |
 
-Prefer a dedicated device key so MCP access can be revoked independently. To use
-Railway private networking, obtain the existing storage service's private DNS
-name and listening port from its configuration. The storage service must listen
-on an interface reachable by the MCP service. Use that address in the device link
-according to the storage link format; preserve its key and vault ID. Do not
-assume the volume path, service hostname or port from this example.
+4. Deploy. The image uses Node.js 24 and the npm lockfile. Its startup briefly
+   prepares `/data/auth` for UID/GID 1000, drops root privileges, then starts MCP
+   as the `node` user. The auth directory is mode `0700`, and files are `0600`.
 
-`MCP_PUBLIC_URL` always remains the public HTTPS URL even when storage uses private
-networking. Keep public access to MCP behind Railway's HTTPS endpoint. Requests
-with a mismatched Host or a foreign Origin are rejected; no browser CORS access
-is enabled. ChatGPT's backend connects directly.
+Enter `STUDYNOTES_LINK` securely in Railway; it contains a device key. Prefer a
+dedicated device link that can be revoked independently. The remote MCP talks to
+storage through `DavAdapter`, not by mounting the vault. Client OAuth tokens are
+never forwarded to the storage service.
 
-The container runs as the unprivileged `node` user. It includes development
-dependencies because the existing executable uses `tsx`. No frontend build or
-desktop toolchain is required. SIGTERM/SIGINT stops accepting new connections and
-allows up to ten seconds for shutdown.
+`/healthz` checks process health, not storage availability. Confirm the storage
+connection with an authenticated tool call. Host and Origin are checked against
+`MCP_PUBLIC_URL`. Keep MCP behind Railway HTTPS; ChatGPT connects from its backend.
+SIGTERM/SIGINT allows up to ten seconds for shutdown.
 
 ## Connect ChatGPT
 
-In ChatGPT's developer-mode app configuration, use `MCP_PUBLIC_URL` as the MCP
-endpoint and OAuth as authentication. Supply client settings from your provider
-when requested. The resource publishes metadata at
-`/.well-known/oauth-protected-resource/mcp` (also at the root well-known path) and
-advertises it in the `WWW-Authenticate` challenge.
+In ChatGPT's custom MCP configuration, use the public `/mcp` URL and OAuth.
+The server publishes discovery metadata and supports dynamic registration, so
+external-provider client IDs and secrets are not required. On the TYPOS page,
+verify that you initiated the connection, enter your owner key, and approve.
+Select the connected TYPOS app in a new chat.
 
-Exact UI labels and availability depend on the account and workspace. This code
-does not publish a public catalog app. A real provider login and an authenticated
-tool call from ChatGPT must be verified after deployment; local transport tests
-alone do not establish that integration.
+Availability and labels depend on the account and workspace. Installing the
+local Codex plugin does not automatically create this connection in ChatGPT.
+See the official [connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+This setup creates a personal connection, not a public catalog listing.
 
-After connecting, verify `list_subjects`, create a disposable note in a test
-subject, update and read it, confirm it appears in TYPOS, and send it to the trash.
-Do not test writes against existing study notes.
+Verify `list_subjects`, then create, update and read a disposable test note and
+send it to the trash. Do not test writes against existing study notes. Local
+protocol tests alone do not establish that a real ChatGPT account has connected.
 
-## Remote tool differences
+## External OAuth alternative
 
-- Remote MCP offers 12 tools. `add_project_file` remains stdio-only because it
-  reads local files. Uploading ChatGPT attachments is not implemented.
-- `create_note`, `update_note` and `import_tool` accept text inline; local `file`
-  arguments are not exposed in their remote schemas.
-- `add_image` accepts only `data:image/...;base64` remotely. It rejects local paths
-  and URLs. External Markdown images are left in place with a warning, without
-  making a network request, to prevent server-side requests to private services.
-- HTTP request bodies are limited to 4 MiB. Large documents must be split into
-  sections. Images also need to fit within this encoded-body limit.
+`MCP_AUTH_MODE=external` is the default for existing installations. Set
+`MCP_AUTH_ISSUER`, `MCP_AUTH_JWKS_URL`, and `MCP_AUTH_SUBJECT` in addition to
+`MCP_PUBLIC_URL` and `STUDYNOTES_LINK`. The provider must support authorization
+code flow, PKCE S256, a registration usable by ChatGPT, and JWT access tokens
+signed with RS256 or ES256 and published JWKS.
 
-## Validation
+Tokens must contain `exp`, `iat`, `iss`, `aud`, `sub` and space-separated `scope`.
+Audience must be the exact public `/mcp` URL, subject must match the configured
+owner, and scope must include `typos`. ID tokens and opaque provider access
+tokens are not accepted. This mode does not use the auth volume or owner key.
 
-From the repository root run `npm run check`. The HTTP integration tests fetch
-real JWKS, verify signed tokens and exercise the MCP client against a real storage
-server. They also cover auth rejection, metadata discovery, Host/Origin checks,
-body size limits and blocked local-file access. The stdio integration test
-continues to exercise the original 13 tools.
+## Tools and checks
 
-To run the HTTP entrypoint outside Railway, provide the same environment variables
-and run `npm run mcp:http`; `PORT` defaults to 3000. Public URLs must use HTTPS.
+Remote MCP exposes twelve tools. `add_project_file` remains local-only.
+`create_note`, `update_note` and `import_tool` accept inline text; local file
+arguments are not exposed. `add_image` accepts only `data:image/...;base64`.
+Remote Markdown images are left in place with a warning, without fetching URLs.
+Request bodies are limited to 4 MiB, including encoded images.
+
+Run `npm run check`. Tests exercise complete owner login, PKCE, consent binding,
+token expiration, rotation, revocation, persistence and key changes. External
+OAuth tests use real JWKS and signed tokens. HTTP tests also cover Host/Origin,
+metadata, size limits, local-file restrictions and a real storage connection.
+
+Outside Docker, set an absolute writable `MCP_AUTH_DATA_DIR` and run
+`npm run mcp:http` with the same variables. The owner-key generator refuses to
+overwrite an existing file.
