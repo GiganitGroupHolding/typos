@@ -1,0 +1,19 @@
+{
+  "name": "typos",
+  "version": "0.1.0",
+  "description": "Учебные конспекты TYPOS в личном серверном хранилище.",
+  "author": { "name": "robloxlover44" },
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "TYPOS",
+    "shortDescription": "Читай и редактируй свои учебные конспекты через ИИ.",
+    "longDescription": "Локальный MCP подключается к твоему серверу хранения TYPOS по личной ссылке. Требует Node.js и локальную копию репозитория с зависимостями.",
+    "developerName": "robloxlover44",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/robloxlover44/typos",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
+    "defaultPrompt": ["Покажи мои предметы в TYPOS", "Найди конспект по теме", "Создай конспект в TYPOS"]
+  }
+}

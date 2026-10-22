@@ -189,6 +189,8 @@ Instead of the flags you can set `STUDYNOTES_VAULT` or `STUDYNOTES_LINK`. With a
 
 For a remote MCP endpoint on Railway with OAuth, see [Remote MCP on Railway](docs/mcp-railway.md). The local stdio mode remains available.
 
+For a desktop plugin with a local marketplace entry and private per-user storage settings, see [the TYPOS plugin](plugins/typos/README.md).
+
 ## Roadmap
 
 - [x] Desktop build with Tauri

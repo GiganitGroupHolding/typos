@@ -1,0 +1,12 @@
+{
+  "name": "typos-local",
+  "interface": { "displayName": "TYPOS" },
+  "plugins": [
+    {
+      "name": "typos",
+      "source": { "source": "local", "path": "./plugins/typos" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}
