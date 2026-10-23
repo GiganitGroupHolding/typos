@@ -9,43 +9,86 @@ export function textSize(text: string, width = 260) {
 
 const GAP = 80
 const FRAME_PAD = 32
+// подпись рамки стоит над её верхним краем — столько места оставляем над рамкой
+const LABEL_ROOM = 40
+
+type Box = { x: number; y: number; width: number; height: number }
+
+const hit = (a: Box, b: Box) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+
+/**
+ * Куда поставить блок новых узлов. Висит на стрелке от уже стоящей карточки — рядом с ней (справа или снизу),
+ * сдвигаясь, пока не найдётся свободное место; иначе — под всем, что есть.
+ */
+function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block: Box, dir: 'TB' | 'LR', framed: boolean) {
+  const below = boardBounds(placed)
+  if (!below) return { x: 0, y: 0 }
+  const fallback = { x: below.x, y: below.y + below.height + GAP + (framed ? LABEL_ROOM : 0) }
+  const src = placed.find((p) => data.edges.some((e) => e.fromNode === p.id && fresh.has(e.toNode)))
+  if (!src) return fallback
+  // занятое место: карточки с отступом, у рамок — ещё и подпись над ними
+  const taken = placed.map((n) => ({
+    x: n.x - 24,
+    y: n.y - 24 - (n.type === 'group' ? LABEL_ROOM : 0),
+    width: n.width + 48,
+    height: n.height + 48 + (n.type === 'group' ? LABEL_ROOM : 0),
+  }))
+  const pad = framed ? LABEL_ROOM : 0
+  let at = dir === 'LR' ? { x: src.x + src.width + 90, y: src.y + pad } : { x: src.x, y: src.y + src.height + 90 + pad }
+  for (let i = 0; i < 100; i++) {
+    const box = { ...block, x: at.x, y: at.y - pad, height: block.height + pad }
+    if (!taken.some((t) => hit(t, box))) return at
+    at = dir === 'LR' ? { ...at, y: at.y + 40 } : { ...at, x: at.x + 40 }
+  }
+  return fallback
+}
 
 /**
  * Расставляет узлы без координат (их присылает MCP): схема по стрелкам между ними (dagre), блоком под тем,
- * что уже есть на доске. Рамка с children встаёт вокруг своих узлов.
+ * что уже есть на доске. Рамка с children встаёт вокруг своих узлов; если они тоже новые, рамка — подграф
+ * в схеме, и чужие карточки не налезают ни на неё, ни на её подпись.
  */
 export async function placeNodes(data: BoardData, unplaced: Set<string>, children: Map<string, string[]>, dir: 'TB' | 'LR' = 'LR') {
   const frames = new Set([...children.keys()].filter((id) => unplaced.has(id)))
   const fresh = data.nodes.filter((n) => unplaced.has(n.id) && !frames.has(n.id))
+  const freshIds = new Set(fresh.map((n) => n.id))
+  // подграфом — только рамка, у которой все узлы расставляются сейчас; иначе она встанет вокруг них потом
+  const clusters = [...frames].filter((id) => children.get(id)!.every((c) => freshIds.has(c)))
   const placed = data.nodes.filter((n) => !unplaced.has(n.id))
-  const at = new Map<string, { x: number; y: number }>()
+  const at = new Map<string, Box>()
 
   if (fresh.length) {
     const { default: dagre } = await import('@dagrejs/dagre')
-    const g = new dagre.graphlib.Graph({ multigraph: true })
-    g.setGraph({ rankdir: dir, nodesep: 40, ranksep: 90, marginx: 0, marginy: 0 })
+    const g = new dagre.graphlib.Graph({ multigraph: true, compound: true })
+    g.setGraph({ rankdir: dir, nodesep: clusters.length ? 40 + LABEL_ROOM / 2 : 40, ranksep: 90, marginx: 0, marginy: 0 })
     g.setDefaultEdgeLabel(() => ({}))
     for (const n of fresh) g.setNode(n.id, { width: n.width, height: n.height })
-    const ids = new Set(fresh.map((n) => n.id))
-    for (const e of data.edges) if (ids.has(e.fromNode) && ids.has(e.toNode)) g.setEdge(e.fromNode, e.toNode, {}, e.id)
+    for (const id of clusters) {
+      g.setNode(id, {})
+      // узел — только в одной рамке: первая забирает его
+      for (const c of children.get(id)!) if (!g.parent(c)) g.setParent(c, id)
+    }
+    for (const e of data.edges) if (freshIds.has(e.fromNode) && freshIds.has(e.toNode)) g.setEdge(e.fromNode, e.toNode, {}, e.id)
     dagre.layout(g)
-    const raw = fresh.map((n) => {
-      const p = g.node(n.id) as { x: number; y: number }
-      return { id: n.id, x: p.x - n.width / 2, y: p.y - n.height / 2 }
+    const raw = [...fresh.map((n) => n.id), ...clusters].map((id) => {
+      const p = g.node(id) as Box
+      return { id, x: p.x - p.width / 2, y: p.y - p.height / 2, width: p.width, height: p.height }
     })
     const minX = Math.min(...raw.map((p) => p.x))
     const minY = Math.min(...raw.map((p) => p.y))
-    const below = boardBounds(placed)
-    const ox = below ? below.x : 0
-    // место под рамкой: её подпись над верхним краем
-    const oy = below ? below.y + below.height + GAP + (frames.size ? FRAME_PAD : 0) : 0
-    for (const p of raw) at.set(p.id, { x: Math.round(p.x - minX + ox), y: Math.round(p.y - minY + oy) })
+    const block = boardBounds(raw.map((p) => ({ ...p, x: p.x - minX, y: p.y - minY })))!
+    const { x: ox, y: oy } = origin(data, placed, freshIds, block, dir, frames.size > 0)
+    for (const p of raw) at.set(p.id, { ...p, x: Math.round(p.x - minX + ox), y: Math.round(p.y - minY + oy) })
   }
 
-  let nodes: BoardNode[] = data.nodes.map((n) => (at.has(n.id) ? { ...n, ...at.get(n.id)! } : n))
+  let nodes: BoardNode[] = data.nodes.map((n) => {
+    const p = at.get(n.id)
+    if (!p) return n
+    return frames.has(n.id) ? { ...n, ...p, width: Math.round(p.width), height: Math.round(p.height) } : { ...n, x: p.x, y: p.y }
+  })
   for (const id of frames) {
-    const inside = nodes.filter((n) => children.get(id)!.includes(n.id))
-    const b = boardBounds(inside)
+    if (at.has(id)) continue
+    const b = boardBounds(nodes.filter((n) => children.get(id)!.includes(n.id)))
     if (!b) continue
     const frame = { x: b.x - FRAME_PAD, y: b.y - FRAME_PAD, width: b.width + FRAME_PAD * 2, height: b.height + FRAME_PAD * 2 }
     nodes = nodes.map((n) => (n.id === id ? { ...n, ...frame } : n))

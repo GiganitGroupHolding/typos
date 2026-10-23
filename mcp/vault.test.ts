@@ -230,7 +230,59 @@ describe('доски', () => {
     expect((await loadVault(a)).boards[0].data.nodes).toHaveLength(4)
   })
 
-  it('правит, добавляет под существующим, удаляет и переименовывает', async () => {
+  it('чужие карточки не налезают на рамку и её подпись', async () => {
+    await v.createSubject({ name: 'Матан' })
+    const r = await v.createBoard({
+      subject: 'Матан',
+      name: 'Производные',
+      nodes: [
+        { id: 'root', text: '# Производная' },
+        { id: 'rules', text: 'Правила' },
+        { id: 'chain', text: 'Цепное правило' },
+        { id: 'table', text: 'Таблица\n- a\n- b' },
+        { id: 'use', text: 'Применение' },
+        { id: 'frame', type: 'group', label: 'Как считать', children: ['rules', 'chain', 'table'] },
+      ],
+      edges: [
+        { from: 'root', to: 'rules' },
+        { from: 'root', to: 'table' },
+        { from: 'rules', to: 'chain' },
+        { from: 'root', to: 'use' },
+      ],
+    })
+    const { nodes } = await v.readBoard(r.id)
+    const frame = nodes.find((n) => n.id === 'frame')!
+    // подпись — примерно 30 px над верхним краем
+    const withLabel = { ...frame, y: frame.y - 30, height: frame.height + 30 }
+    for (const n of nodes.filter((x) => x.id === 'root' || x.id === 'use')) expect(overlap(withLabel, n)).toBe(false)
+    for (const id of ['rules', 'chain', 'table']) {
+      const n = nodes.find((x) => x.id === id)!
+      expect(n.x >= frame.x && n.y >= frame.y && n.x + n.width <= frame.x + frame.width && n.y + n.height <= frame.y + frame.height).toBe(
+        true,
+      )
+    }
+  })
+
+  it('новая карточка на стрелке от старой встаёт рядом с ней, на свободное место', async () => {
+    await v.createSubject({ name: 'Физика' })
+    const { id } = await v.createBoard({
+      subject: 'Физика',
+      name: 'Схема',
+      nodes: [
+        { id: 'a', text: 'А', x: 0, y: 0 },
+        { id: 'b', text: 'Б', x: 0, y: 300 },
+        { id: 'busy', text: 'занято', x: 350, y: 300 },
+      ],
+    })
+    await v.updateBoard({ id, nodes: [{ id: 'c', text: 'пример к Б' }], edges: [{ from: 'b', to: 'c' }] })
+    const { nodes } = await v.readBoard(id)
+    const [b, busy, c] = ['b', 'busy', 'c'].map((x) => nodes.find((n) => n.id === x)!)
+    expect(c.x).toBeGreaterThan(b.x + b.width)
+    expect(c.x).toBeLessThan(b.x + b.width + 200)
+    expect(overlap(c, busy)).toBe(false)
+  })
+
+  it('правит, добавляет, удаляет и переименовывает', async () => {
     await v.createSubject({ name: 'Физика' })
     const { id } = await v.createBoard({ subject: 'Физика', name: 'Схема', nodes: [{ id: 'a', text: 'А', x: 0, y: 0 }] })
     const r = await v.updateBoard({
@@ -247,7 +299,7 @@ describe('доски', () => {
     const [na, nb] = b.nodes
     expect(na).toMatchObject({ x: 0, y: 0, text: 'А\nвторая строка\nтретья\nчетвёртая' })
     expect(na.height).toBeGreaterThan(80)
-    expect(nb.y).toBeGreaterThanOrEqual(na.y + na.height)
+    expect(nb.x).toBeGreaterThanOrEqual(na.x + na.width)
     expect(b.edges[0]).toMatchObject({ id: 'e', arrow: 'both' })
 
     await v.updateBoard({ id, edges: [{ id: 'e', label: 'связь', arrow: 'end' }] })
