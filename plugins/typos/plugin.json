@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "typos",
   "version": "0.1.0",
-  "description": "Учебные конспекты TYPOS: предметы, заметки, формулы и проекты в личном хранилище.",
+  "description": "Учебные конспекты TYPOS: предметы, заметки, формулы, проекты и доски в личном хранилище.",
   "author": { "name": "robloxlover44" },
   "repository": "https://github.com/robloxlover44/typos",
   "extensions": {
@@ -11,7 +11,7 @@
       "interface": {
         "displayName": "TYPOS",
         "shortDescription": "Читай и редактируй свои учебные конспекты через ИИ.",
-        "longDescription": "Локальный MCP подключается к твоему серверу хранения TYPOS по личной ссылке. Поддерживает конспекты, формулы, поиск и проекты. Требует установленный Node.js и локальную копию репозитория TYPOS с зависимостями.",
+        "longDescription": "Локальный MCP подключается к твоему серверу хранения TYPOS по личной ссылке. Поддерживает конспекты, формулы, поиск, проекты и доски. Требует установленный Node.js и локальную копию репозитория TYPOS с зависимостями.",
         "developerName": "robloxlover44",
         "category": "Productivity",
         "capabilities": ["Read", "Write"],

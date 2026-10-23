@@ -149,7 +149,7 @@ it('проводит полный OAuth-вход и позволяет ИИ чи
     await client.connect(
       new StreamableHTTPClientTransport(config.resource, { requestInit: { headers: { Authorization: `Bearer ${tokens.access_token}` } } }),
     )
-    expect((await client.listTools()).tools).toHaveLength(12)
+    expect((await client.listTools()).tools).toHaveLength(15)
     expect((await client.callTool({ name: 'create_subject', arguments: { name: 'OAuth-тест' } })).isError).not.toBe(true)
     expect(
       (await client.callTool({ name: 'create_note', arguments: { subject: 'OAuth-тест', title: 'Вход', markdown: 'Запись после входа' } }))

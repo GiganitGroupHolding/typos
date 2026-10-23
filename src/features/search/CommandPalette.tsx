@@ -6,6 +6,7 @@ import {
   FolderOpen,
   FolderPlus,
   GraduationCap,
+  LayoutDashboard,
   Moon,
   Pin,
   SquarePen,
@@ -32,7 +33,7 @@ import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
 import { SubjectBadge, toolIcon, toolIcons } from '@/features/subjects/visuals'
 import { relativeTime } from '@/lib/format'
 import type { Subject } from '@/types'
-import { useCreateNote, useRecentNotes } from '@/vault/hooks'
+import { useCreateBoard, useCreateNote, useRecentNotes } from '@/vault/hooks'
 import { useVault } from '@/vault/store'
 import { buildDocs, createIndex, normalize, search, snippet, type SearchHit } from './searchIndex'
 
@@ -68,11 +69,12 @@ function Snippet({ hit }: { hit: SearchHit }) {
   )
 }
 
-const KIND_ICON = { note: FileText, pin: Pin } as const
+const KIND_ICON = { note: FileText, pin: Pin, board: LayoutDashboard } as const
 const GROUPS: { kind: SearchHit['kind']; heading: string }[] = [
   { kind: 'note', heading: 'Конспекты' },
   { kind: 'pin', heading: 'Закреп' },
   { kind: 'tool', heading: 'Проекты' },
+  { kind: 'board', heading: 'Доски' },
   { kind: 'subject', heading: 'Предметы' },
 ]
 
@@ -83,8 +85,9 @@ export function CommandPalette() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const createNote = useCreateNote()
+  const createBoard = useCreateBoard()
   const recent = useRecentNotes(5)
-  const data = useVault(useShallow((s) => ({ subjects: s.subjects, notes: s.notes, pins: s.pins, tools: s.tools })))
+  const data = useVault(useShallow((s) => ({ subjects: s.subjects, notes: s.notes, pins: s.pins, tools: s.tools, boards: s.boards })))
   const [query, setQuery] = useState('')
   const deferred = useDeferredValue(query)
 
@@ -116,6 +119,13 @@ export function CommandPalette() {
     ...(currentSubject
       ? [
           {
+            id: 'new-board',
+            label: 'Новая доска',
+            keywords: 'создать полотно схема стикеры miro',
+            icon: LayoutDashboard,
+            run: () => void createBoard(currentSubject),
+          },
+          {
             id: 'review',
             label: 'Повторение закрепа',
             keywords: 'карточки экзамен',
@@ -139,6 +149,7 @@ export function CommandPalette() {
     if (h.kind === 'note') navigate(`/s/${h.subjectId}/n/${h.refId}`)
     else if (h.kind === 'pin') ui().openWindow('pin', h.refId)
     else if (h.kind === 'tool') navigate(`/s/${h.subjectId}/t/${h.refId}`)
+    else if (h.kind === 'board') navigate(`/s/${h.subjectId}/b/${h.refId}`)
     else navigate(`/s/${h.refId}`)
   }
 
@@ -149,7 +160,7 @@ export function CommandPalette() {
       const Icon = t ? toolIcon(t) : toolIcons.calculator
       return <Icon />
     }
-    const Icon = KIND_ICON[h.kind as 'note' | 'pin']
+    const Icon = KIND_ICON[h.kind as 'note' | 'pin' | 'board']
     return <Icon />
   }
 
@@ -158,7 +169,7 @@ export function CommandPalette() {
       open={open}
       onOpenChange={setOpen}
       title="Поиск и команды"
-      description="Поиск по тексту всех конспектов, закрепа и проектов"
+      description="Поиск по тексту всех конспектов, закрепа, проектов и досок"
       className="sm:max-w-xl"
     >
       <Command shouldFilter={false} className="rounded-none!">
@@ -196,7 +207,7 @@ export function CommandPalette() {
                               <span className="ml-auto shrink-0 text-xs text-muted-foreground">{subject.name}</span>
                             )}
                           </span>
-                          {(kind === 'note' || kind === 'pin') && <Snippet hit={h} />}
+                          {(kind === 'note' || kind === 'pin' || kind === 'board') && <Snippet hit={h} />}
                         </span>
                       </CommandItem>
                     )

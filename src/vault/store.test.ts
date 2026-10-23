@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { parseBoard, serializeBoard } from '@/features/boards/model'
 import { sampleVault } from '@/test/sampleVault'
 import { serializeFrontmatter } from './format'
 import * as repo from './repo'
@@ -57,5 +58,28 @@ describe('сохранение конспекта и правки снаружи
     await writeOutside('# Снова снаружи')
     await s.saveNote(n.id, '# Моя версия', { force: true })
     expect(await repo.readNoteBody(a, firstNote().path)).toBe('# Моя версия')
+  })
+})
+
+describe('сохранение доски и правки снаружи', () => {
+  it('правку снаружи (MCP) не затирает: сливает со своей', async () => {
+    const subject = useVault.getState().subjects[0]
+    const s = useVault.getState()
+    const b = await s.createBoard(subject.id, 'Схема')
+    const mine = { id: 'm', type: 'text' as const, x: 0, y: 0, width: 200, height: 80, text: 'моя' }
+    const theirs = { id: 't', type: 'text' as const, x: 300, y: 0, width: 200, height: 80, text: 'от Claude' }
+    s.adoptBoard(b.id, b.data)
+    await a.writeText(b.path, serializeBoard(b.id, { nodes: [theirs], edges: [] }))
+
+    const saved = await s.saveBoard(b.id, { nodes: [mine], edges: [] })
+    expect(saved?.nodes.map((n) => n.id)).toEqual(['m', 't'])
+    expect(parseBoard(await a.readText(b.path)).data.nodes.map((n) => n.text)).toEqual(['моя', 'от Claude'])
+
+    // следующее сохранение идёт уже от слитой версии — ничего не теряется и не двоится
+    await s.saveBoard(b.id, { nodes: [{ ...mine, x: 40 }, theirs], edges: [] })
+    expect(parseBoard(await a.readText(b.path)).data.nodes.map((n) => [n.id, n.x])).toEqual([
+      ['m', 40],
+      ['t', 300],
+    ])
   })
 })

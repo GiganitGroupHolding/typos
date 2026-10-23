@@ -29,6 +29,7 @@ const router = createBrowserRouter([
       { path: 's/:subjectId', element: <SubjectHome /> },
       { path: 's/:subjectId/n/:noteId', lazy: loadNote },
       { path: 's/:subjectId/t/:toolId', lazy: () => import('@/pages/ToolPage').then((m) => ({ Component: m.ToolPage })) },
+      { path: 's/:subjectId/b/:boardId', lazy: () => import('@/pages/BoardPage').then((m) => ({ Component: m.BoardPage })) },
       { path: 's/:subjectId/review', lazy: () => import('@/pages/ReviewPage').then((m) => ({ Component: m.ReviewPage })) },
       { path: 'trash', lazy: () => import('@/pages/TrashPage').then((m) => ({ Component: m.TrashPage })) },
       { path: '*', element: <NotFoundPage /> },

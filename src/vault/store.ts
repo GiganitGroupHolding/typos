@@ -15,11 +15,12 @@ import type { RemoteConfig } from '@/storage/remoteLink'
 import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
 import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
 import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
-import type { Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
+import type { Board, Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
 import { extractExcerpt, extractTitle, sameBody } from './format'
 import { imagesByName, isMarkdownFile } from '@/lib/files'
 import * as repo from './repo'
 import { emptyMap, mapText, type NoteMap } from '@/editor/map/types'
+import { mergeBoards, parseBoard, serializeBoard, type BoardData } from '@/features/boards/model'
 
 type Status = 'loading' | 'ready' | 'needs-permission' | 'error'
 type SubjectInput = { name: string; color: SubjectColor; icon: SubjectIcon }
@@ -78,6 +79,18 @@ interface VaultState extends repo.VaultData {
   importProjectFile: (subjectId: string, input: { name: string; blob: Blob; title?: string; icon?: ToolIcon }) => Promise<Tool>
   updateTool: (id: string, input: { name: string; icon: ToolIcon }) => Promise<void>
   trashTool: (id: string) => Promise<Undo>
+  createBoard: (subjectId: string, name?: string) => Promise<Board>
+  /**
+   * Записывает доску. Если файл поменяли снаружи (MCP, другое устройство) с тех пор, как доска открыта,
+   * правки сливаются (mergeBoards). Возвращает то, что записано; null — доски уже нет.
+   */
+  saveBoard: (id: string, data: BoardData) => Promise<BoardData | null>
+  /** Доска показывает эти данные — от них считаются следующие правки. */
+  adoptBoard: (id: string, data: BoardData) => void
+  renameBoard: (id: string, name: string) => Promise<void>
+  trashBoard: (id: string) => Promise<Undo>
+  /** Картинка для доски; путь от корня хранилища. */
+  saveBoardImage: (id: string, file: Blob) => Promise<string>
   listTrash: () => Promise<repo.TrashItem[]>
   restoreTrash: (item: repo.TrashItem) => Promise<void>
   /** Необратимо. */
@@ -114,6 +127,8 @@ export class NoteConflictError extends Error {
 
 /** id конспекта → текст, от которого идут правки в редакторе. Перечитывание папки его не трогает. */
 const bases = new Map<string, string>()
+/** id доски → файл, от которого идут правки на доске. */
+const boardBases = new Map<string, string>()
 
 export const useVault = create<VaultState>()((set, get) => {
   const need = () => {
@@ -162,6 +177,7 @@ export const useVault = create<VaultState>()((set, get) => {
     notes: [],
     pins: [],
     tools: [],
+    boards: [],
 
     init() {
       // StrictMode и повторные монтирования зовут init несколько раз — открываем один раз
@@ -475,6 +491,55 @@ export const useVault = create<VaultState>()((set, get) => {
     async trashTool(id) {
       const tool = get().tools.find((t) => t.id === id)
       return tool ? trashWithUndo(tool.path) : async () => {}
+    },
+
+    // ---------- доски ----------
+
+    async createBoard(subjectId, name = 'Новая доска') {
+      const subject = get().subjects.find((s) => s.id === subjectId)
+      if (!subject) throw new Error('Предмет не найден')
+      const board = await repo.createBoard(need(), subject, name)
+      boardBases.set(board.id, serializeBoard(board.id, board.data))
+      set((s) => ({ boards: [...s.boards, board].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      return board
+    },
+
+    saveBoard(id, data) {
+      return enqueue(`board:${id}`, async () => {
+        const board = get().boards.find((b) => b.id === id)
+        if (!board) return null
+        const a = need()
+        const text = await a.readText(board.path)
+        const disk = text === null ? null : serializeBoard(id, parseBoard(text).data)
+        const base = boardBases.get(id)
+        const next = disk !== null && base !== undefined && disk !== base ? mergeBoards(parseBoard(base).data, data, parseBoard(disk).data) : data
+        const saved = await repo.saveBoard(a, board, next)
+        boardBases.set(id, serializeBoard(id, next))
+        set((s) => ({ boards: s.boards.map((b) => (b.id === id ? { ...b, data: saved.data } : b)) }))
+        return next
+      })
+    },
+
+    adoptBoard: (id, data) => void boardBases.set(id, serializeBoard(id, data)),
+
+    renameBoard(id, name) {
+      return enqueue(`board:${id}`, async () => {
+        const board = get().boards.find((b) => b.id === id)
+        if (!board) return
+        const next = await repo.renameBoard(need(), board, name)
+        set((s) => ({ boards: s.boards.map((b) => (b.id === id ? next : b)).sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      })
+    },
+
+    async trashBoard(id) {
+      const board = get().boards.find((b) => b.id === id)
+      return board ? trashWithUndo(board.path) : async () => {}
+    },
+
+    async saveBoardImage(id, file) {
+      const board = get().boards.find((b) => b.id === id)
+      if (!board) throw new Error('Доска не найдена')
+      return repo.saveBoardImage(need(), board, file)
     },
 
     // ---------- корзина ----------

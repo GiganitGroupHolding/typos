@@ -116,7 +116,7 @@ it('проверяет подпись, срок, issuer, audience, владел�
     expect(response.status).toBe(401)
   }
   await connect()
-  expect((await client!.listTools()).tools).toHaveLength(12)
+  expect((await client!.listTools()).tools).toHaveLength(15)
 })
 
 it('создаёт, читает, меняет и удаляет конспект через HTTP и настоящий сервер хранения', async () => {

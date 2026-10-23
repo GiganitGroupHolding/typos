@@ -14,11 +14,13 @@ export const useSubject = (id?: string) => useVault((s) => s.subjects.find((x) =
 export const useNote = (id?: string) => useVault((s) => s.notes.find((x) => x.id === id))
 export const useTool = (id?: string) => useVault((s) => s.tools.find((x) => x.id === id))
 export const usePin = (id?: string) => useVault((s) => s.pins.find((x) => x.id === id))
+export const useBoard = (id?: string) => useVault((s) => s.boards.find((x) => x.id === id))
 
 export const useNotesOf = (subjectId?: string) =>
   useVault(useShallow((s) => s.notes.filter((n) => n.subjectId === subjectId).sort(byUpdated)))
 export const usePinsOf = (subjectId?: string) => useVault(useShallow((s) => s.pins.filter((p) => p.subjectId === subjectId)))
 export const useToolsOf = (subjectId?: string) => useVault(useShallow((s) => s.tools.filter((t) => t.subjectId === subjectId)))
+export const useBoardsOf = (subjectId?: string) => useVault(useShallow((s) => s.boards.filter((b) => b.subjectId === subjectId)))
 export const useRecentNotes = (limit = 5) => useVault(useShallow((s) => [...s.notes].sort(byUpdated).slice(0, limit)))
 
 /** Создать конспект в предмете и открыть его. */
@@ -37,6 +39,22 @@ export function useCreateNote() {
         navigate(`/s/${target}/n/${note.id}?new=1`)
       } catch (e) {
         toast.error('Не удалось создать конспект', { description: e instanceof Error ? e.message : String(e) })
+      }
+    },
+    [navigate],
+  )
+}
+
+/** Создать доску в предмете и открыть её. */
+export function useCreateBoard() {
+  const navigate = useNavigate()
+  return useCallback(
+    async (subjectId: string) => {
+      try {
+        const board = await useVault.getState().createBoard(subjectId)
+        navigate(`/s/${subjectId}/b/${board.id}?new=1`)
+      } catch (e) {
+        toast.error('Не удалось создать доску', { description: e instanceof Error ? e.message : String(e) })
       }
     },
     [navigate],

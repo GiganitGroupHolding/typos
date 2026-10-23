@@ -1,4 +1,4 @@
-import { ChevronDown, FileDown, FileUp, Maximize2, Plus, SquarePen } from 'lucide-react'
+import { ChevronDown, FileDown, FileUp, LayoutDashboard, Maximize2, Plus, SquarePen } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -11,26 +11,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { BoardActions } from '@/features/boards/BoardActions'
+import { boardText } from '@/features/boards/model'
 import { pickAndImportNotes } from '@/features/import/importFiles'
 import { useFileDrop } from '@/features/import/useFileDrop'
 import { PinActions } from '@/features/pins/PinActions'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
+import { tabOfPath } from '@/features/subjects/tabs'
 import { SubjectBadge, toolIcon } from '@/features/subjects/visuals'
 import { ToolActions } from '@/features/tools/ToolActions'
 import { openToolDialog } from '@/features/tools/ToolDialog'
-import { relativeTime } from '@/lib/format'
+import { plural, relativeTime } from '@/lib/format'
 import { listItem, listParent, spring } from '@/lib/motion'
 import { templates } from '@/lib/templates'
 import { Tex } from '@/lib/tex'
 import { cn } from '@/lib/utils'
 import type { Subject, SubjectTab } from '@/types'
-import { useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
+import { useBoardsOf, useCreateBoard, useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
 import { useUi } from '../store'
 
 const tabs: { id: SubjectTab; label: string }[] = [
   { id: 'notes', label: 'Конспекты' },
   { id: 'pins', label: 'Закреп' },
   { id: 'tools', label: 'Проекты' },
+  { id: 'boards', label: 'Доски' },
 ]
 
 function useCurrentTab(): SubjectTab {
@@ -38,13 +42,25 @@ function useCurrentTab(): SubjectTab {
   const { pathname } = useLocation()
   const t = params.get('tab') as SubjectTab | null
   if (t) return t
-  return pathname.includes('/t/') ? 'tools' : 'notes'
+  return tabOfPath(pathname)
 }
 
-/** Кнопка «создать» меняется по вкладке: конспект (с шаблонами), карточка, файл в проекты. */
+/** Кнопка «создать» меняется по вкладке: конспект (с шаблонами), карточка, файл в проекты, доска. */
 function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
   const createNote = useCreateNote()
+  const createBoard = useCreateBoard()
   const navigate = useNavigate()
+  if (tab === 'boards')
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="Новая доска" onClick={() => void createBoard(subject.id)}>
+            <Plus />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Новая доска</TooltipContent>
+      </Tooltip>
+    )
   if (tab === 'pins')
     return (
       <Tooltip>
@@ -108,11 +124,12 @@ function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
 }
 
 export function ListColumn() {
-  const { subjectId, noteId, toolId } = useParams()
+  const { subjectId, noteId, toolId, boardId } = useParams()
   const subject = useSubject(subjectId)
   const notes = useNotesOf(subjectId)
   const pins = usePinsOf(subjectId)
   const tools = useToolsOf(subjectId)
+  const boards = useBoardsOf(subjectId)
   const tab = useCurrentTab()
   const [, setParams] = useSearchParams()
   const openWindow = useUi((s) => s.openWindow)
@@ -238,9 +255,37 @@ export function ListColumn() {
             )
           })}
 
-        {((tab === 'notes' && !notes.length) || (tab === 'pins' && !pins.length) || (tab === 'tools' && !tools.length)) && (
-          <EmptyList tab={tab} subjectId={subject.id} />
-        )}
+        {tab === 'boards' &&
+          boards.map((b) => (
+            <motion.li key={b.id} variants={listItem} className="group relative">
+              <Link
+                to={`/s/${subject.id}/b/${b.id}`}
+                viewTransition
+                data-active={boardId === b.id || undefined}
+                className="flex items-center gap-3 rounded-lg py-2.5 pr-10 pl-3 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
+              >
+                <span className="flex size-8 items-center justify-center rounded-lg bg-card shadow-card">
+                  <LayoutDashboard className="size-4 text-highlight" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-medium">{b.name}</span>
+                  <span className="block truncate text-[12px] text-muted-foreground">
+                    {b.data.nodes.length ? plural(b.data.nodes.length, ['элемент', 'элемента', 'элементов']) : 'Пустая'}
+                    {boardText(b.data) && ` · ${boardText(b.data).split('\n')[0]}`}
+                  </span>
+                </span>
+              </Link>
+              <BoardActions
+                board={b}
+                className="absolute top-2.5 right-2 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+              />
+            </motion.li>
+          ))}
+
+        {((tab === 'notes' && !notes.length) ||
+          (tab === 'pins' && !pins.length) ||
+          (tab === 'tools' && !tools.length) ||
+          (tab === 'boards' && !boards.length)) && <EmptyList tab={tab} subjectId={subject.id} />}
       </motion.ul>
 
       {drop.over && (
@@ -254,6 +299,7 @@ export function ListColumn() {
 
 function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
   const createNote = useCreateNote()
+  const createBoard = useCreateBoard()
   const content = {
     notes: {
       title: 'Конспектов пока нет',
@@ -272,6 +318,12 @@ function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
       hint: 'Перетащи сюда файл: PDF, презентацию, документ, картинку или HTML-тулзу',
       action: 'Добавить файл',
       run: () => openToolDialog({ subjectId }),
+    },
+    boards: {
+      title: 'Досок нет',
+      hint: 'Доска — полотно для схем, стикеров и картинок: разложить тему, связать понятия стрелками',
+      action: 'Новая доска',
+      run: () => void createBoard(subjectId),
     },
   }[tab]
   return (

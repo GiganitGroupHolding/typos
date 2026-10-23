@@ -6,6 +6,7 @@ export const PINS_DIR = 'Закреп'
 /** мини-карты конспектов: Конспекты/.maps/<id>.json */
 export const MAPS_DIR = '.maps'
 export const PROJECTS_DIR = 'Проекты'
+export const BOARDS_DIR = 'Доски'
 /** старое имя «Проектов»: при открытии хранилища содержимое переезжает (repo.migrateTools) */
 export const TOOLS_DIR = 'Инструменты'
 

@@ -1,4 +1,4 @@
-import { ChevronRight, FileText, FolderOpen, Pin } from 'lucide-react'
+import { ChevronRight, FileText, FolderOpen, LayoutDashboard, Pin } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
@@ -6,7 +6,8 @@ import { SidebarMenu, SidebarMenuButton } from '@/components/ui/sidebar'
 import { dur, easeOut, spring } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { Subject, SubjectTab } from '@/types'
-import { useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/vault/hooks'
+import { useBoardsOf, useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/vault/hooks'
+import { tabOfPath } from './tabs'
 import { SubjectBadge } from './visuals'
 
 /*
@@ -40,6 +41,7 @@ const sections: { tab: SubjectTab; label: string; icon: typeof FileText }[] = [
   { tab: 'notes', label: 'Конспекты', icon: FileText },
   { tab: 'pins', label: 'Закреп', icon: Pin },
   { tab: 'tools', label: 'Проекты', icon: FolderOpen },
+  { tab: 'boards', label: 'Доски', icon: LayoutDashboard },
 ]
 
 function SubjectNode({ subject }: { subject: Subject }) {
@@ -52,8 +54,9 @@ function SubjectNode({ subject }: { subject: Subject }) {
     notes: useNotesOf(subject.id).length,
     pins: usePinsOf(subject.id).length,
     tools: useToolsOf(subject.id).length,
+    boards: useBoardsOf(subject.id).length,
   }
-  const currentTab: SubjectTab = (params.get('tab') as SubjectTab) ?? (pathname.includes('/t/') ? 'tools' : 'notes')
+  const currentTab: SubjectTab = (params.get('tab') as SubjectTab) ?? tabOfPath(pathname)
 
   return (
     <motion.li layout="position" transition={spring} className="relative list-none">

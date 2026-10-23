@@ -1,12 +1,13 @@
 import MiniSearch from 'minisearch'
-import type { Note, Pin, Subject, Tool } from '@/types'
+import { boardText } from '@/features/boards/model'
+import type { Board, Note, Pin, Subject, Tool } from '@/types'
 
 /**
  * Полнотекстовый поиск по всему vault. Индекс в памяти, пересобирается при изменении данных
  * (сотни конспектов — миллисекунды). Русский без стемминга: префикс + опечатки (fuzzy).
  */
 
-export type HitKind = 'note' | 'pin' | 'tool' | 'subject'
+export type HitKind = 'note' | 'pin' | 'tool' | 'board' | 'subject'
 
 export interface SearchDoc {
   id: string // `${kind}:${refId}`
@@ -45,7 +46,7 @@ export function plainText(md: string): string {
     .trim()
 }
 
-export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[]; tools: Tool[] }): SearchDoc[] {
+export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[]; tools: Tool[]; boards?: Board[] }): SearchDoc[] {
   return [
     ...data.subjects.map((s) => ({
       id: `subject:${s.id}`,
@@ -72,6 +73,14 @@ export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[
       text: plainText([p.tex ? `$${p.tex}$` : '', p.text ?? ''].join(' ')),
     })),
     ...data.tools.map((t) => ({ id: `tool:${t.id}`, kind: 'tool' as const, refId: t.id, subjectId: t.subjectId, title: t.name, text: '' })),
+    ...(data.boards ?? []).map((b) => ({
+      id: `board:${b.id}`,
+      kind: 'board' as const,
+      refId: b.id,
+      subjectId: b.subjectId,
+      title: b.name,
+      text: plainText(boardText(b.data)),
+    })),
   ]
 }
 

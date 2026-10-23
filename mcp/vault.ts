@@ -2,11 +2,13 @@ import path from 'node:path'
 import katex from 'katex'
 import sharp from 'sharp'
 import { normalizeMarkdownMath } from '@/editor/texImport'
+import { boardText } from '@/features/boards/model'
 import { SUBJECT_COLOR_IDS } from '@/lib/subjectPalette'
 import { basename, joinPath, type VaultAdapter } from '@/storage/VaultAdapter'
-import type { Note, Subject, SubjectColor, SubjectIcon, ToolIcon } from '@/types'
+import type { Board, Note, Subject, SubjectColor, SubjectIcon, ToolIcon } from '@/types'
 import { genId, NOTES_DIR } from '@/vault/format'
 import * as repo from '@/vault/repo'
+import { boardForModel, editBoard, type BoardEdit } from './boards'
 import { fetchPublic } from './fetchPublic'
 import { LocalFiles } from './localFiles'
 
@@ -49,6 +51,12 @@ export class StudyVault {
     return n
   }
 
+  private board(data: repo.VaultData, id: string): Board {
+    const b = data.boards.find((x) => x.id === id)
+    if (!b) throw new Error(`Нет доски с id «${id}». Id — из get_subject или search.`)
+    return b
+  }
+
   // ---------- предметы ----------
 
   async listSubjects() {
@@ -61,6 +69,7 @@ export class StudyVault {
       notes: d.notes.filter((n) => n.subjectId === s.id).length,
       pins: d.pins.filter((p) => p.subjectId === s.id).length,
       tools: d.tools.filter((t) => t.subjectId === s.id).length,
+      boards: d.boards.filter((b) => b.subjectId === s.id).length,
     }))
   }
 
@@ -94,6 +103,9 @@ export class StudyVault {
         })),
       pins: d.pins.filter((p) => p.subjectId === s.id).map((p) => ({ id: p.id, title: p.title, tex: p.tex, text: p.text, order: p.order })),
       tools: d.tools.filter((t) => t.subjectId === s.id).map((t) => ({ id: t.id, name: t.name, kind: t.kind, file: basename(t.path) })),
+      boards: d.boards
+        .filter((b) => b.subjectId === s.id)
+        .map((b) => ({ id: b.id, name: b.name, nodes: b.data.nodes.length, edges: b.data.edges.length })),
     }
   }
 
@@ -218,6 +230,31 @@ export class StudyVault {
     return { id: t.id, path: t.path, kind: t.kind }
   }
 
+  // ---------- доски ----------
+
+  async readBoard(id: string) {
+    const d = await this.load()
+    const b = this.board(d, id)
+    const s = d.subjects.find((x) => x.id === b.subjectId)!
+    return { id: b.id, subject: s.name, name: b.name, path: b.path, ...boardForModel(b.data) }
+  }
+
+  async createBoard(input: { subject: string; name: string } & BoardEdit) {
+    const s = this.subject(await this.load(), input.subject)
+    const { data, ids } = await editBoard({ nodes: [], edges: [] }, input)
+    const b = await repo.createBoard(this.a, s, input.name, data)
+    return { id: b.id, path: b.path, nodes: ids, warnings: checkBoard(data, ids) }
+  }
+
+  async updateBoard(input: { id: string; name?: string } & BoardEdit) {
+    const d = await this.load()
+    let b = this.board(d, input.id)
+    const { data, ids } = await editBoard(b.data, input)
+    b = await repo.saveBoard(this.a, b, data)
+    if (input.name?.trim()) b = await repo.renameBoard(this.a, b, input.name)
+    return { id: b.id, path: b.path, name: b.name, nodes: ids, warnings: checkBoard(data, ids) }
+  }
+
   // ---------- поиск и корзина ----------
 
   async search(input: { query: string; subject?: string; limit?: number }) {
@@ -226,8 +263,8 @@ export class StudyVault {
     const terms = norm(input.query).split(/\s+/).filter(Boolean)
     if (!terms.length) return []
     const name = (id: string) => d.subjects.find((s) => s.id === id)?.name
-    const hits: { kind: 'note' | 'pin'; id: string; subject?: string; title: string; snippet: string; score: number }[] = []
-    const consider = (kind: 'note' | 'pin', id: string, subjectId: string, title: string, text: string) => {
+    const hits: { kind: 'note' | 'pin' | 'board'; id: string; subject?: string; title: string; snippet: string; score: number }[] = []
+    const consider = (kind: 'note' | 'pin' | 'board', id: string, subjectId: string, title: string, text: string) => {
       if (only && subjectId !== only) return
       const hay = norm(`${title}\n${text}`)
       if (!terms.every((t) => hay.includes(t))) return
@@ -241,12 +278,13 @@ export class StudyVault {
     }
     for (const n of d.notes) consider('note', n.id, n.subjectId, n.title, n.body)
     for (const p of d.pins) consider('pin', p.id, p.subjectId, p.title, `${p.tex ?? ''}\n${p.text ?? ''}`)
+    for (const b of d.boards) consider('board', b.id, b.subjectId, b.name, boardText(b.data))
     return hits.sort((x, y) => y.score - x.score).slice(0, input.limit ?? 20)
   }
 
-  async trash(input: { kind: 'note' | 'pin' | 'tool'; id: string }) {
+  async trash(input: { kind: 'note' | 'pin' | 'tool' | 'board'; id: string }) {
     const d = await this.load()
-    const list = input.kind === 'note' ? d.notes : input.kind === 'pin' ? d.pins : d.tools
+    const list = { note: d.notes, pin: d.pins, tool: d.tools, board: d.boards }[input.kind]
     const item = list.find((x) => x.id === input.id)
     if (!item) throw new Error(`Не нашёл: ${input.kind} «${input.id}»`)
     const trashPath = await repo.trashEntry(this.a, item.path)
@@ -325,6 +363,11 @@ export function checkMarkdown(md: string): string[] {
       warnings.push(`Строка ${i + 1}: непарный «$» — редактор не поймёт формулу. Для знака доллара пиши «\\$».`)
   })
   return warnings
+}
+
+/** Формулы в карточках доски, которых KaTeX не поймёт (только в узлах из этого вызова). */
+function checkBoard(data: { nodes: { id: string; text?: string }[] }, ids: string[]): string[] {
+  return data.nodes.filter((n) => ids.includes(n.id) && n.text).flatMap((n) => checkMarkdown(n.text!).map((w) => `Узел ${n.id}: ${w}`))
 }
 
 function checkPin(tex?: string, text?: string): string[] {

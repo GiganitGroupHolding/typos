@@ -95,6 +95,21 @@
   --hl-red: #fdebec;
   --hl-default: oklch(0.65 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.16);
 
+  /* доски: фон стикеров и цвет линий — пресеты JSON Canvas 1…6 */
+  --board-1: #ffdcd8;
+  --board-line-1: #d44c47;
+  --board-2: #fde3c8;
+  --board-line-2: #d9730d;
+  --board-3: #fdf0b2;
+  --board-line-3: #b8820f;
+  --board-4: #d9f0d3;
+  --board-line-4: #448361;
+  --board-5: #d0ebf4;
+  --board-line-5: #337ea9;
+  --board-6: #e8ddf7;
+  --board-line-6: #9065b0;
+  --board-dot: rgb(31 30 29 / 0.16);
+
   --chart-1: var(--highlight);
   --chart-2: #2563eb;
   --chart-3: #c27a10;
@@ -195,6 +210,20 @@
   --tc-red: #df5452;
   --hl-red: #522e2a;
   --hl-default: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h) / 0.2);
+
+  --board-1: #5b2f2c;
+  --board-line-1: #df5452;
+  --board-2: #5e3d22;
+  --board-line-2: #c77d48;
+  --board-3: #574722;
+  --board-line-3: #ca984d;
+  --board-4: #27432f;
+  --board-line-4: #529e72;
+  --board-5: #173f51;
+  --board-line-5: #5e9fc9;
+  --board-6: #3f2e53;
+  --board-line-6: #a57ad6;
+  --board-dot: rgb(255 255 255 / 0.13);
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.25);
 }

@@ -1,10 +1,11 @@
-import { FileDown, FileUp, FolderOpen, GraduationCap, Pin, Plus, SquarePen } from 'lucide-react'
+import { FileDown, FileUp, FolderOpen, GraduationCap, LayoutDashboard, Pin, Plus, SquarePen } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useUi } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
+import { BoardPreview } from '@/features/boards/BoardPreview'
 import { pickAndImportNotes } from '@/features/import/importFiles'
 import { useFileDrop } from '@/features/import/useFileDrop'
 import { PinBody } from '@/features/pins/PinCard'
@@ -16,11 +17,11 @@ import { ToolDock } from '@/features/tools/ToolDock'
 import { plural, relativeTime } from '@/lib/format'
 import { listItem, listParent, pageEnter } from '@/lib/motion'
 import { cn } from '@/lib/utils'
-import { useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
+import { useBoardsOf, useCreateBoard, useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from '@/vault/hooks'
 
 const PINS_PREVIEW = 4
 
-/** Главная предмета — bento: конспекты, закреп, проекты. */
+/** Главная предмета — bento: конспекты, закреп, проекты, доски. */
 export function SubjectHome() {
   const { subjectId } = useParams()
   const [params] = useSearchParams()
@@ -28,7 +29,9 @@ export function SubjectHome() {
   const notes = useNotesOf(subjectId)
   const pins = usePinsOf(subjectId)
   const tools = useToolsOf(subjectId)
+  const boards = useBoardsOf(subjectId)
   const createNote = useCreateNote()
+  const createBoard = useCreateBoard()
   const openWindow = useUi((s) => s.openWindow)
   const setPinsOpen = useUi((s) => s.setPinsOpen)
   const drop = useFileDrop(subjectId)
@@ -141,6 +144,36 @@ export function SubjectHome() {
             </div>
           ) : (
             <Empty text={drop.over ? 'Отпусти — добавлю' : 'Перетащи сюда PDF, презентацию, документ, картинку или HTML-тулзу'} />
+          )}
+        </Tile>
+
+        <Tile
+          className="lg:col-span-3"
+          highlight={tab === 'boards'}
+          title="Доски"
+          icon={<LayoutDashboard />}
+          actions={[{ label: 'Новая', icon: <Plus />, onClick: () => void createBoard(subject.id) }]}
+        >
+          {boards.length ? (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {boards.map((b) => (
+                <li key={b.id}>
+                  <Link
+                    to={`/s/${subject.id}/b/${b.id}`}
+                    viewTransition
+                    className="group block rounded-xl border bg-background p-2 outline-none transition-colors duration-(--dur-fast) hover:border-(--subject)/40 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <BoardPreview data={b.data} className="aspect-[16/10] w-full rounded-lg bg-muted/40" />
+                    <div className="mt-2 truncate px-1 text-[14px] font-semibold">{b.name}</div>
+                    <div className="px-1 text-[12px] text-muted-foreground">
+                      {b.data.nodes.length ? plural(b.data.nodes.length, ['элемент', 'элемента', 'элементов']) : 'Пустая'}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty text="Доска — полотно для схем, стикеров и картинок: разложить тему и связать понятия стрелками" />
           )}
         </Tile>
       </motion.div>

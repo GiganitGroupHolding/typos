@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { buildDocs, createIndex, search } from '@/features/search/searchIndex'
 import * as repo from './repo'
 import { sampleVault } from '@/test/sampleVault'
 import { fileKind } from './format'
@@ -156,5 +157,48 @@ describe('копия хранилища', () => {
     await folder.writeText('Физика/Конспекты/Кинематика точки.md', '# моя версия')
     await repo.copyVault(a, folder)
     expect(await folder.readText('Физика/Конспекты/Кинематика точки.md')).toBe('# моя версия')
+  })
+})
+
+describe('доски', () => {
+  it('создание, переименование с тем же id, поиск и корзина', async () => {
+    const { a, v } = await sample()
+    const phys = v.subjects.find((s) => s.name === 'Физика')!
+    const b = await repo.createBoard(a, phys, 'Схема: механика', {
+      nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 200, height: 80, text: 'Импульс сохраняется' }],
+      edges: [],
+    })
+    expect(b.path).toBe('Физика/Доски/Схема механика.canvas')
+
+    const renamed = await repo.renameBoard(a, b, 'Механика')
+    expect(renamed.path).toBe('Физика/Доски/Механика.canvas')
+    expect(await a.exists(b.path)).toBe(false)
+    const loaded = (await repo.loadVault(a)).boards.find((x) => x.id === b.id)
+    expect(loaded).toMatchObject({ name: 'Механика', subjectId: phys.id })
+    expect(loaded?.data.nodes[0].text).toBe('Импульс сохраняется')
+
+    const hits = search(createIndex(buildDocs(await repo.loadVault(a))), 'импульс')
+    expect(hits.find((h) => h.kind === 'board')?.refId).toBe(b.id)
+
+    await repo.trashEntry(a, renamed.path)
+    const [item] = await repo.listTrash(a)
+    expect(item).toMatchObject({ kind: 'board', name: 'Механика', originalPath: renamed.path })
+  })
+
+  it('доска из Obsidian без id получает id при переименовании — он не меняется вместе с путём', async () => {
+    const { a } = await sample()
+    await a.writeText('Физика/Доски/Своя.canvas', JSON.stringify({ nodes: [], edges: [] }))
+    const b = (await repo.loadVault(a)).boards[0]
+    const renamed = await repo.renameBoard(a, b, 'Новая')
+    expect((await repo.loadVault(a)).boards[0]).toMatchObject({ id: b.id, path: renamed.path })
+  })
+
+  it('картинка доски — в папке досок, путь от корня хранилища', async () => {
+    const { a, v } = await sample()
+    const b = await repo.createBoard(a, v.subjects[0], 'Доска')
+    const path = await repo.saveBoardImage(a, b, new Blob(['x'], { type: 'image/gif' }))
+    expect(path).toMatch(/^Линейная алгебра\/Доски\/assets\/\w+\.gif$/)
+    expect(await a.exists(path)).toBe(true)
+    expect((await repo.loadVault(a)).boards).toHaveLength(1)
   })
 })

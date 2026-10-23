@@ -187,3 +187,96 @@ describe('картинки, закреп, тулзы, поиск, корзина
     expect((await loadVault(a)).notes).toHaveLength(0)
   })
 })
+
+describe('доски', () => {
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+    a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+
+  it('создаёт доску: узлы без координат расставлены схемой, рамка встаёт вокруг своих', async () => {
+    await v.createSubject({ name: 'Физика' })
+    const r = await v.createBoard({
+      subject: 'Физика',
+      name: 'Законы Ньютона',
+      nodes: [
+        { id: 'root', text: '# Законы Ньютона', color: 'yellow' },
+        { id: 'n1', text: 'Первый: инерция' },
+        { id: 'n2', text: 'Второй: $\\vec F = m\\vec a$', color: '4' },
+        { id: 'g', type: 'group', label: 'Следствия', children: ['n1', 'n2'] },
+      ],
+      edges: [
+        { from: 'root', to: 'n1' },
+        { from: 'root', to: 'n2', label: 'сила' },
+      ],
+    })
+    expect(r.nodes).toEqual(['root', 'n1', 'n2', 'g'])
+    expect(r.warnings).toEqual([])
+
+    const b = await v.readBoard(r.id)
+    expect(b).toMatchObject({ subject: 'Физика', name: 'Законы Ньютона', path: 'Физика/Доски/Законы Ньютона.canvas' })
+    const by = new Map(b.nodes.map((n) => [n.id, n]))
+    expect(by.get('root')).toMatchObject({ color: '3', type: 'text' })
+    expect(overlap(by.get('root')!, by.get('n1')!)).toBe(false)
+    expect(overlap(by.get('n1')!, by.get('n2')!)).toBe(false)
+    const g = by.get('g')!
+    for (const id of ['n1', 'n2']) {
+      const n = by.get(id)!
+      expect(n.x >= g.x && n.y >= g.y && n.x + n.width <= g.x + g.width && n.y + n.height <= g.y + g.height).toBe(true)
+    }
+    expect(b.edges.map((e) => [e.from, e.to, e.label])).toEqual([
+      ['root', 'n1', undefined],
+      ['root', 'n2', 'сила'],
+    ])
+    // файл читается приложением
+    expect((await loadVault(a)).boards[0].data.nodes).toHaveLength(4)
+  })
+
+  it('правит, добавляет под существующим, удаляет и переименовывает', async () => {
+    await v.createSubject({ name: 'Физика' })
+    const { id } = await v.createBoard({ subject: 'Физика', name: 'Схема', nodes: [{ id: 'a', text: 'А', x: 0, y: 0 }] })
+    const r = await v.updateBoard({
+      id,
+      name: 'Схема темы',
+      nodes: [
+        { id: 'a', text: 'А\nвторая строка\nтретья\nчетвёртая' },
+        { id: 'b', text: 'Б' },
+      ],
+      edges: [{ id: 'e', from: 'a', to: 'b', arrow: 'both' }],
+    })
+    expect(r).toMatchObject({ name: 'Схема темы', path: 'Физика/Доски/Схема темы.canvas', nodes: ['a', 'b'] })
+    let b = await v.readBoard(id)
+    const [na, nb] = b.nodes
+    expect(na).toMatchObject({ x: 0, y: 0, text: 'А\nвторая строка\nтретья\nчетвёртая' })
+    expect(na.height).toBeGreaterThan(80)
+    expect(nb.y).toBeGreaterThanOrEqual(na.y + na.height)
+    expect(b.edges[0]).toMatchObject({ id: 'e', arrow: 'both' })
+
+    await v.updateBoard({ id, edges: [{ id: 'e', label: 'связь', arrow: 'end' }] })
+    expect((await v.readBoard(id)).edges[0]).toEqual({ id: 'e', from: 'a', to: 'b', label: 'связь' })
+
+    await v.updateBoard({ id, remove: ['b'] })
+    b = await v.readBoard(id)
+    expect(b.nodes.map((n) => n.id)).toEqual(['a'])
+    expect(b.edges).toEqual([])
+  })
+
+  it('отказывает в чужих путях, плохих ссылках и стрелках в никуда', async () => {
+    await v.createSubject({ name: 'Физика' })
+    const { id } = await v.createBoard({ subject: 'Физика', name: 'Схема' })
+    await expect(v.updateBoard({ id, nodes: [{ type: 'file', file: '../секрет.png' }] })).rejects.toThrow(/внутри хранилища/)
+    await expect(v.updateBoard({ id, nodes: [{ type: 'file', file: '.typos-server/server.json' }] })).rejects.toThrow(/внутри хранилища/)
+    await expect(v.updateBoard({ id, nodes: [{ type: 'link', url: 'javascript:alert(1)' }] })).rejects.toThrow(/http/)
+    await expect(v.updateBoard({ id, nodes: [{ text: 'x', color: 'url(x)' }] })).rejects.toThrow(/цвет/)
+    await expect(v.updateBoard({ id, edges: [{ from: 'нет', to: 'тоже' }] })).rejects.toThrow(/нет узла/)
+    expect((await v.readBoard(id)).nodes).toEqual([])
+  })
+
+  it('поиск находит доску, корзина её принимает, формулы проверяются', async () => {
+    await v.createSubject({ name: 'Физика' })
+    const r = await v.createBoard({ subject: 'Физика', name: 'Энергия', nodes: [{ id: 'k', text: 'Кинетическая $\\frac{mv^2$' }] })
+    expect(r.warnings[0]).toMatch(/^Узел k: /)
+    expect((await v.search({ query: 'кинетическая' }))[0]).toMatchObject({ kind: 'board', id: r.id })
+    expect((await v.getSubject('Физика')).boards).toEqual([{ id: r.id, name: 'Энергия', nodes: 1, edges: 0 }])
+    await v.trash({ kind: 'board', id: r.id })
+    expect((await v.listSubjects())[0].boards).toBe(0)
+  })
+})

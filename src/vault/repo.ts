@@ -1,9 +1,11 @@
 import { basename, dirname, fileExt, fileTitle, joinPath, safeName, uniquePath, type VaultAdapter } from '@/storage/VaultAdapter'
-import type { Note, Pin, Subject, SubjectColor, SubjectIcon, Tool, ToolIcon } from '@/types'
+import type { Board, Note, Pin, Subject, SubjectColor, SubjectIcon, Tool, ToolIcon } from '@/types'
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from '@/lib/subjectPalette'
 import { normalizeMarkdownMath } from '@/editor/texImport'
 import { mapText, parseNoteMap, serializeNoteMap, type NoteMap } from '@/editor/map/types'
+import { BOARD_EXT, emptyBoard, parseBoard, serializeBoard, type BoardData } from '@/features/boards/model'
 import {
+  BOARDS_DIR,
   extractExcerpt,
   extractTitle,
   fileKind,
@@ -28,6 +30,7 @@ export interface VaultData {
   notes: Note[]
   pins: Pin[]
   tools: Tool[]
+  boards: Board[]
 }
 
 const COLORS: SubjectColor[] = SUBJECT_COLOR_IDS
@@ -35,7 +38,7 @@ const ICONS: SubjectIcon[] = SUBJECT_ICON_IDS
 const TOOL_ICONS: ToolIcon[] = ['grid', 'chart', 'ruler', 'binary', 'calculator', 'function', 'timer', 'table']
 
 export async function loadVault(a: VaultAdapter): Promise<VaultData> {
-  const data: VaultData = { subjects: [], notes: [], pins: [], tools: [] }
+  const data: VaultData = { subjects: [], notes: [], pins: [], tools: [], boards: [] }
   const roots = (await a.list('')).filter((e) => e.kind === 'dir' && !e.name.startsWith('.'))
 
   for (const [i, root] of roots.entries()) data.subjects.push(await readSubject(a, root.name, i))
@@ -68,6 +71,10 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
       // старая папка «Инструменты» — тоже: до миграции (и в MCP, где миграции нет) файлы не пропадают
       readProjects(a, joinPath(subject.dir, PROJECTS_DIR), subject.id, data.tools),
       readProjects(a, joinPath(subject.dir, TOOLS_DIR), subject.id, data.tools),
+      readFiles(a, joinPath(subject.dir, BOARDS_DIR), BOARD_EXT, async (path, text) => {
+        const { id, data: board } = parseBoard(text)
+        data.boards.push({ id: id || pathId(path), subjectId: subject.id, path, name: fileTitle(basename(path)), data: board })
+      }),
     ])
     for (const n of notes) {
       const t = maps.get(n.id)
@@ -77,9 +84,11 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
   data.notes = uniqueIds(data.notes, (n) => n.path)
   data.pins = uniqueIds(data.pins, (p) => p.path)
   data.tools = uniqueIds(data.tools, (t) => t.path)
+  data.boards = uniqueIds(data.boards, (b) => b.path)
   data.subjects.sort((x, y) => x.order - y.order || x.name.localeCompare(y.name, 'ru'))
   data.pins.sort((x, y) => x.order - y.order || x.title.localeCompare(y.title, 'ru'))
   data.tools.sort((x, y) => x.name.localeCompare(y.name, 'ru'))
+  data.boards.sort((x, y) => x.name.localeCompare(y.name, 'ru'))
   return data
 }
 
@@ -310,7 +319,7 @@ export async function restoreFromTrash(a: VaultAdapter, trashPath: string, origi
   return path
 }
 
-export type TrashKind = 'note' | 'pin' | 'tool' | 'subject' | 'file'
+export type TrashKind = 'note' | 'pin' | 'tool' | 'board' | 'subject' | 'file'
 
 export interface TrashItem {
   trashPath: string
@@ -337,7 +346,9 @@ export async function listTrash(a: VaultAdapter): Promise<TrashItem[]> {
             ? 'pin'
             : parts[1] === TOOLS_DIR || parts[1] === PROJECTS_DIR
               ? 'tool'
-              : 'file'
+              : parts[1] === BOARDS_DIR && parts.length === 3
+                ? 'board'
+                : 'file'
     const iso = stamp.replace(/T(\d\d)-(\d\d)-(\d\d)-(\d{3})Z/, 'T$1:$2:$3.$4Z')
     items.push({ trashPath: joinPath(TRASH_DIR, e.name), originalPath, name: splitExt(parts.at(-1)!).base, kind, deletedAt: iso })
   }
@@ -480,6 +491,41 @@ export async function updateTool(a: VaultAdapter, tool: Tool, input: { name: str
   await a.writeText(path, html)
   if (path !== tool.path) await a.remove(tool.path)
   return { ...tool, path, html, icon: input.icon, name: basename(path).replace(/\.html?$/i, '') }
+}
+
+// ---------- доски ----------
+
+export async function createBoard(a: VaultAdapter, subject: Subject, name: string, data: BoardData = emptyBoard()): Promise<Board> {
+  const id = genId()
+  const path = await uniquePath(a, joinPath(subject.dir, BOARDS_DIR), safeName(name, 'Доска'), BOARD_EXT)
+  await a.writeText(path, serializeBoard(id, data))
+  return { id, subjectId: subject.id, path, name: fileTitle(basename(path)), data }
+}
+
+export async function saveBoard(a: VaultAdapter, board: Board, data: BoardData): Promise<Board> {
+  await a.writeText(board.path, serializeBoard(board.id, data))
+  return { ...board, data }
+}
+
+/** Переименование = перенос файла; id лежит внутри, поэтому не меняется. */
+export async function renameBoard(a: VaultAdapter, board: Board, name: string): Promise<Board> {
+  const wanted = safeName(name, 'Доска')
+  const current = fileTitle(basename(board.path)).replace(/ \(\d+\)$/, '')
+  if (wanted === current) return board
+  const path = await uniquePath(a, dirname(board.path), wanted, BOARD_EXT, board.path)
+  // в файле мог не быть id (доску сделали в Obsidian) — дописываем, иначе id сменится вместе с путём
+  await a.writeText(board.path, serializeBoard(board.id, board.data))
+  if (path !== board.path) await a.move(board.path, path)
+  return { ...board, path, name: fileTitle(basename(path)) }
+}
+
+/**
+ * Картинка на доску → `<Предмет>/Доски/assets/<id>.webp`.
+ * Возвращает путь от корня хранилища — так ссылается на файлы JSON Canvas.
+ */
+export async function saveBoardImage(a: VaultAdapter, board: Pick<Board, 'path'>, file: Blob): Promise<string> {
+  const dir = dirname(board.path)
+  return joinPath(dir, await saveAsset(a, dir, file))
 }
 
 // ---------- предметы ----------

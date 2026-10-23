@@ -52,7 +52,7 @@ it('плагин из отдельной папки запускает MCP и п
         env: { ...getDefaultEnvironment(), TYPOS_MCP_CONFIG: config, STUDYNOTES_VAULT: dir },
       }),
     )
-    expect((await client.listTools()).tools).toHaveLength(13)
+    expect((await client.listTools()).tools).toHaveLength(16)
     await client.callTool({ name: 'create_subject', arguments: { name: 'Тест' } })
     // файлы — только из папки, разрешённой при настройке
     const fromFile = await client.callTool({

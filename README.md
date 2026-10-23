@@ -44,6 +44,7 @@ In TYPOS a subject is a folder. Open it and the lecture notes are right there, n
 - Tables, text color and highlight, a toolbar over selected text, and a visual formula editor for when you don't remember the LaTeX.
 - Formula cards for the key formulas of each subject, with a review mode for exam prep.
 - Small HTML tools such as calculators and trainers live inside a subject. They run in a sandboxed iframe with no access to your notes.
+- Boards: an endless canvas per subject, like a small Miro. Sticky notes and cards with formulas, frames, images and arrows with labels. A board is a JSON Canvas file, so Obsidian opens it too.
 - `Ctrl K` searches every subject. It ignores case and treats е and ё as the same letter.
 - Deleted items stay in the trash for 30 days, and every delete can be undone.
 - If a note's file changes on disk while the note is open, TYPOS loads the new version. If you have unsaved edits, it asks which version to keep.
@@ -103,11 +104,13 @@ Study/
     │   └── assets/             images, saved as webp
     ├── Закреп/                 formula cards
     │   └── Cramer's rule.md
-    └── Инструменты/            HTML tools
-        └── Inverse matrix.html
+    ├── Проекты/                HTML tools, PDFs, slides and other files
+    │   └── Inverse matrix.html
+    └── Доски/                  boards (JSON Canvas)
+        └── Mechanics.canvas
 ```
 
-The three folder names inside a subject are fixed: `Конспекты` for notes, `Закреп` for formula cards and `Инструменты` for tools.
+The folder names inside a subject are fixed: `Конспекты` for notes, `Закреп` for formula cards, `Проекты` for tools and files (the old name `Инструменты` is moved there on open) and `Доски` for boards.
 
 A note is Markdown with a short frontmatter block. Its first line is the title, and the file is named after it.
 
@@ -182,7 +185,7 @@ The server keeps the vault as the same plain files and speaks a subset of WebDAV
 
 ## MCP server
 
-The MCP server lets an AI assistant such as Claude read your notes and write new ones: notes, formula cards and tools, in the same format the app writes. It works with a folder on this computer or with a storage server.
+The MCP server lets an AI assistant such as Claude read your notes and write new ones: notes, formula cards, tools and boards, in the same format the app writes. On a board the assistant can leave out coordinates: the nodes are laid out along their arrows. If the board is open in the app at the same time, both sets of edits are kept. It works with a folder on this computer or with a storage server.
 
 ```bash
 # a notes folder on this computer

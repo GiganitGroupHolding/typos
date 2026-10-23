@@ -1,4 +1,4 @@
-import { FileText, Folder, FolderOpen, Loader2, Pin, RotateCcw, Trash2, type LucideIcon } from 'lucide-react'
+import { FileText, Folder, FolderOpen, LayoutDashboard, Loader2, Pin, RotateCcw, Trash2, type LucideIcon } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ const KIND: Record<TrashKind, { icon: LucideIcon; label: string }> = {
   note: { icon: FileText, label: 'Конспект' },
   pin: { icon: Pin, label: 'Карточка закрепа' },
   tool: { icon: FolderOpen, label: 'Проект' },
+  board: { icon: LayoutDashboard, label: 'Доска' },
   subject: { icon: Folder, label: 'Предмет целиком' },
   file: { icon: FileText, label: 'Файл' },
 }

@@ -5,16 +5,17 @@ import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { useNote, useSubject, useTool } from '@/vault/hooks'
+import { useBoard, useNote, useSubject, useTool } from '@/vault/hooks'
 import { useUi } from '../store'
 import { WindowControls } from './WindowControls'
 
 export function TopBar() {
-  const { subjectId, noteId, toolId } = useParams()
+  const { subjectId, noteId, toolId, boardId } = useParams()
   const subject = useSubject(subjectId)
   const note = useNote(noteId)
   const tool = useTool(toolId)
-  const leaf = note ? note.title || 'Без названия' : tool?.name
+  const board = useBoard(boardId)
+  const leaf = note ? note.title || 'Без названия' : (tool?.name ?? board?.name)
   const pinsOpen = useUi((s) => s.pinsOpen)
   const togglePins = useUi((s) => s.togglePins)
   const focusMode = useUi((s) => s.focusMode)

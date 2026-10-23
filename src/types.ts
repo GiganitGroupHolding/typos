@@ -1,3 +1,5 @@
+import type { BoardData } from '@/features/boards/model'
+
 export type SubjectColor =
   | 'red'
   | 'orange'
@@ -110,4 +112,13 @@ export interface Tool {
   size?: number
 }
 
-export type SubjectTab = 'notes' | 'pins' | 'tools'
+/** Доска = `<Предмет>/Доски/<Название>.canvas` (JSON Canvas, как в Obsidian). */
+export interface Board {
+  id: string
+  subjectId: string
+  path: string
+  name: string
+  data: BoardData
+}
+
+export type SubjectTab = 'notes' | 'pins' | 'tools' | 'boards'

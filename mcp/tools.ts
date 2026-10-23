@@ -3,17 +3,18 @@ import { z } from 'zod'
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from '@/lib/subjectPalette'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import type { SubjectColor, SubjectIcon } from '@/types'
+import type { BoardEdit } from './boards'
 import { LocalFiles } from './localFiles'
 import { StudyVault } from './vault'
 
 /*
- * MCP-сервер TYPOS: Claude пишет конспекты, закреп и тулзы прямо в хранилище.
+ * MCP-сервер TYPOS: Claude пишет конспекты, закреп, тулзы и доски прямо в хранилище.
  * Запуск: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "C:\путь\к\папке"
  *     или: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…" (сервер хранения; ссылку даёт команда link)
  * Приложение с папкой подхватывает изменения, когда окно получает фокус; с сервером хранения — сразу.
  */
 
-const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой) и «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки).
+const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой), «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки) и «Доски» (полотна как в Miro: стикеры, карточки, рамки и стрелки).
 
 Формат конспекта — Markdown, который понимает редактор приложения:
 - первая строка — заголовок «# …» (по нему называется файл); дальше ## / ### для разделов;
@@ -23,6 +24,8 @@ const INSTRUCTIONS = `Хранилище учебных конспектов п�
 - ==выделение==, **жирный**, *курсив*, > цитата для определений, списки;
 - картинки — ![подпись](https://…): сервер сам скачает их в assets/. Для локального файла или data: — сначала add_image.
 - матрицы — pmatrix/vmatrix в $$-блоках; расширенная матрица — \\left(\\begin{array}{cc|c}…\\end{array}\\right).
+
+Доска — узлы и стрелки. Узлы: text (карточка; Markdown: #, -, **жирный**, формулы $…$; с color — стикер), group (рамка с label; children — id узлов внутри), link (url), file (картинка: path из add_image). Стрелки: from → to (id узлов), label. Свои id узлов задавай сам — на них ссылаются стрелки. Координаты можно не писать: узлы без x/y расставятся схемой по стрелкам (direction LR или TB) под тем, что уже есть на доске. Цвета: 1 красный, 2 оранжевый, 3 жёлтый, 4 зелёный, 5 голубой, 6 фиолетовый.
 
 Перед записью нескольких конспектов покажи пользователю план (предмет → конспекты). Ответ create/update содержит warnings — если они есть, исправь и обнови конспект.
 При переносе из документов передавай source (ссылка на оригинал): повторный перенос обновит тот же конспект, а не создаст дубль.
@@ -87,7 +90,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
 
   server.registerTool(
     'list_subjects',
-    { title: 'Предметы', description: 'Все предметы и сколько в них конспектов, карточек закрепа и тулз.', annotations: read },
+    { title: 'Предметы', description: 'Все предметы и сколько в них конспектов, карточек закрепа, тулз и досок.', annotations: read },
     run(() => vault.listSubjects()),
   )
 
@@ -95,7 +98,8 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     'get_subject',
     {
       title: 'Содержимое предмета',
-      description: 'Конспекты (id, заголовок, превью), карточки закрепа и тулзы предмета. Отсюда берутся id для read_note / update_note.',
+      description:
+        'Конспекты (id, заголовок, превью), карточки закрепа, тулзы и доски предмета. Отсюда берутся id для read_note / update_note / read_board / update_board.',
       inputSchema: { subject },
       annotations: read,
     },
@@ -248,11 +252,85 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
       ),
     )
 
+  const boardNode = z.object({
+    id: z
+      .string()
+      .min(1)
+      .max(64)
+      .optional()
+      .describe('Свой id: на него ссылаются стрелки и children. Узел с таким id уже есть — правятся только переданные поля'),
+    type: z
+      .enum(['text', 'group', 'link', 'file'])
+      .optional()
+      .describe('text — карточка (по умолчанию), group — рамка, link — ссылка, file — картинка'),
+    text: z.string().optional().describe('Для text: Markdown (#, -, **жирный**, формулы $…$ и $$…$$)'),
+    label: z.string().optional().describe('Для group: подпись рамки'),
+    children: z.array(z.string()).optional().describe('Для group без координат: id узлов, вокруг которых встанет рамка'),
+    url: z.string().optional().describe('Для link: https://…'),
+    file: z.string().optional().describe('Для file: path картинки из ответа add_image'),
+    color: z.string().optional().describe('1…6 (красный, оранжевый, жёлтый, зелёный, голубой, фиолетовый) или #rrggbb; "" — убрать'),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+  })
+  const boardEdge = z.object({
+    id: z.string().min(1).max(64).optional().describe('Стрелка с таким id уже есть — правятся переданные поля'),
+    from: z.string().optional().describe('id узла, откуда стрелка (для новой — обязательно)'),
+    to: z.string().optional().describe('id узла, куда стрелка (для новой — обязательно)'),
+    label: z.string().optional(),
+    color: z.string().optional(),
+    arrow: z.enum(['end', 'both', 'none']).optional().describe('Наконечники: end — у to (по умолчанию), both, none'),
+  })
+  const boardShape = {
+    nodes: z.array(boardNode).max(500).optional(),
+    edges: z.array(boardEdge).max(1000).optional(),
+    direction: z
+      .enum(['LR', 'TB'])
+      .optional()
+      .describe('Как расставлять узлы без координат: LR — слева направо (по умолчанию), TB — сверху вниз'),
+  }
+
+  server.registerTool(
+    'read_board',
+    { title: 'Прочитать доску', description: 'Узлы (с координатами) и стрелки доски.', inputSchema: { id: z.string() }, annotations: read },
+    run(({ id }: { id: string }) => vault.readBoard(id)),
+  )
+
+  server.registerTool(
+    'create_board',
+    {
+      title: 'Новая доска',
+      description:
+        'Создаёт доску в предмете: майнд-карта, схема темы, сравнение в рамках. Узлы без x/y расставятся схемой по стрелкам. Ответ — id доски и id узлов по порядку.',
+      inputSchema: { subject, name: z.string().min(1).describe('Название (имя файла)'), ...boardShape },
+      annotations: write,
+    },
+    run((a: { subject: string; name: string } & BoardEdit) => vault.createBoard(a)),
+  )
+
+  server.registerTool(
+    'update_board',
+    {
+      title: 'Изменить доску',
+      description:
+        'Добавляет и правит узлы и стрелки (по id), удаляет по id (remove — узлы вместе с их стрелками), переименовывает. Новые узлы без x/y встанут под тем, что уже есть. Если доска открыта в приложении, оно сольёт правки со своими.',
+      inputSchema: {
+        id: z.string(),
+        name: z.string().optional().describe('Новое название'),
+        ...boardShape,
+        remove: z.array(z.string()).optional().describe('id узлов и стрелок для удаления'),
+      },
+      annotations: { ...write, idempotentHint: false },
+    },
+    run((a: { id: string; name?: string } & BoardEdit) => vault.updateBoard(a)),
+  )
+
   server.registerTool(
     'search',
     {
       title: 'Поиск',
-      description: 'Ищет по конспектам и закрепу (все слова запроса, без учёта регистра и ё/е).',
+      description: 'Ищет по конспектам, закрепу и доскам (все слова запроса, без учёта регистра и ё/е).',
       inputSchema: { query: z.string().min(1), subject: subject.optional(), limit: z.number().int().min(1).max(100).optional() },
       annotations: read,
     },
@@ -263,11 +341,11 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     'trash',
     {
       title: 'В корзину',
-      description: 'Переносит конспект, карточку или тулзу в корзину приложения. Восстанавливается там же в течение 30 дней.',
-      inputSchema: { kind: z.enum(['note', 'pin', 'tool']), id: z.string() },
+      description: 'Переносит конспект, карточку, тулзу или доску в корзину приложения. Восстанавливается там же в течение 30 дней.',
+      inputSchema: { kind: z.enum(['note', 'pin', 'tool', 'board']), id: z.string() },
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     },
-    run((a: { kind: 'note' | 'pin' | 'tool'; id: string }) => vault.trash(a)),
+    run((a: { kind: 'note' | 'pin' | 'tool' | 'board'; id: string }) => vault.trash(a)),
   )
 
   return server
