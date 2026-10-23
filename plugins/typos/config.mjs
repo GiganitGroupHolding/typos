@@ -16,6 +16,10 @@ export async function validateConfig(value) {
   } catch {
     throw new Error('Ссылка TYPOS повреждена — скопируй её целиком')
   }
+  // папки, из которых MCP может читать файлы по пути от ИИ; без них файлы компьютера недоступны
+  const files = value.files ?? []
+  if (!Array.isArray(files) || !files.every((f) => typeof f === 'string' && path.isAbsolute(f)))
+    throw new Error('Папки для файлов (files) — список абсолютных путей')
   try {
     await access(path.join(value.repo, 'mcp/server.ts'))
     await access(path.join(value.repo, 'mcp/tsconfig.json'))
@@ -23,7 +27,7 @@ export async function validateConfig(value) {
   } catch {
     throw new Error('Не найдены MCP или зависимости — проверь папку TYPOS и выполни в ней npm ci')
   }
-  return { repo: value.repo, link: value.link.trim() }
+  return { repo: value.repo, link: value.link.trim(), ...(files.length ? { files } : {}) }
 }
 
 /** Настройки лежат вне пакета: обновление или установка плагина в кэш не затрагивает ключ. */

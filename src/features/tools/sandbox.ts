@@ -20,12 +20,17 @@ export const TOOL_CSP = [
   "base-uri 'none'",
 ].join('; ')
 
-/** Вставляет CSP первым элементом <head>, чтобы он действовал до любых скриптов артефакта. */
+/**
+ * Ставит CSP самым первым тегом документа: раньше него может стоять только doctype, поэтому ни один скрипт тулзы
+ * не выполнится до политики. Искать <head> нельзя: «<head>» в комментарии или строке уводил meta-тег из документа.
+ * Парсер HTML сам создаёт <head> для meta перед <html>, а поздние <html>/<head> тулзы лишь сливаются с ним.
+ */
 export function withCsp(html: string): string {
   const meta = `<meta http-equiv="Content-Security-Policy" content="${TOOL_CSP}">`
-  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`)
-  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${meta}</head>`)
-  return `<!doctype html><html><head>${meta}</head><body>${html}</body></html>`
+  const source = html.replace(/^\uFEFF/, '')
+  // doctype оставляем первым: без него документ перешёл бы в режим совместимости и свёрстался иначе
+  const doctype = source.match(/^\s*<!doctype\b[^>]*>/i)?.[0] ?? ''
+  return `${doctype}${meta}${source.slice(doctype.length)}`
 }
 
 /** Белый список сообщений приложение → тулза. */

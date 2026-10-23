@@ -1,4 +1,3 @@
-import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import katex from 'katex'
 import sharp from 'sharp'
@@ -8,6 +7,8 @@ import { basename, joinPath, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Note, Subject, SubjectColor, SubjectIcon, ToolIcon } from '@/types'
 import { genId, NOTES_DIR } from '@/vault/format'
 import * as repo from '@/vault/repo'
+import { fetchPublic } from './fetchPublic'
+import { LocalFiles } from './localFiles'
 
 /**
  * Операции MCP над vault. Всё пишется через repo.ts — те же функции, что у приложения,
@@ -25,9 +26,13 @@ export class StudyVault {
 
   readonly remote: boolean
 
-  constructor(adapter: VaultAdapter, options: { remote?: boolean } = {}) {
+  /** Папки компьютера, из которых можно брать картинки по пути. */
+  readonly files: LocalFiles
+
+  constructor(adapter: VaultAdapter, options: { remote?: boolean; files?: LocalFiles } = {}) {
     this.a = adapter
     this.remote = options.remote ?? false
+    this.files = options.remote ? new LocalFiles([]) : (options.files ?? new LocalFiles([]))
   }
 
   private load = () => repo.loadVault(this.a)
@@ -169,7 +174,7 @@ export class StudyVault {
   }
 
   private async saveImage(s: Subject, source: string) {
-    const { data, ext } = await toWebImage(await loadImage(source))
+    const { data, ext } = await toWebImage(await loadImage(source, this.files))
     const rel = `assets/${genId()}.${ext}`
     await this.a.writeBlob(joinPath(s.dir, NOTES_DIR, rel), new Blob([new Uint8Array(data)]))
     return rel
@@ -331,26 +336,20 @@ function checkPin(tex?: string, text?: string): string[] {
 
 // ---------- картинки ----------
 
-async function loadImage(source: string): Promise<Buffer> {
+async function loadImage(source: string, files: LocalFiles): Promise<Buffer> {
   if (source.startsWith('data:')) {
     const m = source.match(/^data:image\/[\w+.-]+;base64,(.+)$/)
     if (!m) throw new Error('Ожидался data:image/…;base64,…')
     return Buffer.from(m[1], 'base64')
   }
   if (/^https?:\/\//i.test(source)) {
-    const res = await fetch(source, { signal: AbortSignal.timeout(30_000) })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const type = res.headers.get('content-type') ?? ''
+    const { body, type } = await fetchPublic(source, { maxBytes: MAX_IMAGE })
     if (type && !/^(image\/|application\/octet-stream)/.test(type)) throw new Error(`Это не картинка (${type})`)
-    const buf = Buffer.from(await res.arrayBuffer())
-    if (buf.length > MAX_IMAGE) throw new Error('Картинка больше 25 МБ')
-    return buf
+    return body
   }
-  const file = path.resolve(source)
-  if (!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file))
+  if (!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(source))
     throw new Error('Локальный файл должен быть картинкой (png, jpg, gif, webp, svg…)')
-  if ((await fs.stat(file)).size > MAX_IMAGE) throw new Error('Картинка больше 25 МБ')
-  return fs.readFile(file)
+  return files.read(source, MAX_IMAGE)
 }
 
 /** Как в приложении: растровое → webp до 2400 px; svg и анимированный gif — как есть. */

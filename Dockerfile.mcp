@@ -2,8 +2,8 @@ FROM node:24-bookworm-slim
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-# tsx нужен во время запуска; devDependencies не исключаем.
-RUN npm ci --include=dev
+# Только зависимости запуска (tsx и sharp — в dependencies): сборщики и CLI вроде shadcn в образ не попадают.
+RUN npm ci --omit=dev
 
 COPY mcp ./mcp
 COPY src ./src

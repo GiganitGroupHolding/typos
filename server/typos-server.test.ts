@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { once } from 'node:events'
 import { promises as fs } from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
@@ -15,7 +16,16 @@ import type { SyncedAdapter } from '@/storage/syncedAdapter'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import * as repo from '@/vault/repo'
 import { useVault } from '@/vault/store'
-import { buildLink, connectionTargets, deviceKey, revokeDevice, rotateDevice, startServer, STATE_DIR } from './typos-server.mjs'
+import {
+  buildLink,
+  connectionTargets,
+  DEFAULT_DEVICE,
+  deviceKey,
+  revokeDevice,
+  rotateDevice,
+  startServer,
+  STATE_DIR,
+} from './typos-server.mjs'
 
 let dir: string
 let srv: Awaited<ReturnType<typeof startServer>>
@@ -178,6 +188,96 @@ describe('сервер хранения', () => {
     expect((await from('203.0.113.7')).status).toBe(429)
     // другой клиент за тем же прокси не заблокирован
     expect((await from('198.51.100.2', token)).status).toBe(200)
+  })
+
+  it('за прокси хостинга (--trust-proxy) клиенты различаются, без него X-Forwarded-For не подделать', async () => {
+    const from = (ip: string, key = 'wrong') =>
+      call('/.typos/info', { headers: { Authorization: `Bearer ${key}`, 'X-Forwarded-For': `1.1.1.1, ${ip}` } })
+    for (let i = 0; i < 10; i++) expect((await from('203.0.113.7')).status).toBe(401)
+    // без доверия к прокси заголовок не меняет адрес: подставным адресом блокировку не обойти
+    expect((await from('198.51.100.2', token)).status).toBe(429)
+
+    await srv.close()
+    srv = await startServer({ dir, port: 0, host: '127.0.0.1', trustProxy: true })
+    base = `http://127.0.0.1:${srv.port}`
+    for (let i = 0; i < 10; i++) expect((await from('203.0.113.7')).status).toBe(401)
+    expect((await from('203.0.113.7')).status).toBe(429)
+    expect((await from('198.51.100.2', token)).status).toBe(200)
+  })
+
+  it('ключ только для чтения читает, но не меняет и не удаляет', async () => {
+    await adapter().writeText('A/x.md', 'текст')
+    const reader = await deviceKey(dir, 'mcp', { readOnly: true })
+    expect(reader).toMatchObject({ created: true, readOnly: true })
+    await new Promise((r) => setTimeout(r, 1100))
+    const ro = new DavAdapter({ url: base, token: reader.token, name: 'Тест', vaultId: srv.state.vaultId })
+    expect(await ro.info()).toMatchObject({ device: 'mcp', readOnly: true })
+    expect(await ro.readText('A/x.md')).toBe('текст')
+    expect((await ro.list('A')).map((e) => e.name)).toEqual(['x.md'])
+    await expect(ro.writeText('A/x.md', 'чужое')).rejects.toMatchObject({ status: 403 })
+    await expect(ro.remove('A/x.md')).rejects.toMatchObject({ status: 403 })
+    await expect(ro.move('A/x.md', 'B/x.md')).rejects.toMatchObject({ status: 403 })
+    expect(await fs.readFile(path.join(dir, 'A/x.md'), 'utf8')).toBe('текст')
+    // rotate задаёт права заново
+    const full = await rotateDevice(dir, 'mcp')
+    expect(full.readOnly).toBe(false)
+    expect((await deviceKey(dir, 'mcp')).readOnly).toBe(false)
+  })
+
+  it('не даёт заполнить диск: предел объёма и числа файлов', async () => {
+    await srv.close()
+    srv = await startServer({ dir, port: 0, host: '127.0.0.1', maxVault: 10, maxFiles: 2 })
+    base = `http://127.0.0.1:${srv.port}`
+    expect((await call('/files/a.md', { method: 'PUT', body: '12345' })).status).toBe(201)
+    expect((await call('/files/b.md', { method: 'PUT', body: '123456' })).status).toBe(507)
+    // перезапись того же файла считается по разнице
+    expect((await call('/files/a.md', { method: 'PUT', body: '1234567890' })).status).toBe(204)
+    expect((await call('/files/a.md', { method: 'DELETE' })).status).toBe(204)
+    expect((await call('/files/b.md', { method: 'PUT', body: '1' })).status).toBe(201)
+    expect((await call('/files/c.md', { method: 'PUT', body: '1' })).status).toBe(201)
+    expect((await call('/files/d.md', { method: 'PUT', body: '1' })).status).toBe(507)
+    expect(await fs.readdir(dir)).not.toContain('d.md')
+  })
+
+  it('потоков событий не больше предела', async () => {
+    await srv.close()
+    srv = await startServer({ dir, port: 0, host: '127.0.0.1', maxStreams: 2 })
+    base = `http://127.0.0.1:${srv.port}`
+    const open = () => new AbortController()
+    const streams = [open(), open()]
+    try {
+      for (const c of streams) expect((await call('/.typos/events', { signal: c.signal })).status).toBe(200)
+      expect((await call('/.typos/events')).status).toBe(429)
+    } finally {
+      for (const c of streams) c.abort()
+    }
+  })
+
+  it('при запуске не печатает ссылку с ключом, в том числе из контейнера', async () => {
+    const { token: secret } = await deviceKey(dir, DEFAULT_DEVICE)
+    await srv.close()
+    for (const script of ['typos-server.mjs', 'container.mjs']) {
+      const child = spawn(process.execPath, [path.join(import.meta.dirname, script), '--dir', dir, '--port', '0', '--host', '127.0.0.1'], {
+        env: { ...process.env, TYPOS_VAULT: dir, PORT: '' },
+      })
+      let out = ''
+      child.stdout.on('data', (c: Buffer) => (out += c.toString()))
+      child.stderr.on('data', (c: Buffer) => (out += c.toString()))
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`${script} не запустился: ${out}`)), 10_000)
+        child.stdout.on('data', () => {
+          if (!out.includes('node typos-server.mjs link')) return
+          clearTimeout(timer)
+          resolve()
+        })
+      })
+      child.kill()
+      await once(child, 'close')
+      expect(out).toContain('запущен')
+      expect(out).not.toContain(secret)
+      expect(out).not.toMatch(/typos:\/\//)
+    }
+    srv = await startServer({ dir, port: 0, host: '127.0.0.1' })
   })
 
   it('неверный числовой флаг — ошибка, а не молча NaN', async () => {

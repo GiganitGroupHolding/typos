@@ -11,7 +11,7 @@ import * as repo from '@/vault/repo'
 import { NodeFsAdapter } from '../mcp/nodeAdapter'
 import { openVault } from '../mcp/open'
 import { StudyVault } from '../mcp/vault'
-import { buildLink, deviceKey, startServer, STATE_DIR } from './typos-server.mjs'
+import { buildLink, DEFAULT_DEVICE, deviceKey, startServer, STATE_DIR } from './typos-server.mjs'
 
 let dir: string
 let srv: Awaited<ReturnType<typeof startServer>>
@@ -51,6 +51,16 @@ describe('MCP с сервером хранения (--link)', () => {
 
     await v.trash({ kind: 'note', id: note.id })
     expect(await repo.listTrash(new DavAdapter(device.config))).toHaveLength(1)
+  })
+
+  it('предупреждает, если MCP подключён общим ключом default, а не своим', async () => {
+    const warnings: string[] = []
+    await openVault(['--link', link], {}, (line) => warnings.push(line))
+    expect(warnings).toEqual([])
+    const shared = (await deviceKey(dir, DEFAULT_DEVICE)).token
+    await new Promise((r) => setTimeout(r, 1100))
+    await openVault(['--link', link.replace(/k=[^&]+/, `k=${shared}`)], {}, (line) => warnings.push(line))
+    expect(warnings.join()).toMatch(/link mcp/)
   })
 
   it('имена с & и апострофом переживают список WebDAV', async () => {

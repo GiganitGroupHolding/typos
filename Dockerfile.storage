@@ -1,0 +1,10 @@
+FROM node:24-bookworm-slim
+WORKDIR /app
+
+# Сервер хранения без зависимостей: в образе только он сам, без npm-пакетов проекта.
+COPY server/typos-server.mjs server/container.mjs ./server/
+
+ENV NODE_ENV=production
+ENV TYPOS_VAULT=/data/vault
+# Стартует от root только чтобы отдать том пользователю node, затем сбрасывает права (server/container.mjs).
+CMD ["node", "server/container.mjs", "--trust-proxy"]

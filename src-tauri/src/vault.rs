@@ -1,5 +1,5 @@
 //! Папка vault на диске для десктопного приложения (src/storage/tauriAdapter.ts).
-//! Повторяет mcp/nodeAdapter.ts: пути относительные через «/», выйти за корень нельзя,
+//! Повторяет mcp/nodeAdapter.ts: пути относительные через «/», выйти за корень нельзя ни строкой, ни ссылкой (src/paths.rs),
 //! запись атомарная — во временный «имя.1a2b3c4d.tmp» и переименование.
 //!
 //! Корень приходит из JS, но Rust пускает только в папки, которые пользователь сам выбрал в системном диалоге
@@ -18,6 +18,8 @@ use serde::{Deserialize, Serialize};
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
+
+use crate::paths::{checked, inside, is_state_dir};
 
 /// Ошибка «файла нет» — адаптер превращает её в null.
 const MISSING: &str = "ENOENT";
@@ -62,21 +64,6 @@ fn err(e: impl ToString) -> String {
 /// Файловые операции — в пуле блокирующих задач, чтобы не занимать потоки асинхронного рантайма.
 async fn blocking<T: Send + 'static>(job: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
   tauri::async_runtime::spawn_blocking(job).await.map_err(err)?
-}
-
-/// Относительный путь vault («Физика/Конспекты/x.md») → абсолютный внутри корня.
-fn resolve(root: &Path, rel: &str) -> Result<PathBuf, String> {
-  if !root.is_absolute() {
-    return Err(format!("Корень хранилища должен быть абсолютным: {}", root.display()));
-  }
-  let mut p = root.to_path_buf();
-  for part in rel.split('/').filter(|s| !s.is_empty()) {
-    if part == "." || part == ".." || part.contains('\\') || part.contains(':') {
-      return Err(format!("Недопустимый путь: {rel}"));
-    }
-    p.push(part);
-  }
-  Ok(p)
 }
 
 fn tmp_name(target: &Path) -> PathBuf {
@@ -165,8 +152,11 @@ pub async fn vault_forget(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) -> Result<Vec<Entry>, String> {
-  let dir = resolve(&granted.check(&root)?, &dir)?;
+  let root = granted.check(&root)?;
   blocking(move || {
+    let dir = checked(&root, &dir)?;
+    let root_real = fs::canonicalize(&root).map_err(err)?;
+    let at_root = dir == root;
     let items = match fs::read_dir(dir) {
       Ok(items) => items,
       Err(e) if e.kind() == ErrorKind::NotFound => return Ok(vec![]),
@@ -175,6 +165,13 @@ pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) 
     let mut out = Vec::new();
     for item in items {
       let item = item.map_err(err)?;
+      if at_root && is_state_dir(&item.file_name().to_string_lossy()) {
+        continue;
+      }
+      // ссылку наружу не показываем: прочитать по ней всё равно нельзя
+      if item.file_type().map_err(err)?.is_symlink() && !fs::canonicalize(item.path()).is_ok_and(|real| inside(&root_real, &real)) {
+        continue;
+      }
       // ссылку на папку считаем папкой, как readdir + stat
       let is_dir = fs::metadata(item.path()).map(|m| m.is_dir()).unwrap_or(false);
       out.push(Entry {
@@ -190,8 +187,8 @@ pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) 
 /// Содержимое файла сырыми байтами (в JS — ArrayBuffer, без JSON).
 #[tauri::command]
 pub async fn vault_read(granted: State<'_, Granted>, root: String, path: String) -> Result<Response, String> {
-  let target = resolve(&granted.check(&root)?, &path)?;
-  let bytes = blocking(move || match fs::read(target) {
+  let root = granted.check(&root)?;
+  let bytes = blocking(move || match fs::read(checked(&root, &path)?) {
     Ok(bytes) => Ok(bytes),
     Err(e) if e.kind() == ErrorKind::NotFound || e.kind() == ErrorKind::IsADirectory => Err(MISSING.into()),
     Err(e) => Err(err(e)),
@@ -202,8 +199,8 @@ pub async fn vault_read(granted: State<'_, Granted>, root: String, path: String)
 
 #[tauri::command]
 pub async fn vault_write_text(granted: State<'_, Granted>, root: String, path: String, text: String) -> Result<(), String> {
-  let target = resolve(&granted.check(&root)?, &path)?;
-  blocking(move || write_atomic(&target, text.as_bytes())).await
+  let root = granted.check(&root)?;
+  blocking(move || write_atomic(&checked(&root, &path)?, text.as_bytes())).await
 }
 
 /// Тело запроса — сырые байты, корень и путь — в заголовках x-root / x-path (encodeURIComponent).
@@ -214,18 +211,18 @@ pub async fn vault_write_bytes(granted: State<'_, Granted>, request: Request<'_>
     let raw = raw.to_str().map_err(err)?;
     Ok(percent_decode_str(raw).decode_utf8().map_err(err)?.into_owned())
   };
-  let target = resolve(&granted.check(&header("x-root")?)?, &header("x-path")?)?;
+  let (root, path) = (granted.check(&header("x-root")?)?, header("x-path")?);
   let InvokeBody::Raw(bytes) = request.body() else {
     return Err("Ожидались сырые байты".into());
   };
   let bytes = bytes.clone();
-  blocking(move || write_atomic(&target, &bytes)).await
+  blocking(move || write_atomic(&checked(&root, &path)?, &bytes)).await
 }
 
 #[tauri::command]
 pub async fn vault_exists(granted: State<'_, Granted>, root: String, path: String) -> Result<bool, String> {
-  let target = resolve(&granted.check(&root)?, &path)?;
-  blocking(move || Ok(target.exists())).await
+  let root = granted.check(&root)?;
+  blocking(move || Ok(checked(&root, &path).is_ok_and(|target| target.exists()))).await
 }
 
 #[tauri::command]
@@ -233,8 +230,9 @@ pub async fn vault_remove(granted: State<'_, Granted>, root: String, path: Strin
   if path.split('/').all(|s| s.is_empty()) {
     return Err("Нельзя удалить корень хранилища".into());
   }
-  let target = resolve(&granted.check(&root)?, &path)?;
+  let root = granted.check(&root)?;
   blocking(move || {
+    let target = checked(&root, &path)?;
     let res = match fs::symlink_metadata(&target) {
       Ok(m) if m.is_dir() => fs::remove_dir_all(&target),
       Ok(_) => fs::remove_file(&target),
@@ -254,8 +252,8 @@ pub async fn vault_move(granted: State<'_, Granted>, root: String, from: String,
     return Ok(());
   }
   let root = granted.check(&root)?;
-  let (src, dst) = (resolve(&root, &from)?, resolve(&root, &to)?);
   blocking(move || {
+    let (src, dst) = (checked(&root, &from)?, checked(&root, &to)?);
     if dst.exists() {
       return Err(format!("Уже существует: {to}"));
     }
@@ -270,17 +268,6 @@ pub async fn vault_move(granted: State<'_, Granted>, root: String, from: String,
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  #[test]
-  fn resolve_stays_inside_root() {
-    let root = Path::new(if cfg!(windows) { "C:\\vault" } else { "/vault" });
-    assert_eq!(resolve(root, "Физика/x.md").unwrap(), root.join("Физика").join("x.md"));
-    assert_eq!(resolve(root, "").unwrap(), root);
-    for bad in ["../x", "a/../../x", "a\\..\\x", "C:/x", "./x"] {
-      assert!(resolve(root, bad).is_err(), "{bad}");
-    }
-    assert!(resolve(Path::new("relative"), "x").is_err());
-  }
 
   #[test]
   fn only_granted_roots() {

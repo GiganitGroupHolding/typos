@@ -42,6 +42,20 @@ created with mode `0600`.
 Use the storage server's `link mcp` command to create a dedicated device key that
 can be revoked without disconnecting your other devices.
 
+### Files on this computer
+
+By default the plugin can't read files on your computer: `file` arguments and
+`add_project_file` are hidden. To let it read lectures, PDFs or images from
+specific folders, list them after the repository path when you run setup:
+
+```bash
+printf '%s' "$typos_link" | node plugins/typos/setup.mjs "$PWD" "$HOME/Lectures"
+```
+
+Only files inside those folders are readable. Links leading outside and hidden
+files and folders (`.env`, `.ssh`, `.git`) are refused. Run setup again to change
+the list.
+
 ## Install
 
 Create a ZIP containing the contents of this plugin directory, including the

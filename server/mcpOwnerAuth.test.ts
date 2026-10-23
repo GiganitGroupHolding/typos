@@ -2,7 +2,7 @@
 import { createHash, randomBytes, scryptSync } from 'node:crypto'
 import { once } from 'node:events'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
-import { createServer, type Server } from 'node:http'
+import { createServer, type IncomingMessage, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -10,7 +10,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createMemoryAdapter } from '@/storage/flatAdapter'
 import { createHttpMcpServer } from '../mcp/http'
-import { createOwnerAuth, ownerAuthConfig, type OwnerAuthConfig } from '../mcp/ownerAuth'
+import { clientKey, createOwnerAuth, ownerAuthConfig, type OwnerAuthConfig } from '../mcp/ownerAuth'
 
 const password = randomBytes(32).toString('base64url')
 const salt = randomBytes(16)
@@ -236,4 +236,36 @@ it('ограничивает попытки входа, запрещает не�
   expect(() => ownerAuthConfig(config.resource, { MCP_OWNER_PASSWORD_HASH: passwordHash, MCP_AUTH_DATA_DIR: 'relative' })).toThrow(
     'MCP_AUTH_DATA_DIR',
   )
+})
+
+it('считает лимиты по клиенту за прокси: посторонний не закрывает вход владельцу', async () => {
+  config = { ...config, trustProxy: true }
+  mount()
+  const attempt = (ip: string) =>
+    fetch(endpoint('/consent'), { method: 'POST', headers: { Origin: config.resource.origin, 'X-Forwarded-For': `10.0.0.1, ${ip}` } })
+  for (let i = 0; i < 10; i++) await attempt('203.0.113.7')
+  expect((await attempt('203.0.113.7')).status).toBe(429)
+  expect((await attempt('198.51.100.2')).status).toBe(400)
+})
+
+it('чужие регистрации не занимают места клиентов: вытесняется самый старый без разрешений', async () => {
+  const { client_id } = await connect()
+  const first = await owner.provider.clientsStore.registerClient({ redirect_uris: [redirect], token_endpoint_auth_method: 'none' })
+  for (let i = 0; i < 98; i++)
+    await owner.provider.clientsStore.registerClient({ redirect_uris: [redirect], token_endpoint_auth_method: 'none' })
+  const fresh = await register()
+  expect(owner.provider.clientsStore.getClient(fresh.client_id)).toBeDefined()
+  expect(owner.provider.clientsStore.getClient(first.client_id)).toBeUndefined()
+  // клиент с выданным разрешением не вытесняется, хоть он и самый старый
+  expect(owner.provider.clientsStore.getClient(client_id)).toBeDefined()
+})
+
+it('ключ лимита для IPv6 — сеть /64, для IPv4 внутри IPv6 — сам IPv4', () => {
+  const req = (remoteAddress: string, forwarded?: string) =>
+    ({ headers: forwarded ? { 'x-forwarded-for': forwarded } : {}, socket: { remoteAddress } }) as unknown as IncomingMessage
+  expect(clientKey(req('2001:db8:1:2:3:4:5:6'))).toBe('2001:db8:1:2::/64')
+  expect(clientKey(req('2001:db8::1'))).toBe('2001:db8:0:0::/64')
+  expect(clientKey(req('::ffff:192.0.2.1'))).toBe('192.0.2.1')
+  expect(clientKey(req('127.0.0.1', '203.0.113.7'))).toBe('127.0.0.1')
+  expect(clientKey(req('127.0.0.1', '1.1.1.1, 203.0.113.7'), true)).toBe('203.0.113.7')
 })

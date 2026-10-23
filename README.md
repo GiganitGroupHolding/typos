@@ -153,22 +153,26 @@ To keep notes on another machine (a home server, a NAS, a VPS) run the storage s
 node server/typos-server.mjs --dir ./vault
 ```
 
-Every start prints the same connection link, one per address, labelled by where TYPOS is opened: `localhost` when the app runs on the same computer, the network address when it runs on another device. In TYPOS open the storage screen, paste the link and press «Подключить». The link contains the key, so treat it like a password. When the server runs without a terminal (systemd, Docker) the link is not printed; get it with `link`.
+The server never prints the key when it starts, so service logs, terminal recordings and screen shares don't capture it. Get the connection link with `link`: it prints one link per address, labelled by where TYPOS is opened: `localhost` when the app runs on the same computer, the network address when it runs on another device. In TYPOS open the storage screen, paste the link and press «Подключить». The link contains the key, so treat it like a password.
 
-One link works for all your devices, and they all see the same vault. Separate device keys are optional and only let you disconnect one device without touching the others.
+One link works for all your devices, and they all see the same vault. Separate device keys let you disconnect one device without touching the others. Give every AI assistant its own key (`link mcp`), and use `--read-only` for anything that only needs to read.
 
 | Command | What it does |
 | --- | --- |
-| `link [device] --dir ./vault` | Prints the link again. With a new device name, creates a separate key for it |
-| `rotate <device> --dir ./vault` | Gives a device a new key. Its old link stops working (`rotate default` for the shared link) |
-| `devices --dir ./vault` | Lists devices and when they were last seen |
+| `link [device] --dir ./vault` | Prints the link. With a new device name, creates a separate key for it (`--read-only`: a key that can read but not change or delete) |
+| `rotate <device> --dir ./vault` | Gives a device a new key. Its old link stops working (`rotate default` for the shared link). Access is set again: add `--read-only` or leave it out |
+| `devices --dir ./vault` | Lists devices, their access and when they were last seen |
 | `revoke <device> --dir ./vault` | Disconnects a device. The server picks this up without a restart |
 
 Each device keeps its own copy of the server vault. Edits are saved to that copy first and sent to the server right away. When the server can't be reached, you keep working: the edits wait on the device and go up as soon as it is back, and the sidebar shows how many are still waiting. Changes from other devices arrive on their own. If the same file was changed on two devices while they were offline, both versions are kept, and the second one gets «(конфликт …)» in its name.
 
 «Отключить» on the storage screen disconnects the app from the server. The notes stay on the server, and the app goes back to the browser storage exactly as it was before you connected. The device's copy of the server vault stays in the browser too, so edits that were still waiting go up when you connect again.
 
-Bad keys are rate-limited: 10 wrong keys in a minute block that address for a minute. Behind a proxy on the same machine with `--public-url`, the address is taken from the proxy's `X-Forwarded-For` header, so one client can't lock out the others.
+Bad keys are rate-limited: 10 wrong keys in a minute block that address for a minute. Behind a proxy on the same machine with `--public-url`, the address is taken from the proxy's `X-Forwarded-For` header, so one client can't lock out the others. Behind a hosting proxy on another machine (Railway and similar), pass `--trust-proxy` for the same effect. Don't pass it when clients connect directly: then anyone could pick their own address.
+
+A leaked key shouldn't be able to fill the server's disk: the vault is capped at `--max-vault` megabytes (10240 by default) and `--max-files` files (100000), single files at `--max-size` (50 MB), and open event streams at 64. Writes over a limit get `507`.
+
+To run the server in a container, use `Dockerfile.storage`. It contains only the server, hands the vault folder (`TYPOS_VAULT`, `/data/vault` by default) to the unprivileged `node` user and drops root before the server starts. It reads the port from `PORT` and trusts the hosting proxy (`--trust-proxy`).
 
 The app can run on `localhost` or on any address in your network, for example `npm run preview -- --host`. If the app is opened over `https://`, the server needs HTTPS too: pass `--cert` and `--key`, or put it behind a proxy such as Caddy and pass `--public-url https://notes.example.com`. Over plain `http://` on a network address the browser turns off the folder picker and offline install, but the storage server still works.
 
@@ -183,9 +187,13 @@ The MCP server lets an AI assistant such as Claude read your notes and write new
 npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "/path/to/notes"
 # a storage server: get a link for it with `link mcp` on the server
 npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…"
+# let the assistant read files from a folder (large lectures, PDFs, images)
+npx tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…" --files "/path/to/lectures"
 ```
 
-Instead of the flags you can set `STUDYNOTES_VAULT` or `STUDYNOTES_LINK`. With a link, every device sees the assistant's edits right away; with a folder, the app picks them up when its window gets focus. A separate device key (`link mcp`) lets you disconnect the assistant without touching your other devices. If the storage server is off when the assistant starts, the MCP server still starts and its tools report that the server can't be reached until it is back.
+Instead of the flags you can set `STUDYNOTES_VAULT`, `STUDYNOTES_LINK` and `STUDYNOTES_FILES` (folders separated by `;` on Windows, `:` elsewhere). With a link, every device sees the assistant's edits right away; with a folder, the app picks them up when its window gets focus. A separate device key (`link mcp`) lets you disconnect the assistant without touching your other devices; the MCP server warns when it runs on the shared `default` key. If the storage server is off when the assistant starts, the MCP server still starts and its tools report that the server can't be reached until it is back.
+
+The assistant can't read arbitrary files on this computer. File arguments (`file` in `create_note`, `update_note` and `import_tool`, `add_project_file`, a file path in `add_image`) exist only when you allow folders with `--files`, and then only for files inside them: links that lead outside and hidden files and folders (`.env`, `.ssh`, `.git`) are refused. Images from links are downloaded only from the internet: addresses on this computer and in local networks are refused after every redirect, and downloads stop at 25 MB.
 
 For a remote MCP endpoint on Railway with OAuth, see [Remote MCP on Railway](docs/mcp-railway.md). The local stdio mode remains available.
 

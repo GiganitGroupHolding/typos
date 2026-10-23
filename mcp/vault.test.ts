@@ -1,10 +1,11 @@
 // @vitest-environment node
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { loadVault } from '@/vault/repo'
+import { LocalFiles } from './localFiles'
 import { NodeFsAdapter } from './nodeAdapter'
 import { checkMarkdown, composeBody, replaceSection, StudyVault } from './vault'
 
@@ -24,6 +25,36 @@ describe('адаптер', () => {
     await expect(a.readText('../секрет.txt')).rejects.toThrow(/Недопустимый путь/)
     await expect(a.writeText('Физика/../../x.md', '')).rejects.toThrow(/Недопустимый путь/)
     await expect(a.readText('C:/Windows/win.ini')).rejects.toThrow(/Недопустимый путь/)
+  })
+
+  it('не выпускает за корень по ссылке или junction и не пускает к ключам сервера через «./»', async () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'studynotes-outside-'))
+    try {
+      writeFileSync(path.join(outside, 'marker.txt'), 'снаружи')
+      symlinkSync(outside, path.join(dir, 'jump'), 'junction')
+      symlinkSync(path.join(outside, 'нет.txt'), path.join(dir, 'битая.txt'))
+      mkdirSync(path.join(dir, '.typos-server'))
+      writeFileSync(path.join(dir, '.typos-server', 'server.json'), '{}')
+      symlinkSync(path.join(dir, '.typos-server'), path.join(dir, 'ключи'), 'junction')
+
+      await expect(a.readText('jump/marker.txt')).rejects.toThrow(/вне хранилища/)
+      await expect(a.writeText('jump/new.md', 'x')).rejects.toThrow(/вне хранилища/)
+      await expect(a.writeText('битая.txt', 'x')).rejects.toThrow(/вне хранилища/)
+      await expect(a.readText('./.typos-server/server.json')).rejects.toThrow(/Недопустимый путь/)
+      await expect(a.readText('ключи/server.json')).rejects.toThrow(/вне хранилища/)
+      expect(await a.exists('jump/marker.txt')).toBe(false)
+      expect((await a.list('')).map((e) => e.name)).toEqual([])
+      expect(readdirSync(outside)).toEqual(['marker.txt'])
+    } finally {
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('ссылка на папку внутри vault работает как папка', async () => {
+    await a.writeText('Физика/x.md', 'внутри')
+    symlinkSync(path.join(dir, 'Физика'), path.join(dir, 'Ярлык'), 'junction')
+    expect(await a.readText('Ярлык/x.md')).toBe('внутри')
+    expect(await a.list('')).toEqual(expect.arrayContaining([{ name: 'Ярлык', kind: 'dir' }]))
   })
 })
 
@@ -89,9 +120,11 @@ describe('проверка разметки', () => {
 })
 
 describe('картинки, закреп, тулзы, поиск, корзина', () => {
-  it('локальная картинка → webp в assets, ссылка для Markdown', async () => {
+  it('локальная картинка из разрешённой папки → webp в assets, ссылка для Markdown', async () => {
+    const files = mkdtempSync(path.join(tmpdir(), 'studynotes-files-'))
+    v = new StudyVault(a, { files: new LocalFiles([files]) })
     await v.createSubject({ name: 'Химия' })
-    const png = path.join(dir, '..', `pic-${Date.now()}.png`)
+    const png = path.join(files, 'pic.png')
     writeFileSync(
       png,
       await sharp({ create: { width: 40, height: 20, channels: 3, background: '#f00' } })
@@ -102,8 +135,9 @@ describe('картинки, закреп, тулзы, поиск, корзина
       const r = await v.addImage({ subject: 'Химия', source: png, alt: 'схема' })
       expect(r.markdown).toMatch(/^!\[схема\]\(assets\/[a-z0-9]+\.webp\)$/)
       expect(await a.exists(r.path)).toBe(true)
+      await expect(new StudyVault(a).addImage({ subject: 'Химия', source: png })).rejects.toThrow(/выключено/)
     } finally {
-      rmSync(png, { force: true })
+      rmSync(files, { recursive: true, force: true })
     }
   })
 

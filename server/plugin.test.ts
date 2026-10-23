@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -36,10 +36,13 @@ it('плагин из отдельной папки запускает MCP и п
     const plugin = path.join(dir, 'Кэш плагина с пробелами')
     await cp(path.join(root, 'plugins/typos'), plugin, { recursive: true })
     const config = path.join(dir, 'settings/mcp.json')
-    const setup = await run(path.join(plugin, 'setup.mjs'), config, [root], link)
+    const files = path.join(dir, 'Лекции')
+    await mkdir(files)
+    await writeFile(path.join(files, 'lecture.md'), '# Из файла\n')
+    const setup = await run(path.join(plugin, 'setup.mjs'), config, [root, files], link)
     expect(setup.code).toBe(0)
     expect(setup.stdout + setup.stderr).not.toContain(token)
-    expect(JSON.parse(await readFile(config, 'utf8'))).toEqual({ repo: root, link })
+    expect(JSON.parse(await readFile(config, 'utf8'))).toEqual({ repo: root, link, files: [files] })
 
     await client.connect(
       new StdioClientTransport({
@@ -51,6 +54,14 @@ it('плагин из отдельной папки запускает MCP и п
     )
     expect((await client.listTools()).tools).toHaveLength(13)
     await client.callTool({ name: 'create_subject', arguments: { name: 'Тест' } })
+    // файлы — только из папки, разрешённой при настройке
+    const fromFile = await client.callTool({
+      name: 'create_note',
+      arguments: { subject: 'Тест', title: 'Из файла', file: path.join(files, 'lecture.md') },
+    })
+    expect(fromFile.isError).not.toBe(true)
+    const outside = await client.callTool({ name: 'add_project_file', arguments: { subject: 'Тест', file: config } })
+    expect((outside.content as { text: string }[])[0].text).toMatch(/вне разрешённых папок/)
     const result = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Плагин', markdown: 'Запись с ПК' } })
     expect(result.isError).not.toBe(true)
     const note = JSON.parse((result.content as { text: string }[])[0].text) as { path: string }

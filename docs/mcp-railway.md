@@ -44,10 +44,15 @@ from the auth volume, and restart; this does not touch notes.
 
 Run **one replica** against the auth directory. The file store and pending login
 requests are not designed for multiple workers. Public endpoints have request
-limits; consent allows ten attempts per fifteen minutes across the single-owner
-service. An attacker can temporarily exhaust those limits, so this is not a
-multi-tenant hosting service. Stored clients and grants are capped at 100 each;
-client registrations expire after ninety days.
+limits per client address (IPv6 per `/64`); set `MCP_TRUST_PROXY=1` behind
+Railway so the address comes from the proxy's `X-Forwarded-For` instead of the
+proxy itself. Consent allows ten attempts per fifteen minutes per address and 300
+in total, which only bounds scrypt load: the 32-byte owner key can't be guessed.
+Stored clients and grants are capped at 100 each; when client registrations are
+full, the oldest client without a grant is dropped, so strangers can't block new
+connections. The 100 pending logins are replaced oldest-first. Client
+registrations expire after ninety days. Many addresses at once can still slow
+logins down, so this is not a multi-tenant hosting service.
 
 ## Railway setup
 
@@ -64,16 +69,18 @@ client registrations expire after ninety days.
 | `MCP_PUBLIC_URL` | Exact HTTPS endpoint, such as `https://your-mcp.up.railway.app/mcp` |
 | `MCP_OWNER_PASSWORD_HASH` | Output of `mcp:owner-key`; never the original key |
 | `MCP_AUTH_DATA_DIR` | `/data/auth` |
+| `MCP_TRUST_PROXY` | `1`: rate limits use the client address from Railway's proxy |
 | `RAILWAY_RUN_UID` | `0` for volume preparation; the entrypoint drops to UID/GID 1000 before starting MCP |
-| `STUDYNOTES_LINK` | A device connection link for your existing storage server |
+| `STUDYNOTES_LINK` | A dedicated device link for your storage server: `link mcp` (add `--read-only` if the AI should only read) |
 | `PORT` | Railway's listening port; defaults to `3000` |
 
 4. Deploy. The image uses Node.js 24 and the npm lockfile. Its startup briefly
    prepares `/data/auth` for UID/GID 1000, drops root privileges, then starts MCP
    as the `node` user. The auth directory is mode `0700`, and files are `0600`.
 
-Enter `STUDYNOTES_LINK` securely in Railway; it contains a device key. Prefer a
-dedicated device link that can be revoked independently. The remote MCP talks to
+Enter `STUDYNOTES_LINK` securely in Railway; it contains a device key. Use a
+dedicated device link that can be revoked independently: the MCP logs a warning
+when it runs on the shared `default` key. The remote MCP talks to
 storage through `DavAdapter`, not by mounting the vault. Client OAuth tokens are
 never forwarded to the storage service.
 
@@ -81,6 +88,32 @@ never forwarded to the storage service.
 connection with an authenticated tool call. Host and Origin are checked against
 `MCP_PUBLIC_URL`. Keep MCP behind Railway HTTPS; ChatGPT connects from its backend.
 SIGTERM/SIGINT allows up to ten seconds for shutdown.
+
+## Storage service on Railway
+
+Build the storage service from `Dockerfile.storage`. The image contains only
+`server/typos-server.mjs`, without npm packages. Attach the vault volume at
+`/data` (the vault itself lives in `/data/vault`, set by `TYPOS_VAULT`) and set
+`RAILWAY_RUN_UID=0`: the entrypoint hands the vault to UID/GID 1000 and drops
+root before the server starts. It listens on Railway's `PORT` and passes
+`--trust-proxy`, so wrong keys are counted per client and not for everyone behind
+Railway's proxy. A custom start command replaces those flags; keep
+`--trust-proxy` in it.
+
+The server never prints the connection key at startup. Create keys from a
+Railway shell: `node server/typos-server.mjs link mcp --dir /data/vault`.
+
+Moving an existing deployment off the shared key:
+
+1. `link mcp` for the remote MCP and `link codex` (or another name) for the local
+   plugin and Codex config; put each link where it is used.
+2. Check that both work, then `rotate default` and paste the new link into your
+   devices, or `revoke default` if every device has its own key.
+3. Run `devices` to confirm the list.
+
+The `typos` service with a public domain that answers 404 has no part in this
+setup. Remove its domain or the service, so a later deploy from GitHub doesn't
+publish anything there by accident.
 
 ## Connect ChatGPT
 
@@ -114,7 +147,8 @@ tokens are not accepted. This mode does not use the auth volume or owner key.
 
 ## Tools and checks
 
-Remote MCP exposes twelve tools. `add_project_file` remains local-only.
+Remote MCP exposes twelve tools. `add_project_file` remains local-only and
+appears only when the local MCP is allowed folders with `--files`.
 `create_note`, `update_note` and `import_tool` accept inline text; local file
 arguments are not exposed. `add_image` accepts only `data:image/...;base64`.
 Remote Markdown images are left in place with a warning, without fetching URLs.

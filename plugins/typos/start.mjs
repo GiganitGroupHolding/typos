@@ -3,7 +3,7 @@ import path from 'node:path'
 import { loadConfig } from './config.mjs'
 
 try {
-  const { repo, link } = await loadConfig()
+  const { repo, link, files = [] } = await loadConfig()
   // Запуск из кэша плагинов не должен менять базу относительных путей MCP.
   const child = spawn(
     process.execPath,
@@ -13,7 +13,12 @@ try {
       path.join(repo, 'mcp/tsconfig.json'),
       path.join(repo, 'mcp/server.ts'),
     ],
-    { cwd: repo, stdio: 'inherit', env: { ...process.env, STUDYNOTES_LINK: link, STUDYNOTES_VAULT: '' }, windowsHide: true },
+    {
+      cwd: repo,
+      stdio: 'inherit',
+      env: { ...process.env, STUDYNOTES_LINK: link, STUDYNOTES_VAULT: '', STUDYNOTES_FILES: files.join(path.delimiter) },
+      windowsHide: true,
+    },
   )
   child.once('error', () => {
     console.error('Не получилось запустить MCP TYPOS — проверь Node.js и зависимости репозитория')

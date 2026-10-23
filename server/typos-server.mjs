@@ -3,15 +3,16 @@
  * Сервер хранения TYPOS: папка vault на своём сервере, приложение подключается по ссылке.
  * Один файл, без зависимостей, Node 18+ (правки прямо в папке устройства видят сразу с Node 20). Скопируй на сервер и запусти:
  *
- *   node typos-server.mjs --dir ./vault              запустить и показать ссылку подключения
- *   node typos-server.mjs link --dir ./vault         показать ссылку снова
+ *   node typos-server.mjs --dir ./vault              запустить сервер
+ *   node typos-server.mjs link --dir ./vault         показать ссылку подключения
  *   node typos-server.mjs link phone --dir ./vault   отдельный ключ для устройства (чтобы отключать по одному)
+ *   node typos-server.mjs link mcp --read-only --dir ./vault  ключ только для чтения
  *   node typos-server.mjs revoke phone --dir ./vault отключить устройство
  *   node typos-server.mjs --help                     все команды и флаги
  *
  * Протокол — подмножество WebDAV под /files/ (папку можно подключить и в проводнике),
  * плюс /.typos/info, /.typos/manifest и /.typos/events (поток: приложение сразу видит, что сервер пропал).
- * Аккаунтов нет: доступ по ключу из ссылки. Все ключи открывают одно и то же хранилище.
+ * Аккаунтов нет: доступ по ключу из ссылки. Все ключи открывают одно и то же хранилище; ключ может быть только для чтения.
  * Ключи лежат в .typos-server/server.json внутри vault; эту папку сервер не отдаёт ни под каким написанием и ни по какой ссылке.
  */
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
@@ -33,7 +34,7 @@ const TMP_RE = /\.[0-9a-f]{8}\.tmp$/
 const DEVICE_RE = /^[\p{L}\p{N}_.-]{1,40}$/u
 
 /**
- * @typedef {{ name: string, token: string, created: string }} Device
+ * @typedef {{ name: string, token: string, created: string, access?: 'read' }} Device
  * @typedef {{ port: number, host: string, tls: boolean, publicUrl?: string }} Listen
  * @typedef {{ vaultId: string, name: string, devices: Device[], listen?: Listen }} ServerState
  * @typedef {{ etag: string, size: number, mtime: string }} ManifestFile
@@ -115,26 +116,28 @@ export const DEFAULT_DEVICE = 'default'
 /**
  * Ключ устройства. Нового устройства ещё нет — заводит ключ; есть — возвращает тот же (ссылку можно показать снова).
  * Ключ лежит открыто, как и сами конспекты рядом: кто может прочитать server.json, прочитает и vault.
- * @param {string} root @param {string} device
+ * @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options] права нового устройства
  */
-export async function deviceKey(root, device = DEFAULT_DEVICE) {
+export async function deviceKey(root, device = DEFAULT_DEVICE, options = {}) {
   const state = await ensureState(root)
   const existing = state.devices.find((d) => d.name === device)
-  if (existing) return { state, token: existing.token, created: false }
-  return { ...(await rotateDevice(root, device)), created: !existing }
+  if (existing) return { state, token: existing.token, created: false, readOnly: existing.access === 'read' }
+  return { ...(await rotateDevice(root, device, options)), created: true }
 }
 
 /**
- * Новый ключ устройству; старая ссылка этого устройства перестаёт работать.
- * @param {string} root @param {string} device
+ * Новый ключ устройству; старая ссылка этого устройства перестаёт работать. Права задаются заново.
+ * @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options]
  */
-export async function rotateDevice(root, device) {
+export async function rotateDevice(root, device, { readOnly = false } = {}) {
   if (!DEVICE_RE.test(device)) throw new Error(`Имя устройства — буквы, цифры, «_.-», до 40 символов: ${device}`)
   const state = await ensureState(root)
   const token = randomBytes(32).toString('base64url')
-  state.devices = [...state.devices.filter((d) => d.name !== device), { name: device, token, created: new Date().toISOString() }]
+  /** @type {Device} */
+  const next = { name: device, token, created: new Date().toISOString(), ...(readOnly ? { access: /** @type {const} */ ('read') } : {}) }
+  state.devices = [...state.devices.filter((d) => d.name !== device), next]
   await writeJson(statePath(root), state)
-  return { state, token }
+  return { state, token, readOnly }
 }
 
 /** @param {string} root @param {string} device */
@@ -251,7 +254,8 @@ const contentType = (name) => CONTENT_TYPES[path.extname(name).toLowerCase()] ??
 /**
  * @typedef {{
  *   dir: string, port?: number, host?: string, name?: string, publicUrl?: string,
- *   cert?: string, key?: string, origins?: string[], maxSize?: number, heartbeatMs?: number, log?: (line: string) => void
+ *   cert?: string, key?: string, origins?: string[], maxSize?: number, maxVault?: number, maxFiles?: number,
+ *   maxStreams?: number, trustProxy?: boolean, heartbeatMs?: number, log?: (line: string) => void
  * }} ServerOptions
  */
 
@@ -264,6 +268,10 @@ export async function startServer(opts) {
   await fs.mkdir(root, { recursive: true })
   const rootReal = await fs.realpath(root)
   const maxSize = opts.maxSize ?? 50 * 1024 * 1024
+  // утёкший ключ не должен заполнить диск сервера или исчерпать inode: общий предел объёма и числа файлов
+  const maxVault = opts.maxVault ?? 10 * 1024 ** 3
+  const maxFiles = opts.maxFiles ?? 100_000
+  const maxStreams = opts.maxStreams ?? 64
   const origins = opts.origins ?? []
   const log = opts.log ?? (() => {})
   let state = await ensureState(root, opts.name)
@@ -351,18 +359,20 @@ export async function startServer(opts) {
   heartbeat.unref()
 
   /**
-   * Адрес клиента для счётчика неверных ключей. За прокси (--public-url) все запросы приходят с localhost —
-   * тогда берём адрес, который дописал сам прокси: последний в X-Forwarded-For (первые клиент может подделать).
+   * Адрес клиента для счётчика неверных ключей. За прокси (--public-url) все запросы приходят с localhost,
+   * а за прокси хостинга (--trust-proxy, например Railway) — с его внутреннего адреса.
+   * Тогда берём адрес, который дописал сам прокси: последний в X-Forwarded-For (первые клиент может подделать).
+   * Иначе один чужой клиент с неверными ключами блокировал бы всех.
    * @param {http.IncomingMessage} req
    */
   const clientIp = (req) => {
     const peer = req.socket.remoteAddress ?? ''
     const forwarded = req.headers['x-forwarded-for']
-    if (!opts.publicUrl || !isLoopback(peer) || typeof forwarded !== 'string') return peer
-    return forwarded.split(',').at(-1)?.trim() || peer
+    if (typeof forwarded !== 'string' || !(opts.trustProxy || (opts.publicUrl && isLoopback(peer)))) return peer
+    return forwarded.split(',').at(-1)?.trim().slice(0, 64) || peer
   }
 
-  /** @param {http.IncomingMessage} req @returns {Promise<string | null>} */
+  /** @param {http.IncomingMessage} req @returns {Promise<Device | null>} */
   const authenticate = async (req) => {
     const header = req.headers.authorization ?? ''
     let token = ''
@@ -375,7 +385,7 @@ export async function startServer(opts) {
     const hash = Buffer.from(hashToken(token), 'hex')
     // сравниваем хэши: одинаковая длина для timingSafeEqual и время не зависит от совпавших символов
     for (const d of (await currentState()).devices) {
-      if (timingSafeEqual(Buffer.from(hashToken(d.token), 'hex'), hash)) return d.name
+      if (timingSafeEqual(Buffer.from(hashToken(d.token), 'hex'), hash)) return d
     }
     return null
   }
@@ -495,12 +505,11 @@ export async function startServer(opts) {
     )
   }
 
-  /** Все файлы и папки vault одним списком — для синхронизации. */
-  const manifest = async () => {
-    /** @type {Record<string, ManifestFile>} */
-    const files = {}
-    /** @type {string[]} */
-    const dirs = []
+  /**
+   * Обходит весь vault без служебного.
+   * @param {(rel: string, c: { abs: string, st: import('node:fs').Stats }) => Promise<void> | void} visit
+   */
+  const walkVault = async (visit) => {
     // ссылка внутри vault на свою же папку не должна зациклить обход
     const visited = new Set()
     /** @param {string} abs @param {string} rel */
@@ -510,21 +519,50 @@ export async function startServer(opts) {
       visited.add(real)
       for (const c of await children(abs)) {
         const childRel = rel ? `${rel}/${c.name}` : c.name
-        if (c.st.isDirectory()) {
-          dirs.push(childRel)
-          await walk(c.abs, childRel)
-        } else {
-          files[childRel] = { etag: await etagOf(c.abs, c.st), size: c.st.size, mtime: c.st.mtime.toISOString() }
-        }
+        await visit(childRel, c)
+        if (c.st.isDirectory()) await walk(c.abs, childRel)
       }
     }
     await walk(rootReal, '')
+  }
+
+  /** Все файлы и папки vault одним списком — для синхронизации. */
+  const manifest = async () => {
+    /** @type {Record<string, ManifestFile>} */
+    const files = {}
+    /** @type {string[]} */
+    const dirs = []
+    await walkVault(async (rel, c) => {
+      if (c.st.isDirectory()) dirs.push(rel)
+      else files[rel] = { etag: await etagOf(c.abs, c.st), size: c.st.size, mtime: c.st.mtime.toISOString() }
+    })
     return { files, dirs }
   }
 
-  /** @param {http.IncomingMessage} req @param {http.ServerResponse} res @param {string[]} parts */
-  const dav = async (req, res, parts) => {
+  /**
+   * Занятое место для пределов --max-vault и --max-files. Обход дорогой — помним минуту и поправляем при записи через сервер;
+   * правки мимо сервера догонятся при следующем пересчёте.
+   * @type {{ bytes: number, files: number, at: number } | null}
+   */
+  let usage = null
+  const currentUsage = async () => {
+    if (usage && Date.now() - usage.at < 60_000) return usage
+    const next = { bytes: 0, files: 0, at: Date.now() }
+    await walkVault((_rel, c) => {
+      if (!c.st.isFile()) return
+      next.bytes += c.st.size
+      next.files++
+    })
+    return (usage = next)
+  }
+
+  /** @param {http.IncomingMessage} req @param {http.ServerResponse} res @param {string[]} parts @param {Device} device */
+  const dav = async (req, res, parts, device) => {
     const abs = await resolve(parts)
+    if (device.access === 'read' && !['OPTIONS', 'GET', 'HEAD', 'PROPFIND'].includes(req.method ?? '')) {
+      req.resume()
+      throw new HttpError(403, 'Ключ этого устройства только для чтения')
+    }
     switch (req.method) {
       case 'OPTIONS':
         res.writeHead(200, { DAV: '1', Allow: METHODS, 'Content-Length': 0 }).end()
@@ -571,7 +609,13 @@ export async function startServer(opts) {
           const st = await statOrNull(abs)
           if (st?.isDirectory()) throw new HttpError(409, 'Это папка')
           checkPreconditions(req, st ? await etagOf(abs, st) : null)
+          const used = await currentUsage()
+          const bytes = used.bytes + body.length - (st?.size ?? 0)
+          const files = used.files + (st ? 0 : 1)
+          if (bytes > maxVault || files > maxFiles)
+            throw new HttpError(507, 'Хранилище заполнено — удали лишнее или увеличь --max-vault / --max-files на сервере')
           await writeAtomic(abs, body)
+          Object.assign(used, { bytes, files })
           const etag = etagOfBuffer(body)
           etags.set(abs, { key: statKey(await fs.stat(abs)), etag })
           return { status: st ? 204 : 201, etag }
@@ -589,6 +633,8 @@ export async function startServer(opts) {
           if (st.isFile()) checkPreconditions(req, await etagOf(abs, st))
           await fs.rm(abs, { recursive: true, force: true })
           forgetEtags(abs)
+          if (usage && st.isFile()) Object.assign(usage, { bytes: usage.bytes - st.size, files: usage.files - 1 })
+          else usage = null
           // синхронизация удаляет файлы по одному; опустевшие папки (предмет ушёл в корзину) убираем следом.
           // rmdir не трогает непустую папку — файл, который кто-то успел туда положить, не пропадёт
           if (req.headers['x-typos-prune']) {
@@ -642,6 +688,7 @@ export async function startServer(opts) {
             if (!overwrite) throw new HttpError(412, 'Уже существует')
             await fs.rm(destAbs, { recursive: true, force: true })
             forgetEtags(destAbs)
+            usage = null
           }
           await fs.mkdir(path.dirname(destAbs), { recursive: true })
           await fs.rename(abs, destAbs)
@@ -707,21 +754,24 @@ export async function startServer(opts) {
     }
     failures.delete(ip)
     const today = new Date().toISOString().slice(0, 10)
-    if (seen[device] !== today) {
-      seen[device] = today
+    if (seen[device.name] !== today) {
+      seen[device.name] = today
       seenDirty = true
     }
 
     if (url.pathname === '/.typos/info' && req.method === 'GET') {
       const s = await currentState()
-      const body = JSON.stringify({ protocol: PROTOCOL, name: s.name, vaultId: s.vaultId, device })
+      const readOnly = device.access === 'read' ? { readOnly: true } : {}
+      const body = JSON.stringify({ protocol: PROTOCOL, name: s.name, vaultId: s.vaultId, device: device.name, ...readOnly })
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }).end(body)
       return
     }
     if (url.pathname === '/.typos/events' && req.method === 'GET') {
+      // каждый поток держит соединение: без предела один ключ мог бы занять их все
+      if (streams.size >= maxStreams) throw new HttpError(429, 'Слишком много открытых подключений к серверу — закрой лишние вкладки')
       res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'X-Accel-Buffering': 'no' })
       res.write(`event: hello\ndata: ${JSON.stringify({ vaultId: (await currentState()).vaultId })}\n\n`)
-      const stream = { res, device }
+      const stream = { res, device: device.name }
       streams.add(stream)
       req.on('close', () => streams.delete(stream))
       return
@@ -731,7 +781,7 @@ export async function startServer(opts) {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }).end(body)
       return
     }
-    if (isDav) return dav(req, res, vaultParts(url.pathname))
+    if (isDav) return dav(req, res, vaultParts(url.pathname), device)
     throw new HttpError(404)
   }
 
@@ -753,6 +803,9 @@ export async function startServer(opts) {
         listener,
       )
     : http.createServer(listener)
+  // медленные заголовки не должны держать соединения бесконечно (потоки событий это не задевает: ответ идёт после заголовков)
+  server.headersTimeout = 20_000
+  server.requestTimeout = 10 * 60_000
   const host = opts.host ?? '0.0.0.0'
   await new Promise((done, fail) => {
     server.once('error', fail)
@@ -821,13 +874,14 @@ function numberFlag(flags, name, min, max) {
 
 const HELP = `Сервер хранения TYPOS
 
-  node typos-server.mjs [serve] --dir <папка>   запустить сервер и показать ссылку
+  node typos-server.mjs [serve] --dir <папка>   запустить сервер (ссылку с ключом он не печатает)
   node typos-server.mjs link [устройство]      показать ссылку (для нового устройства — завести ему ключ)
   node typos-server.mjs rotate <устройство>    новый ключ устройству, старая ссылка перестанет работать
   node typos-server.mjs devices                устройства и когда заходили
   node typos-server.mjs revoke <устройство>    отключить устройство
 
-  Все ссылки открывают одно хранилище. Отдельные устройства нужны, только чтобы отключать их по одному.
+  Все ссылки открывают одно хранилище. Отдельные устройства нужны, чтобы отключать их по одному.
+  ИИ-помощнику (MCP) заведи свой ключ: link mcp. Только читать — link <имя> --read-only (с rotate тоже).
 
   --dir <папка>         vault (или переменная TYPOS_VAULT)
   --port <порт>         по умолчанию ${DEFAULT_PORT}
@@ -837,8 +891,11 @@ const HELP = `Сервер хранения TYPOS
   --public-url <url>    внешний адрес, если сервер за прокси: https://notes.example.com
                         (тогда адрес клиента берётся из X-Forwarded-For от прокси на этом же компьютере)
   --origin <url,...>    пускать только эти адреса приложения (по умолчанию любые)
+  --trust-proxy         адрес клиента — из X-Forwarded-For от любого прокси (хостинг вроде Railway: прокси не на этом компьютере)
   --max-size <МБ>       предел размера файла, по умолчанию 50
-  --no-link             не печатать ссылку при запуске (без терминала, например в systemd, она и так не печатается)
+  --max-vault <МБ>      предел объёма всего хранилища, по умолчанию 10240
+  --max-files <число>   предел числа файлов, по умолчанию 100000
+  --read-only           для link и rotate: ключ только для чтения
   --quiet               не писать в консоль неверные ключи и ошибки`
 
 /**
@@ -864,8 +921,9 @@ const listenFromFlags = (flags, saved) => ({
   ...(flags['public-url'] ? { publicUrl: flags['public-url'] } : {}),
 })
 
-async function main() {
-  const { positional, flags } = parseArgs(process.argv.slice(2))
+/** Командная строка; экспортирована для запуска в контейнере (server/container.mjs). @param {string[]} argv */
+export async function main(argv) {
+  const { positional, flags } = parseArgs(argv)
   const command = positional[0] ?? 'serve'
   if (command === 'help' || flags.help) return console.log(HELP)
   const dir = flags.dir ?? process.env.TYPOS_VAULT
@@ -874,6 +932,7 @@ async function main() {
 
   if (command === 'serve') {
     const maxSizeMb = numberFlag(flags, 'max-size', 1, 4096)
+    const maxVaultMb = numberFlag(flags, 'max-vault', 1, 1024 * 1024)
     const srv = await startServer({
       dir: root,
       port: numberFlag(flags, 'port', 0, 65535),
@@ -887,6 +946,9 @@ async function main() {
         .map((s) => s.trim().replace(/\/+$/, ''))
         .filter(Boolean),
       maxSize: maxSizeMb === undefined ? undefined : maxSizeMb * 1024 * 1024,
+      maxVault: maxVaultMb === undefined ? undefined : maxVaultMb * 1024 * 1024,
+      maxFiles: numberFlag(flags, 'max-files', 1, 10_000_000),
+      trustProxy: Boolean(flags['trust-proxy']),
       log: flags.quiet ? undefined : (line) => console.error(`[${new Date().toISOString()}] ${line}`),
     })
     const listen = /** @type {Listen} */ (srv.state.listen)
@@ -894,18 +956,9 @@ async function main() {
     console.log(`TYPOS storage «${srv.state.name}» запущен`)
     console.log(`  папка:  ${root}`)
     console.log(`  доступ: ${everywhere ? 'этот компьютер и вся сеть' : listen.host} · порт ${srv.port}${listen.tls ? ' · HTTPS' : ''}`)
-    // первый запуск — заводим ключ; дальше показываем тот же
-    const hasDefault = srv.state.devices.some((d) => d.name === DEFAULT_DEVICE) || !srv.state.devices.length
-    if (!hasDefault)
-      console.log(`\nОбщего ключа нет (отозван). Ссылка для устройства: node typos-server.mjs link <имя> --dir ${JSON.stringify(dir)}`)
-    else if (flags['no-link'] || !process.stdout.isTTY)
-      console.log(`\nСсылка подключения: node typos-server.mjs link --dir ${JSON.stringify(dir)}`)
-    else {
-      const { state, token } = await deviceKey(root)
-      printLinks(state, token, srv.targets(), dir, DEFAULT_DEVICE)
-    }
-    const others = srv.state.devices.filter((d) => d.name !== DEFAULT_DEVICE)
-    if (others.length) console.log(`Отдельные устройства: ${others.map((d) => d.name).join(', ')}`)
+    // ссылку с ключом при запуске не печатаем: журналы сервиса, записи терминала и демонстрации экрана её бы сохранили
+    console.log(`\nСсылка подключения: node typos-server.mjs link [устройство] --dir ${JSON.stringify(dir)}`)
+    if (srv.state.devices.length) console.log(`Устройства: ${srv.state.devices.map((d) => d.name).join(', ')}`)
     const stop = async () => {
       await srv.close()
       process.exit(0)
@@ -918,8 +971,13 @@ async function main() {
 
   if (command === 'link') {
     const device = positional[1] ?? DEFAULT_DEVICE
-    const { state, token, created } = await deviceKey(root, device)
+    const { state, token, created, readOnly } = await deviceKey(root, device, { readOnly: Boolean(flags['read-only']) })
     if (created && device !== DEFAULT_DEVICE) console.log(`Устройству «${device}» заведён отдельный ключ. Отключить: revoke ${device}`)
+    if (!created && Boolean(flags['read-only']) !== readOnly)
+      console.log(
+        `У «${device}» уже есть ключ ${readOnly ? 'только для чтения' : 'с полным доступом'}. Сменить права: rotate ${device}${readOnly ? '' : ' --read-only'}`,
+      )
+    if (readOnly) console.log('Этот ключ только для чтения.')
     printLinks(state, token, connectionTargets(listenFromFlags(flags, state.listen)), dir, device)
     return
   }
@@ -927,8 +985,8 @@ async function main() {
   if (command === 'rotate') {
     const device = positional[1]
     if (!device) throw new Error('Какому устройству новый ключ? rotate <имя> (общая ссылка — rotate default)')
-    const { state, token } = await rotateDevice(root, device)
-    console.log(`Устройству «${device}» выдан новый ключ — старая ссылка больше не работает.`)
+    const { state, token, readOnly } = await rotateDevice(root, device, { readOnly: Boolean(flags['read-only']) })
+    console.log(`Устройству «${device}» выдан новый ключ${readOnly ? ' только для чтения' : ''} — старая ссылка больше не работает.`)
     printLinks(state, token, connectionTargets(listenFromFlags(flags, state.listen)), dir, device)
     return
   }
@@ -939,7 +997,9 @@ async function main() {
     /** @type {Record<string, string>} */
     const seen = await fs.readFile(seenPath(root), 'utf8').then(JSON.parse, () => ({}))
     for (const d of state.devices)
-      console.log(`${d.name.padEnd(20)} добавлено ${d.created.slice(0, 10)} · заходило ${seen[d.name] ?? 'ещё нет'}`)
+      console.log(
+        `${d.name.padEnd(20)} ${d.access === 'read' ? 'чтение' : 'полный доступ'} · добавлено ${d.created.slice(0, 10)} · заходило ${seen[d.name] ?? 'ещё нет'}`,
+      )
     return
   }
 
@@ -954,7 +1014,7 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  main().catch((e) => {
+  main(process.argv.slice(2)).catch((e) => {
     console.error(e instanceof Error ? e.message : e)
     process.exit(1)
   })

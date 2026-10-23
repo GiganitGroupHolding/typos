@@ -1,9 +1,9 @@
-import { readFile, stat } from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from '@/lib/subjectPalette'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import type { SubjectColor, SubjectIcon } from '@/types'
+import { LocalFiles } from './localFiles'
 import { StudyVault } from './vault'
 
 /*
@@ -28,15 +28,30 @@ const INSTRUCTIONS = `Хранилище учебных конспектов п�
 При переносе из документов передавай source (ссылка на оригинал): повторный перенос обновит тот же конспект, а не создаст дубль.
 Удалять насовсем нельзя — trash кладёт в корзину приложения (30 дней).`
 
-/** Одинаковые инструменты для локального и удалённого транспорта. */
-export function createMcpServer(adapter: VaultAdapter, remote = false) {
-  const vault = new StudyVault(adapter, { remote })
+const IMAGES_LINE =
+  '- картинки — ![подпись](https://…): сервер сам скачает их в assets/. Для локального файла или data: — сначала add_image.'
+
+/**
+ * Одинаковые инструменты для локального и удалённого транспорта.
+ * Файлы с компьютера (аргумент file, add_project_file, путь в add_image) — только локально и только из папок files.
+ */
+export function createMcpServer(adapter: VaultAdapter, remote = false, files = new LocalFiles([])) {
+  const vault = new StudyVault(adapter, { remote, files })
+  const readsFiles = !remote && files.enabled
   const instructions = remote
     ? INSTRUCTIONS.replace(
-        '- картинки — ![подпись](https://…): сервер сам скачает их в assets/. Для локального файла или data: — сначала add_image.',
+        IMAGES_LINE,
         '- картинки — передавай в add_image как data:image/…;base64, затем используй возвращённую Markdown-ссылку. Удалённый MCP не читает файлы сервера и не скачивает внешние картинки.',
       )
-    : INSTRUCTIONS
+    : readsFiles
+      ? INSTRUCTIONS.replace(
+          IMAGES_LINE,
+          `- картинки — ![подпись](https://…): сервер сам скачает их в assets/ (только из интернета, не из локальной сети). Для data: или файла из разрешённых папок (${files.roots.join(', ')}) — сначала add_image.`,
+        )
+      : INSTRUCTIONS.replace(
+          IMAGES_LINE,
+          '- картинки — ![подпись](https://…): сервер сам скачает их в assets/ (только из интернета, не из локальной сети). Для data: — сначала add_image. Файлы с компьютера MCP не читает: пользователь может разрешить папку флагом --files.',
+        )
   const server = new McpServer({ name: 'studynotes', version: '1.0.0' }, { instructions })
 
   const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
@@ -51,16 +66,18 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
       }
     }
 
-  /** Большой текст можно передать файлом на этом компьютере — чтобы не гонять десятки КБ через аргументы вызова. */
+  /** Большой текст можно передать файлом из разрешённой папки — чтобы не гонять десятки КБ через аргументы вызова. */
   async function textArg(inline: string | undefined, file: string | undefined, what: string): Promise<string> {
     if (remote && file !== undefined) throw new Error('Удалённый MCP не читает файлы сервера — передай текст напрямую')
     if (inline) return inline
-    if (remote) throw new Error(`Нужен ${what} — передай текст напрямую`)
-    if (!file) throw new Error(`Нужен ${what} или file — путь к файлу на этом компьютере`)
-    if ((await stat(file)).size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ')
-    return readFile(file, 'utf8')
+    if (!readsFiles) throw new Error(`Нужен ${what} — передай текст напрямую`)
+    if (!file) throw new Error(`Нужен ${what} или file — путь к файлу в разрешённой папке`)
+    return (await files.read(file, 10 * 1024 * 1024)).toString('utf8')
   }
-  const fileArg = z.string().optional().describe('Вместо текста: путь к файлу на этом компьютере (для больших лекций и страниц)')
+  const fileArg = z
+    .string()
+    .optional()
+    .describe(`Вместо текста: полный путь к файлу в разрешённых папках (${files.roots.join(', ')}) — для больших лекций и страниц`)
 
   const subject = z.string().describe('Предмет: id или название папки («Математика»)')
   const colors = z.enum(SUBJECT_COLOR_IDS as [SubjectColor, ...SubjectColor[]])
@@ -115,7 +132,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
         subject,
         title: z.string().min(1).describe('Заголовок (первая строка и имя файла)'),
         markdown: z.string().optional().describe('Текст в формате из инструкций сервера; заголовок «# …» в начале можно не писать'),
-        ...(remote ? {} : { file: fileArg }),
+        ...(readsFiles ? { file: fileArg } : {}),
         source: z.string().optional().describe('Ссылка или id оригинала — для повторного переноса без дублей'),
       },
       annotations: write,
@@ -135,7 +152,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
         id: z.string(),
         mode: z.enum(['replace', 'append', 'replace_section']),
         markdown: z.string().optional(),
-        ...(remote ? {} : { file: fileArg }),
+        ...(readsFiles ? { file: fileArg } : {}),
         section: z.string().optional().describe('Текст заголовка раздела для replace_section, без #'),
       },
       annotations: { ...write, idempotentHint: false },
@@ -151,7 +168,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
       title: 'Загрузить картинку',
       description: remote
         ? 'Сохраняет картинку из data:image/…;base64 и возвращает Markdown-ссылку. URL и пути файлов недоступны.'
-        : 'Сохраняет картинку в предмет (webp) и возвращает Markdown-ссылку ![](assets/…). Источник: https-ссылка, data:image/…;base64 или путь к файлу на компьютере.',
+        : `Сохраняет картинку в предмет (webp) и возвращает Markdown-ссылку ![](assets/…). Источник: https-ссылка (только интернет), data:image/…;base64${readsFiles ? ` или полный путь к файлу в разрешённых папках (${files.roots.join(', ')})` : ''}.`,
       inputSchema: { subject, source: z.string(), alt: z.string().optional().describe('Подпись') },
       annotations: { ...write, openWorldHint: !remote },
     },
@@ -196,7 +213,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
         subject,
         name: z.string().min(1),
         html: z.string().optional().describe('Полный HTML-документ'),
-        ...(remote ? {} : { file: fileArg }),
+        ...(readsFiles ? { file: fileArg } : {}),
         icon: z.enum(['grid', 'chart', 'ruler', 'binary', 'calculator', 'function', 'timer', 'table']).optional(),
       },
       annotations: write,
@@ -212,24 +229,23 @@ export function createMcpServer(adapter: VaultAdapter, remote = false) {
     ),
   )
 
-  if (!remote)
+  if (readsFiles)
     server.registerTool(
       'add_project_file',
       {
         title: 'Добавить файл в проекты',
         description:
-          'Копирует файл с компьютера (PDF, PPTX, DOCX, картинка, HTML…) в «Проекты» предмета как есть. В приложении он открывается прямо на сайте.',
+          'Копирует файл из разрешённых папок компьютера (PDF, PPTX, DOCX, картинка, HTML…) в «Проекты» предмета как есть. В приложении он открывается прямо на сайте.',
         inputSchema: {
           subject,
-          file: z.string().describe('Путь к файлу на этом компьютере'),
+          file: z.string().describe(`Полный путь к файлу в разрешённых папках (${files.roots.join(', ')})`),
           name: z.string().optional().describe('Название в приложении; по умолчанию — имя файла'),
         },
         annotations: write,
       },
-      run(async (a: { subject: string; file: string; name?: string }) => {
-        if ((await stat(a.file)).size > 100 * 1024 * 1024) throw new Error('Файл больше 100 МБ')
-        return vault.addProjectFile({ subject: a.subject, fileName: a.file, data: await readFile(a.file), title: a.name })
-      }),
+      run(async (a: { subject: string; file: string; name?: string }) =>
+        vault.addProjectFile({ subject: a.subject, fileName: a.file, data: await files.read(a.file, 100 * 1024 * 1024), title: a.name }),
+      ),
     )
 
   server.registerTool(

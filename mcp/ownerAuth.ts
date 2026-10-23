@@ -1,5 +1,7 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
 import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
+import { isIPv6 } from 'node:net'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import {
@@ -60,6 +62,8 @@ export interface OwnerAuthConfig {
   resource: URL
   passwordHash: string
   dataDir: string
+  /** За прокси хостинга (MCP_TRUST_PROXY=1): адрес клиента — последний в X-Forwarded-For. */
+  trustProxy?: boolean
 }
 
 /** Проверяет настройки личного входа; открытый ключ владельца не нужен серверу. */
@@ -69,7 +73,30 @@ export function ownerAuthConfig(resource: URL, env: NodeJS.ProcessEnv): OwnerAut
     throw new Error('Задай MCP_OWNER_PASSWORD_HASH — хэш отдельного ключа владельца MCP')
   const dataDir = env.MCP_AUTH_DATA_DIR ?? ''
   if (!path.isAbsolute(dataDir)) throw new Error('Задай MCP_AUTH_DATA_DIR — абсолютный путь к постоянной папке авторизации')
-  return { resource, passwordHash, dataDir }
+  return { resource, passwordHash, dataDir, trustProxy: env.MCP_TRUST_PROXY === '1' }
+}
+
+/**
+ * Ключ лимита запросов — адрес клиента, а не один общий: иначе посторонний исчерпал бы лимиты владельца.
+ * За прокси берём адрес, который дописал сам прокси (последний в X-Forwarded-For); IPv6 — по сети /64,
+ * у одного абонента обычно целая подсеть. Адрес не разбираем библиотекой: длинная строка из заголовка не должна тормозить.
+ */
+export function clientKey(req: IncomingMessage, trustProxy = false): string {
+  const forwarded = req.headers['x-forwarded-for']
+  const ip = ((trustProxy && typeof forwarded === 'string' ? forwarded.split(',').at(-1) : undefined) ?? req.socket.remoteAddress ?? '')
+    .trim()
+    .slice(0, 64)
+  if (!isIPv6(ip)) return ip
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+  if (mapped) return mapped[1]
+  const [head, tail = ''] = ip.toLowerCase().split('::')
+  const left = head ? head.split(':') : []
+  const right = tail ? tail.split(':') : []
+  const groups = ip.includes('::') ? [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right] : left
+  return `${groups
+    .slice(0, 4)
+    .map((g) => g.replace(/^0+(?=.)/, ''))
+    .join(':')}::/64`
 }
 
 /** Один владелец, отдельные разрешения клиентов и хэши токенов в постоянной базе. */
@@ -146,7 +173,7 @@ class OwnerProvider implements OAuthServerProvider {
     getClient: (id: string) => this.read<OAuthClientInformationFull>('client', id),
     registerClient: async (client: Omit<OAuthClientInformationFull, 'client_id' | 'client_id_issued_at'>) => {
       this.prune()
-      if (this.all('client').length >= 100) throw new InvalidClientMetadataError('Слишком много клиентов — обратись к владельцу сервера')
+      this.makeRoomForClient()
       if (client.redirect_uris.length > 5 || client.redirect_uris.length === 0 || (client.client_name?.length ?? 0) > 128)
         throw new InvalidClientMetadataError('Проверь название клиента и адреса возврата')
       for (const value of client.redirect_uris) {
@@ -160,6 +187,21 @@ class OwnerProvider implements OAuthServerProvider {
       this.save('client', result.client_id, result)
       return result
     },
+  }
+
+  /**
+   * Регистрация открыта всем: посторонний мог бы занять все 100 мест на 90 дней и не дать владельцу подключиться.
+   * Поэтому место освобождает самый старый клиент без разрешений — у него нет доступа к заметкам.
+   */
+  private makeRoomForClient() {
+    const clients = this.all<OAuthClientInformationFull>('client')
+    if (clients.length < 100) return
+    const granted = new Set(this.all<Grant>('grant').map((g) => g.clientId))
+    const unused = clients
+      .filter((c) => !granted.has(c.client_id))
+      .sort((a, b) => (a.client_id_issued_at ?? 0) - (b.client_id_issued_at ?? 0))[0]
+    if (!unused) throw new InvalidClientMetadataError('Слишком много подключённых клиентов — отключи старые подключения')
+    this.remove('client', unused.client_id)
   }
 
   private resource(resource?: URL) {
@@ -177,7 +219,8 @@ class OwnerProvider implements OAuthServerProvider {
     if (!params.scopes?.includes('typos')) throw new InvalidScopeError('Для доступа к заметкам нужен scope typos')
     if (!/^[A-Za-z0-9_-]{43}$/.test(params.codeChallenge)) throw new InvalidRequestError('Нужен PKCE S256')
     this.prune()
-    if (this.pending.size >= 100) throw new InvalidRequestError('Слишком много запросов входа — попробуй позже')
+    // поток чужих запросов не должен закрыть вход владельцу: вытесняем самый старый незавершённый
+    if (this.pending.size >= 100) this.pending.delete(this.pending.keys().next().value!)
     const id = random()
     const cookie = random()
     const pending = {
@@ -327,14 +370,17 @@ export function createOwnerAuth(config: OwnerAuthConfig) {
     next()
   })
   app.use(express.json({ limit: '8kb' }), express.urlencoded({ extended: false, limit: '8kb' }))
+  // X-Forwarded-For проверяет clientKey: проверка библиотеки ругалась бы на него без «trust proxy» Express
+  const byClient = {
+    keyGenerator: (req: IncomingMessage) => clientKey(req, config.trustProxy),
+    validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
+  }
+  const tooMany = { error: 'Слишком много попыток — подожди 15 минут' }
   app.post(
     '/consent',
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 10,
-      keyGenerator: () => 'owner',
-      message: { error: 'Слишком много попыток — подожди 15 минут' },
-    }),
+    rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: tooMany, ...byClient }),
+    // общий предел — только против нагрузки scrypt; подобрать 32-байтовый ключ владельца перебором нельзя
+    rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, keyGenerator: () => 'all', message: tooMany }),
     async (req, res) => {
       if (req.headers.origin !== config.resource.origin) {
         res.status(403).json({ error: 'Недопустимый источник запроса' })
@@ -360,10 +406,10 @@ export function createOwnerAuth(config: OwnerAuthConfig) {
       issuerUrl: new URL('/', config.resource),
       resourceServerUrl: config.resource,
       scopesSupported: ['typos', 'offline_access'],
-      authorizationOptions: { rateLimit: { keyGenerator: () => 'owner' } },
-      tokenOptions: { rateLimit: { keyGenerator: () => 'owner' } },
-      revocationOptions: { rateLimit: { keyGenerator: () => 'owner' } },
-      clientRegistrationOptions: { clientSecretExpirySeconds: 0, rateLimit: { keyGenerator: () => 'owner' } },
+      authorizationOptions: { rateLimit: byClient },
+      tokenOptions: { rateLimit: byClient },
+      revocationOptions: { rateLimit: byClient },
+      clientRegistrationOptions: { clientSecretExpirySeconds: 0, rateLimit: byClient },
     }),
   )
   app.use((_req, res) => {

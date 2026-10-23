@@ -28,6 +28,9 @@ export async function openVault(
     const config = parseRemoteLink(remote)
     try {
       const info = await checkRemote(config)
+      // общий ключ нельзя отозвать у одного ИИ, не отключив остальные устройства
+      if (info.device === 'default')
+        warn('MCP работает с общим ключом default. Заведи ему отдельный на сервере хранения: link mcp — и подключи MCP по новой ссылке')
       return new DavAdapter({ ...config, name: info.name || config.name, vaultId: info.vaultId })
     } catch (e) {
       // сервер выключен — всё равно запускаемся: инструменты ответят понятной ошибкой, а заработают, когда он вернётся.
