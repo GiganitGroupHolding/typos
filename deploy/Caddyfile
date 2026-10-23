@@ -1,0 +1,19 @@
+# Публичные домены: сертификаты Let's Encrypt выпускаются сами. Адреса — в deploy/.env.
+
+{$APP_DOMAIN} {
+	root * /srv/app
+	encode zstd gzip
+	header Cache-Control "no-cache"
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header X-Content-Type-Options nosniff
+	try_files {path} /index.html
+	file_server
+}
+
+{$VAULT_DOMAIN} {
+	reverse_proxy storage:8787
+}
+
+{$MCP_DOMAIN} {
+	reverse_proxy mcp:3000
+}

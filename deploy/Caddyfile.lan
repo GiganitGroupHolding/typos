@@ -1,0 +1,26 @@
+# Локальная сеть без доменов: HTTPS по IP с собственным центром сертификации Caddy.
+# Его корневой сертификат нужно установить на каждое устройство (docs/self-hosting.md).
+{
+	local_certs
+	skip_install_trust
+	# браузер не передаёт имя сайта (SNI) при входе по IP, а внутри Docker Caddy видит адрес контейнера, а не сервера
+	default_sni {$LAN_IP}
+}
+
+https://{$LAN_IP} {
+	root * /srv/app
+	encode zstd gzip
+	header Cache-Control "no-cache"
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header X-Content-Type-Options nosniff
+	try_files {path} /index.html
+	file_server
+}
+
+https://{$LAN_IP}:8443 {
+	reverse_proxy storage:8787
+}
+
+https://{$LAN_IP}:9443 {
+	reverse_proxy mcp:3000
+}

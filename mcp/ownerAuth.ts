@@ -178,8 +178,11 @@ class OwnerProvider implements OAuthServerProvider {
         throw new InvalidClientMetadataError('Проверь название клиента и адреса возврата')
       for (const value of client.redirect_uris) {
         const url = new URL(value)
-        if (url.username || url.password || url.hash || url.protocol !== 'https:')
-          throw new InvalidClientMetadataError('Адрес возврата должен быть HTTPS без пароля и фрагмента')
+        // настольные клиенты (Claude Code и др.) принимают код на своём компьютере по http (RFC 8252):
+        // туда код не уйдёт дальше этого компьютера, а PKCE не даст обменять его чужой программе без verifier
+        const loopback = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+        if (url.username || url.password || url.hash || (url.protocol !== 'https:' && !loopback))
+          throw new InvalidClientMetadataError('Адрес возврата должен быть HTTPS или http://localhost без пароля и фрагмента')
       }
       if (!['none', 'client_secret_post'].includes(client.token_endpoint_auth_method ?? 'client_secret_post'))
         throw new InvalidClientMetadataError('Используй none или client_secret_post')

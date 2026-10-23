@@ -16,7 +16,8 @@ read and write access to the entire configured vault.
 
 The server implements authorization code flow with mandatory PKCE S256, dynamic
 client registration, resource binding, refresh-token rotation and revocation.
-Callbacks must use HTTPS. Clients can use `none` or `client_secret_post` token
+Callbacks must use HTTPS, except `http://localhost`,
+`127.0.0.1` and `[::1]` for desktop clients such as Claude Code (RFC 8252). Clients can use `none` or `client_secret_post` token
 endpoint authentication. Public registration does not grant access to notes.
 
 Generate a random owner key into a new private file **outside the repository**:

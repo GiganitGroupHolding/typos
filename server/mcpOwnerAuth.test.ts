@@ -269,3 +269,51 @@ it('ключ лимита для IPv6 — сеть /64, для IPv4 внутри
   expect(clientKey(req('127.0.0.1', '203.0.113.7'))).toBe('127.0.0.1')
   expect(clientKey(req('127.0.0.1', '1.1.1.1, 203.0.113.7'), true)).toBe('203.0.113.7')
 })
+
+it('пускает настольные клиенты с адресом возврата на localhost, но не похожие на него адреса', async () => {
+  const registerWith = (uri: string) =>
+    fetch(endpoint('/register'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirect_uris: [uri], token_endpoint_auth_method: 'none' }),
+    })
+  for (const uri of [
+    'http://localhost.evil.example/cb',
+    'http://127.0.0.1.nip.io/cb',
+    'http://192.168.1.5/cb',
+    'http://user:pw@localhost/cb',
+  ])
+    expect((await registerWith(uri)).status, uri).toBe(400)
+
+  const loopback = 'http://localhost:54321/callback'
+  const response = await registerWith(loopback)
+  expect(response.status).toBe(201)
+  const { client_id } = (await response.json()) as { client_id: string }
+  const verifier = randomBytes(32).toString('base64url')
+  const url = endpoint('/authorize')
+  url.search = new URLSearchParams({
+    client_id,
+    response_type: 'code',
+    redirect_uri: loopback,
+    code_challenge_method: 'S256',
+    code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+    resource: config.resource.href,
+    scope: 'typos',
+  }).toString()
+  const page = await fetch(url)
+  const html = await page.text()
+  expect(html).toContain(loopback)
+  const flow = { verifier, id: html.match(/name="request" value="([^"]+)"/)![1], cookie: page.headers.get('set-cookie')!.split(';')[0] }
+  const approved = await consent(flow)
+  expect(approved.status).toBe(303)
+  const callback = new URL(approved.headers.get('location')!)
+  expect(callback.origin + callback.pathname).toBe(loopback)
+  const tokens = await token({
+    client_id,
+    grant_type: 'authorization_code',
+    code: callback.searchParams.get('code')!,
+    code_verifier: verifier,
+    redirect_uri: loopback,
+  })
+  expect(tokens.status).toBe(200)
+})

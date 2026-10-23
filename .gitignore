@@ -34,3 +34,6 @@ public/devices/
 /vault/
 /server/vault/
 .typos-server/
+
+# настройки развёртывания (адреса); секреты MCP лежат вне репозитория
+/deploy/.env

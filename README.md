@@ -174,6 +174,8 @@ A leaked key shouldn't be able to fill the server's disk: the vault is capped at
 
 To run the server in a container, use `Dockerfile.storage`. It contains only the server, hands the vault folder (`TYPOS_VAULT`, `/data/vault` by default) to the unprivileged `node` user and drops root before the server starts. It reads the port from `PORT` and trusts the hosting proxy (`--trust-proxy`).
 
+To run the storage server, the remote MCP and the website together on your own server with Docker and Caddy (public domains or a local network with HTTPS), see [Self-hosting](docs/self-hosting.md).
+
 The app can run on `localhost` or on any address in your network, for example `npm run preview -- --host`. If the app is opened over `https://`, the server needs HTTPS too: pass `--cert` and `--key`, or put it behind a proxy such as Caddy and pass `--public-url https://notes.example.com`. Over plain `http://` on a network address the browser turns off the folder picker and offline install, but the storage server still works.
 
 The server keeps the vault as the same plain files and speaks a subset of WebDAV under `/files/`, so you can also mount it in a file manager (any user name, the key as the password). Keys are stored in `.typos-server/` inside the vault, readable only by the server's user. The server never serves that folder, under any spelling of its name or through a link.
