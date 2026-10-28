@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { genId, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from '@/vault/format'
+import { genId, NOTES_DIR, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from '@/vault/format'
 import { getHtmlMeta, setHtmlMeta } from '@/vault/repo'
 import type { FlatStore } from './flatAdapter'
 import { RemoteError, type RemoteAdapter } from './remoteAdapter'
@@ -83,6 +83,27 @@ async function sameBytes(a: Blob, b: Blob) {
   const v = new Uint8Array(y)
   for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) return false
   return true
+}
+
+/** У одного конспекта может отличаться только время повторного сохранения. */
+async function sameNote(path: string, a: Blob, b: Blob): Promise<boolean> {
+  if (!path.endsWith('.md') || basename(dirname(path)) !== NOTES_DIR) return false
+  try {
+    const stripUpdated = async (blob: Blob) => {
+      const text = utf8
+        .decode(await blob.arrayBuffer())
+        .replace(/^\uFEFF/, '')
+        .replace(/\r\n/g, '\n')
+      if (!text.startsWith('---\n') || !parseFrontmatter(text).meta.id) return null
+      const end = text.indexOf('\n---', 4)
+      if (end < 0) return null
+      return text.slice(0, end).replace(/^updated:[^\n]*$/m, '') + text.slice(end)
+    }
+    const [left, right] = await Promise.all([stripUpdated(a), stripUpdated(b)])
+    return left !== null && left === right
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -283,7 +304,12 @@ export class SyncEngine {
     }
     // здесь удалили, на сервере правили — тоже правка важнее: берём серверную.
     // Одинаковое содержимое — просто запоминаем версию. Цвет и порядок предмета — берём с сервера.
-    if (mine === undefined || (await sameBytes(toBlob(mine), got.blob)) || basename(path) === SUBJECT_META)
+    if (
+      mine === undefined ||
+      (await sameBytes(toBlob(mine), got.blob)) ||
+      (await sameNote(path, toBlob(mine), got.blob)) ||
+      basename(path) === SUBJECT_META
+    )
       return this.adopt(path, got, rev, ctx)
     const copy = conflictCopy(path, mine, ctx.taken)
     ctx.taken.add(copy.path)

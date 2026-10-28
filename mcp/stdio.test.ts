@@ -55,6 +55,20 @@ it('сервер отвечает по stdio', { timeout: 30_000 }, async () => 
       ].sort(),
     )
     await client.callTool({ name: 'create_subject', arguments: { name: 'Тест' } })
+    const board = JSON.parse(
+      text(
+        await client.callTool({ name: 'create_board', arguments: { subject: 'Тест', name: 'Схема', nodes: [{ id: 'a', text: 'До' }] } }),
+      ),
+    )
+    expect(JSON.parse(text(await client.callTool({ name: 'read_board', arguments: { id: board.id } })))).toMatchObject({
+      nodes: [{ id: 'a', text: 'До' }],
+    })
+    expect(
+      (await client.callTool({ name: 'update_board', arguments: { id: board.id, nodes: [{ id: 'a', text: 'После' }] } })).isError,
+    ).not.toBe(true)
+    expect(JSON.parse(text(await client.callTool({ name: 'read_board', arguments: { id: board.id } })))).toMatchObject({
+      nodes: [{ id: 'a', text: 'После' }],
+    })
     const created = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Привет', markdown: '$x^2$' } })
     expect(JSON.parse(text(created))).toMatchObject({ action: 'created', warnings: [] })
     // большой текст — файлом из разрешённой папки, а не аргументом
@@ -67,12 +81,15 @@ it('сервер отвечает по stdio', { timeout: 30_000 }, async () => 
     writeFileSync(secret, '# Секрет\n')
     mkdirSync(path.join(files, '.ssh'))
     writeFileSync(path.join(files, '.ssh', 'id.md'), '# Ключ\n')
-    symlinkSync(secret, path.join(files, 'ярлык.md'))
+    // Junction проверяет тот же выход наружу без права Windows на файловые симлинки.
+    const link = process.platform === 'win32' ? path.join(files, 'ярлык', path.basename(secret)) : path.join(files, 'ярлык.md')
+    if (process.platform === 'win32') symlinkSync(path.dirname(secret), path.dirname(link), 'junction')
+    else symlinkSync(secret, link)
     try {
       for (const [file, error] of [
         [secret, /вне разрешённых папок/],
         [path.join(files, '.ssh', 'id.md'), /Скрытые файлы/],
-        [path.join(files, 'ярлык.md'), /вне разрешённых папок/],
+        [link, /вне разрешённых папок/],
       ] as const) {
         const r = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Утечка', file } })
         expect(r.isError).toBe(true)

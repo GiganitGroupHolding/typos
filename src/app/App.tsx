@@ -10,6 +10,7 @@ import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SubjectHome } from '@/pages/SubjectHome'
 import { useVault } from '@/vault/store'
+import { useDesktopZoom } from './desktopZoom'
 import { AppShell } from './layout/AppShell'
 import { useThemeSync } from './theme'
 
@@ -104,6 +105,7 @@ function PermissionScreen() {
 
 export function App() {
   useThemeSync()
+  useDesktopZoom()
   return (
     // reducedMotion="user": уважает «уменьшить движение» в Windows
     <MotionConfig reducedMotion="user">

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import { normalizeZoom } from './zoomValue'
 
 export type ThemePref = 'light' | 'dark' | 'system'
 export type NoteFont = 'inter' | 'golos' | 'serif'
@@ -20,6 +21,13 @@ interface UiState {
   theme: ThemePref
   noteFont: NoteFont
   backdrop: Backdrop
+  responsiveAccent: boolean
+  fixedAccent: string
+  desktopZoom: number
+  setResponsiveAccent: (value: boolean) => void
+  setFixedAccent: (value: string) => void
+  setDesktopZoom: (value: number) => void
+  setBackdrop: (value: Backdrop) => void
   /** Только чтение: без панели, PT Serif, бумажный фон. */
   readingMode: boolean
   focusMode: boolean
@@ -71,6 +79,15 @@ export const useUi = create<UiState>()(
       theme: 'light',
       noteFont: 'inter',
       backdrop: 'nebula',
+      responsiveAccent: true,
+      fixedAccent: '#5078d4',
+      desktopZoom: 100,
+      setResponsiveAccent: (responsiveAccent) => set({ responsiveAccent }),
+      setFixedAccent: (fixedAccent) => {
+        if (/^#[0-9a-f]{6}$/i.test(fixedAccent)) set({ fixedAccent: fixedAccent.toLowerCase() })
+      },
+      setDesktopZoom: (desktopZoom) => set({ desktopZoom: normalizeZoom(desktopZoom) }),
+      setBackdrop: (backdrop) => set({ backdrop }),
       readingMode: false,
       focusMode: false,
       pinsOpen: false,
@@ -108,7 +125,25 @@ export const useUi = create<UiState>()(
     {
       name: 'studynotes-ui',
       storage: safeStorage,
-      partialize: (s) => ({ theme: s.theme, noteFont: s.noteFont, backdrop: s.backdrop, phonePreview: s.phonePreview }),
+      partialize: (s) => ({
+        theme: s.theme,
+        noteFont: s.noteFont,
+        backdrop: s.backdrop,
+        phonePreview: s.phonePreview,
+        responsiveAccent: s.responsiveAccent,
+        fixedAccent: s.fixedAccent,
+        desktopZoom: s.desktopZoom,
+      }),
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<UiState>
+        return {
+          ...current,
+          ...saved,
+          responsiveAccent: typeof saved.responsiveAccent === 'boolean' ? saved.responsiveAccent : true,
+          fixedAccent: typeof saved.fixedAccent === 'string' && /^#[0-9a-f]{6}$/i.test(saved.fixedAccent) ? saved.fixedAccent : '#5078d4',
+          desktopZoom: normalizeZoom(saved.desktopZoom ?? 100),
+        }
+      },
       // v1: светлая тема по умолчанию — прежнее «как в системе» переводим на светлую один раз
       version: 1,
       migrate: (persisted, version) => {

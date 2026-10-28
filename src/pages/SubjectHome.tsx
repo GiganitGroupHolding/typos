@@ -196,7 +196,7 @@ function Tile({
   className?: string
   children: ReactNode
 }) {
-  const lens = useLiquidLens({ bezel: 22, refraction: 22, dispersion: 0.08, frost: 4, variant: 'card', fallback: 'liquid liquid-lava' })
+  const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
   return (
     <motion.section
       ref={lens.attach}
@@ -209,6 +209,7 @@ function Tile({
         className,
       )}
     >
+      {lens.extras}
       <header className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase [&>svg]:size-4 [&>svg]:text-(--subject)">
         {icon}
         <span className="flex-1">{title}</span>

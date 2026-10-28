@@ -32,7 +32,8 @@ describe('адаптер', () => {
     try {
       writeFileSync(path.join(outside, 'marker.txt'), 'снаружи')
       symlinkSync(outside, path.join(dir, 'jump'), 'junction')
-      symlinkSync(path.join(outside, 'нет.txt'), path.join(dir, 'битая.txt'))
+      // В Windows битая junction не требует права на создание файлового симлинка.
+      symlinkSync(path.join(outside, 'нет.txt'), path.join(dir, 'битая.txt'), process.platform === 'win32' ? 'junction' : 'file')
       mkdirSync(path.join(dir, '.typos-server'))
       writeFileSync(path.join(dir, '.typos-server', 'server.json'), '{}')
       symlinkSync(path.join(dir, '.typos-server'), path.join(dir, 'ключи'), 'junction')

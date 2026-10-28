@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js'
 
 /*
  * Фон — туманности из шейдера 21st.dev «liquid-shader» (InteractiveNebulaShader), но как прозрачное
@@ -14,7 +15,7 @@ import * as THREE from 'three'
  *     поэтому ничего не дёргается), пятна у колонки текста ужимаются в свободную полосу сбоку;
  *     под самой колонкой шейдер гасит фон;
  *   • у каждого пятна своё время (копится в JS): смена скорости не дёргает узор;
- *   • рендер в половинном разрешении, пиксели вне пятна не считаются;
+ *   • рендер в разрешении экрана с ограничением числа пикселей, пиксели вне пятна не считаются;
  *   • «уменьшить движение» — время стоит, кадр перерисовывается только при изменениях.
  */
 
@@ -45,6 +46,8 @@ const fragmentShader = /* glsl */ `
   uniform vec4 uSpots[MAX];   // xy — центр в долях min(ширина, высота), z — масштаб (больше — меньше), w — время пятна
   uniform vec4 uLook[MAX];    // x — размер тёмной середины, y — сдвиг шума и оттенка, z — поворот узора, w — зеркальность (±1)
   uniform float uAlpha[MAX];  // проявленность: 0 — нет (исчезает/появляется плавно)
+  uniform vec4 uRotation[MAX]; // повороты процедурной формы, рассчитанные один раз на пятно
+  uniform float uDrift[MAX];
   uniform vec3 uAvoid;        // x0, x1 — колонка текста в px, z — 1 = гасить фон под ней
   uniform vec3 uBg;           // фон приложения
   uniform vec3 uTintCol;      // цвет предмета
@@ -55,23 +58,24 @@ const fragmentShader = /* glsl */ `
 
   // туманность из промпта — без изменений
   mat2 m(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
-  float map(vec3 p, float t, float seed) {
-    p.xz *= m(t * 0.4);
-    p.xy *= m(t * 0.3);
+  float map(vec3 p, float t, float seed, vec4 rotation, float drift) {
+    p.xz *= mat2(rotation.x, -rotation.y, rotation.y, rotation.x);
+    p.xy *= mat2(rotation.z, -rotation.w, rotation.w, rotation.z);
     vec3 q = p * 2. + t + seed;
     // качание оставлено, но втрое меньше: иначе туманность съезжает к краю пятна и видна «скобкой»
-    return length(p + vec3(sin(t * 0.7)) * 0.3) * log(length(p) + 1.0)
+    return length(p + vec3(drift)) * log(length(p) + 1.0)
          + sin(q.x + sin(q.z + sin(q.y))) * 0.5 - 1.0;
   }
 
   // «толщина» туманности 0…1 — тот же ray-march, без палитры
-  float nebula(vec2 uv, float t, float seed) {
+  float nebula(vec2 uv, float t, float seed, vec4 rotation, float drift) {
     float col = 0.0;
     float d = 2.5;
+    vec3 ray = normalize(vec3(uv, -1.));
     for (int i = 0; i <= 5; i++) {
-      vec3 p = vec3(0, 0, 5.) + normalize(vec3(uv, -1.)) * d;
-      float rz = map(p, t, seed);
-      float f = clamp((rz - map(p + 0.1, t, seed)) * 0.5, -0.1, 1.0);
+      vec3 p = vec3(0, 0, 5.) + ray * d;
+      float rz = map(p, t, seed, rotation, drift);
+      float f = clamp((rz - map(p + 0.1, t, seed, rotation, drift)) * 0.5, -0.1, 1.0);
       float base = 0.35 + 5.0 * f;
       col = col * base + smoothstep(2.5, 0.0, rz) * 0.7 * base;
       d += min(rz, 1.0);
@@ -106,12 +110,13 @@ const fragmentShader = /* glsl */ `
         vec4 lk = uLook[s];
         vec2 ruv = m(lk.z) * uv;
         ruv.x *= lk.w;
-        float v = nebula(ruv, sp.w, lk.y * 6.28318);
+        float v = nebula(ruv, sp.w, lk.y * 6.28318, uRotation[s], uDrift[s]);
         // притемнение середины — как в промпте (кольцо вокруг центра)
         if (!disableCenterDimming) v *= mix(0.3, 1.0, smoothstep(uLook[s].x * 0.6, uLook[s].x, dn));
         float w = smoothstep(1.0, 0.5, dn) * a;
 
-        float e = smoothstep(0.16, 0.28, v) * (1.0 - smoothstep(0.3, 0.46, v));
+        float aa = fwidth(v) * 0.5;
+        float e = smoothstep(0.16 - aa, 0.28 + aa, v) * (1.0 - smoothstep(0.3 - aa, 0.46 + aa, v));
         // призма — светлая, почти белая: лишь лёгкий перелив на кромке
         // стекло белое; радуга — едва заметный перелив (~4 %)
         vec3 prism = mix(vec3(1.0), 0.5 + 0.5 * cos(6.28318 * (v * 0.8 + uLook[s].y + vec3(0.0, 0.33, 0.67))), 0.04);
@@ -155,6 +160,7 @@ const metalShader = /* glsl */ `
   uniform vec2 iResolution;
   uniform float iTime;
   uniform vec4 uSpots[MAX];   // xy — центр, z — масштаб (радиус ~0.3/z), w — время пятна
+  uniform vec3 uMetalSpots[MAX]; // покачивание и радиус рассчитаны на CPU, а не для каждого пикселя
   uniform float uAlpha[MAX];
   uniform vec3 uAvoid;
   uniform vec3 uBg;
@@ -180,6 +186,12 @@ const metalShader = /* glsl */ `
       clear = smoothstep(0.0, 56.0, outside);
     }
 
+    // Под непрозрачной колонкой текста нечего отражать — поле метаболов не считаем.
+    if (clear <= 0.001) {
+      gl_FragColor = vec4(uBg, 1.0);
+      return;
+    }
+
     // поле метаболов и его градиент; второе поле, сдвинутое вниз, — для тени
     float F = 0.0;
     vec2 G = vec2(0.0);
@@ -188,10 +200,8 @@ const metalShader = /* glsl */ `
     for (int s = 0; s < MAX; s++) {
       float a = uAlpha[s];
       if (a < 0.01) continue;
-      vec4 sp = uSpots[s];
-      // лёгкое покачивание и «дыхание» — своё время пятна
-      vec2 c = sp.xy + 0.016 * vec2(sin(sp.w * 0.55 + float(s) * 1.3), cos(sp.w * 0.42 + float(s) * 2.1));
-      float r = 0.24 / sp.z * (1.0 + 0.035 * sin(sp.w * 0.8 + float(s)));
+      vec2 c = uMetalSpots[s].xy;
+      float r = uMetalSpots[s].z;
       vec2 d = p - c;
       float dd = dot(d, d) + 1e-5;
       float k = a * r * r;
@@ -201,12 +211,13 @@ const metalShader = /* glsl */ `
       S += k / (dot(ds, ds) + 1e-5);
     }
 
-    // сглаживание края по градиенту поля (≈1.5 пикселя)
-    float e = max(length(G) / mn * 1.5, 0.02);
+    // Производная учитывает настоящую плотность буфера, включая дробный масштаб окна.
+    float e = max(fwidth(F), 0.001);
     float inside = smoothstep(1.0 - e, 1.0 + e, F) * clear;
     float shadow = smoothstep(0.55, 1.0, S) * (1.0 - inside) * clear;
 
-    vec3 bg = uBg * (1.0 - shadow * (uLight ? 0.12 : 0.35));
+    float contact = smoothstep(0.8, 1.0, S) * (1.0 - inside) * clear;
+    vec3 bg = uBg * (1.0 - shadow * (uLight ? 0.12 : 0.35) - contact * (uLight ? 0.1 : 0.18));
     if (inside <= 0.001) {
       gl_FragColor = vec4(bg, 1.0);
       return;
@@ -214,11 +225,13 @@ const metalShader = /* glsl */ `
 
     // «высота» пузыря и нормаль (как у сферы: у края — вбок, в середине — на зрителя)
     float h = sqrt(clamp(1.0 - 1.0 / max(F, 1.0), 0.0, 1.0));
-    vec2 dh = (0.5 / max(h, 0.04)) * G / (F * F);
-    vec3 n = normalize(vec3(-dh * h * 0.22, max(h, 0.04)));
+    // сферическая нормаль не зависит от радиуса: маленькие окончания остаются выпуклыми
+    vec2 outward = -G / max(length(G), 1e-5);
+    vec3 n = normalize(vec3(outward * sqrt(max(1.0 - h * h, 0.0)), max(h, 0.001)));
+    vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), n);
 
     // отражение: полосы вдоль диагонали, изогнутые нормалью; медленно текут
-    float coord = dot(n.xy, vec2(0.55, 0.85)) * 0.55 + p.y * 0.12 + iTime * 0.03;
+    float coord = dot(reflected.xy, vec2(0.55, 0.85)) * 0.48 + reflected.z * 0.22 + iTime * 0.018;
     float rep = 1.0;
     // разложение каналов сильнее у кромки — как shiftRed/shiftBlue у LiquidMetal
     float shift = 0.006 + 0.03 * pow(1.0 - h, 2.0);
@@ -230,7 +243,13 @@ const metalShader = /* glsl */ `
     metal = mix(metal, vec3(0.98), fres * 0.35);
     vec3 L = normalize(vec3(-0.45, 0.6, 0.66));
     float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 36.0);
-    metal += spec * 0.55;
+    metal *= 0.72 + 0.28 * max(dot(n, L), 0.0);
+    metal += spec * 0.7;
+    // широкое отражение софтбокса подчёркивает объём у концов и на изгибах
+    float softbox = pow(max(dot(reflected, normalize(vec3(-0.55, 0.75, 0.35))), 0.0), 12.0);
+    metal += vec3(0.38, 0.4, 0.42) * softbox;
+    float rim = pow(1.0 - n.z, 4.0);
+    metal += rim * max(dot(outward, normalize(vec2(-0.6, 0.8))), 0.0) * 0.35;
 
     // в предмете металл тонируется его цветом (как colorTint у LiquidMetal)
     metal = mix(metal, metal * (uTintCol * 1.25 + 0.15), 0.7 * uTint);
@@ -385,12 +404,16 @@ export function InteractiveNebulaShader({
 
     let renderer: THREE.WebGLRenderer
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'low-power' })
+      renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        alpha: false,
+        depth: false,
+        stencil: false,
+        powerPreference: 'high-performance',
+      })
     } catch {
       return // нет WebGL — остаётся обычный фон
     }
-    // половинное разрешение: туманность мягкая, а считать в 4 раза меньше
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * 0.5)
     renderer.domElement.style.width = '100%'
     renderer.domElement.style.height = '100%'
     container.appendChild(renderer.domElement)
@@ -401,8 +424,11 @@ export function InteractiveNebulaShader({
       iResolution: { value: new THREE.Vector2() },
       iTime: { value: 0 },
       uSpots: { value: Array.from({ length: MAX }, () => new THREE.Vector4(0.5, 0.5, 3, rand(0, 50))) },
+      uMetalSpots: { value: Array.from({ length: MAX }, () => new THREE.Vector3()) },
       uLook: { value: Array.from({ length: MAX }, () => new THREE.Vector4(0.4, 0, 0, 0)) },
       uAlpha: { value: new Array<number>(MAX).fill(0) },
+      uRotation: { value: Array.from({ length: MAX }, () => new THREE.Vector4()) },
+      uDrift: { value: new Array<number>(MAX).fill(0) },
       uAvoid: { value: new THREE.Vector3(0, 0, 0) },
       uBg: { value: new THREE.Vector3() },
       uTintCol: { value: new THREE.Vector3() },
@@ -411,7 +437,13 @@ export function InteractiveNebulaShader({
       disableCenterDimming: { value: disableCenterDimming },
     }
     const shaderFor = (v: BackgroundVariant) => (v === 'metal' ? metalShader : fragmentShader)
-    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader: shaderFor(variantRef.current), uniforms })
+    const material = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader: shaderFor(variantRef.current),
+      uniforms,
+      depthTest: false,
+      depthWrite: false,
+    })
     swap.current = () => {
       material.fragmentShader = shaderFor(variantRef.current)
       material.needsUpdate = true
@@ -419,6 +451,26 @@ export function InteractiveNebulaShader({
     }
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material)
     scene.add(mesh)
+    // Тяжёлый материал считаем отдельно, а края сглаживаем уже в разрешении окна.
+    const texture = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, stencilBuffer: false })
+    const output = new THREE.ShaderMaterial({
+      ...FXAAShader,
+      uniforms: THREE.UniformsUtils.clone(FXAAShader.uniforms),
+      depthTest: false,
+      depthWrite: false,
+    })
+    output.uniforms.tDiffuse.value = texture.texture
+    const screen = new THREE.Scene()
+    screen.add(new THREE.Mesh(mesh.geometry, output))
+    let quality = 0.55
+    const resizeTexture = (w: number, h: number) => {
+      const ratio = Math.min(window.devicePixelRatio * quality, Math.sqrt(450_000 / (w * h)))
+      const width = Math.max(1, Math.floor(w * ratio))
+      const height = Math.max(1, Math.floor(h * ratio))
+      if (texture.width === width && texture.height === height) return
+      texture.setSize(width, height)
+      output.uniforms.resolution.value.set(1 / width, 1 / height)
+    }
 
     // цвета: целевые значения, к ним плавно подтягиваемся в кадре
     const target = { bg: new THREE.Vector3(), tintCol: new THREE.Vector3(), tint: 0 }
@@ -427,7 +479,8 @@ export function InteractiveNebulaShader({
       const cs = getComputedStyle(root)
       // конечный оттенок — из inline-стиля (app/accent.ts): вычисленный посреди плавного перехода ещё старый
       const h = parseFloat(root.style.getPropertyValue('--accent-h') || cs.getPropertyValue('--accent-h')) || 0
-      const c = parseFloat(root.style.getPropertyValue('--accent-c') || cs.getPropertyValue('--accent-c')) || 1
+      const parsedChroma = parseFloat(root.style.getPropertyValue('--accent-c') || cs.getPropertyValue('--accent-c'))
+      const c = Number.isFinite(parsedChroma) ? parsedChroma : 1
       const dark = root.classList.contains('dark')
       uniforms.uLight.value = !dark
       target.tint = root.dataset.accent && root.dataset.accent !== 'neutral' ? 1 : 0
@@ -493,14 +546,39 @@ export function InteractiveNebulaShader({
     kick.current = () => relayout(!avoidRef.current)
 
     const onResize = () => {
-      const w = container.clientWidth
-      const h = container.clientHeight
-      renderer.setSize(w, h, false)
+      const w = Math.max(container.clientWidth, 1)
+      const h = Math.max(container.clientHeight, 1)
+      const { W: oldW, H: oldH } = size()
+      // Масштаб WebView меняет и CSS-размеры, и DPR; число пикселей фона не должно расти без границ.
+      const ratio = Math.min(window.devicePixelRatio, Math.sqrt(2_073_600 / (w * h)))
+      const bufferWidth = Math.floor(w * ratio)
+      const bufferHeight = Math.floor(h * ratio)
+      if (renderer.domElement.width !== bufferWidth || renderer.domElement.height !== bufferHeight) {
+        renderer.setDrawingBufferSize(w, h, ratio)
+      }
+      resizeTexture(w, h)
       uniforms.iResolution.value.set(w, h)
-      if (free.length) relayout(true)
+      if (free.length) {
+        const { W, H } = size()
+        const sx = W / oldW
+        const sy = H / oldH
+        free = free.map((spot) => ({
+          ...spot,
+          x: spot.x * sx,
+          y: spot.y * sy,
+          ...(spot.dest && { dest: { ...spot.dest, x: spot.dest.x * sx, y: spot.dest.y * sy } }),
+        }))
+        uniforms.uSpots.value.forEach((spot) => {
+          spot.x *= sx
+          spot.y *= sy
+        })
+        relayout(false)
+      }
       dirty = true
     }
     window.addEventListener('resize', onResize)
+    const resize = new ResizeObserver(onResize)
+    resize.observe(container)
     onResize()
     relayout(true)
     // первый кадр — сразу на местах
@@ -512,10 +590,34 @@ export function InteractiveNebulaShader({
       speeds[i] = t.speed
     })
 
-    const clock = new THREE.Clock()
+    let previousTime: number | undefined
+    let sampleTime = 0
+    let sampleFrames = 0
+    let fastSamples = 0
     let frame = 0
-    renderer.setAnimationLoop(() => {
-      const dt = Math.min(clock.getDelta(), 0.1)
+    renderer.setAnimationLoop((now) => {
+      if (document.hidden) {
+        previousTime = undefined
+        sampleTime = sampleFrames = fastSamples = 0
+        return
+      }
+      const dt = previousTime === undefined ? 0 : Math.min((now - previousTime) / 1000, 0.1)
+      previousTime = now
+      if (!reduced && dt > 0) {
+        sampleTime += dt
+        sampleFrames++
+        if (sampleTime >= 1) {
+          const average = sampleTime / sampleFrames
+          fastSamples = average < 0.018 ? fastSamples + 1 : 0
+          const next = average > 0.022 ? Math.max(0.25, quality * 0.85) : fastSamples >= 3 ? Math.min(0.7, quality * 1.05) : quality
+          if (Math.abs(next - quality) > 0.001) {
+            quality = next
+            resizeTexture(uniforms.iResolution.value.x, uniforms.iResolution.value.y)
+            fastSamples = 0
+          }
+          sampleTime = sampleFrames = 0
+        }
+      }
 
       // колонка текста появилась позже или сдвинулась (свернули сайдбар) — ужаться под неё заново
       if (avoidRef.current && frame++ % 15 === 0) {
@@ -551,6 +653,17 @@ export function InteractiveNebulaShader({
         uniforms.uAlpha.value[i] = a + (t.a - a) * k
         // своё время пятна: копится, поэтому смена скорости не дёргает узор
         if (!reduced) sp.w += dt * speeds[i] * (1 + boost)
+        if (variantRef.current === 'nebula' && uniforms.uAlpha.value[i] > 0.01) {
+          // Эти значения одинаковы для всех пикселей пятна — не считаем тригонометрию в каждом шаге ray-march.
+          uniforms.uRotation.value[i].set(Math.cos(sp.w * 0.4), Math.sin(sp.w * 0.4), Math.cos(sp.w * 0.3), Math.sin(sp.w * 0.3))
+          uniforms.uDrift.value[i] = Math.sin(sp.w * 0.7) * 0.3
+        } else if (variantRef.current === 'metal' && uniforms.uAlpha.value[i] > 0.01) {
+          uniforms.uMetalSpots.value[i].set(
+            sp.x + 0.016 * Math.sin(sp.w * 0.55 + i * 1.3),
+            sp.y + 0.016 * Math.cos(sp.w * 0.42 + i * 2.1),
+            (0.24 / sp.z) * (1 + 0.035 * Math.sin(sp.w * 0.8 + i)),
+          )
+        }
       })
 
       const ck = reduced ? 1 : 1 - Math.exp(-dt * 4)
@@ -564,7 +677,10 @@ export function InteractiveNebulaShader({
         0.002
 
       if (!reduced || boost > 0.01 || moving || coloring || dirty) {
+        renderer.setRenderTarget(texture)
         renderer.render(scene, camera)
+        renderer.setRenderTarget(null)
+        renderer.render(screen, camera)
         dirty = false
       }
     })
@@ -572,11 +688,14 @@ export function InteractiveNebulaShader({
     return () => {
       swap.current = () => {}
       window.removeEventListener('resize', onResize)
+      resize.disconnect()
       window.removeEventListener('lava:shuffle', onShuffle)
       mo.disconnect()
       renderer.setAnimationLoop(null)
       container.removeChild(renderer.domElement)
       material.dispose()
+      texture.dispose()
+      output.dispose()
       mesh.geometry.dispose()
       renderer.dispose()
     }

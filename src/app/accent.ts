@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
+import { accentFromHex } from '@/lib/accentColor'
 import { SUBJECT_COLORS } from '@/lib/subjectPalette'
 import type { SubjectColor } from '@/types'
+import { useUi } from './store'
 
 /*
  * Акцент приложения:
@@ -8,27 +10,21 @@ import type { SubjectColor } from '@/types'
  *     фон — прозрачное «жидкое стекло» с радужной призмой;
  *   • внутри предмета — цвет его иконки: --accent-h/--accent-c (OKLCH), из них в tokens.css строятся
  *     кнопки, значки, выделение, а фон-туманности тонируются этим цветом.
- * Оттенок меняется по кратчайшему пути по кругу и плавно перетекает (@property --accent-h).
+ * Интерфейс получает цвет сразу; плавное перетекание фона выполняет шейдер.
  */
-
-let hue = 4
 
 export function initAccent() {
   document.documentElement.dataset.accent = 'neutral'
 }
 
 /** null — нейтральный акцент; цвет — акцент предмета. */
-export function setAccent(color: SubjectColor | null) {
+export function setAccent(color: SubjectColor | `#${string}` | null) {
   const root = document.documentElement
   const next = color ?? 'neutral'
   if (root.dataset.accent === next) return
-  root.classList.add('accent-anim')
-  window.setTimeout(() => root.classList.remove('accent-anim'), 1000)
-  const c = color && SUBJECT_COLORS.find((x) => x.id === color)
+  const c = color?.startsWith('#') ? accentFromHex(color) : color && SUBJECT_COLORS.find((x) => x.id === color)
   if (c) {
-    const from = ((hue % 360) + 360) % 360
-    hue += ((c.hue - from + 540) % 360) - 180 // кратчайший путь; OKLCH понимает оттенок за 360
-    root.style.setProperty('--accent-h', hue.toFixed(1))
+    root.style.setProperty('--accent-h', c.hue.toFixed(1))
     root.style.setProperty('--accent-c', String(c.chroma))
   }
   root.dataset.accent = next
@@ -36,7 +32,9 @@ export function setAccent(color: SubjectColor | null) {
 
 /** Акцент — по открытому предмету (или нейтральный вне предметов). */
 export function useAccentSync(color: SubjectColor | undefined) {
-  useEffect(() => setAccent(color ?? null), [color])
+  const responsive = useUi((s) => s.responsiveAccent)
+  const fixed = useUi((s) => s.fixedAccent)
+  useEffect(() => setAccent(responsive ? (color ?? null) : (fixed as `#${string}`)), [color, responsive, fixed])
 }
 
 /** Клик по логотипу — новый расклад фона и короткий «закрут» (liquid-shader.tsx слушает событие). */

@@ -16,8 +16,8 @@ import {
   Underline,
   type LucideIcon,
 } from 'lucide-react'
-import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, type HTMLMotionProps, type MotionValue } from 'motion/react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { cn } from '@/lib/utils'
 import { COLOR_LABELS, NOTE_COLORS, type NoteColor } from './colors'
@@ -82,6 +82,23 @@ function turnInto(e: Editor, id: BlockId) {
 
 const keep = (e: React.MouseEvent) => e.preventDefault()
 
+const ToolbarMouse = createContext<MotionValue<number> | null>(null)
+
+function ToolbarButton(props: HTMLMotionProps<'button'>) {
+  const ref = useRef<HTMLButtonElement>(null)
+  const idleMouse = useMotionValue(Infinity)
+  const mouseX = useContext(ToolbarMouse) ?? idleMouse
+  const distance = useTransform(mouseX, (x) => {
+    const r = ref.current?.getBoundingClientRect()
+    if (!r || !Number.isFinite(x)) return Infinity
+    return x - (r.left + r.width / 2)
+  })
+  const scale = useSpring(useTransform(distance, [-90, 0, 90], [1, 1.22, 1], { clamp: true }), { stiffness: 420, damping: 30, mass: 0.5 })
+  const y = useTransform(scale, (s) => -(s - 1) * 16)
+
+  return <motion.button {...props} ref={ref} style={{ ...props.style, scale, y }} whileTap={{ scale: 0.9 }} />
+}
+
 function Btn({
   icon: Icon,
   label,
@@ -96,7 +113,7 @@ function Btn({
   className?: string
 }) {
   return (
-    <button
+    <ToolbarButton
       type="button"
       title={label}
       aria-label={label}
@@ -104,13 +121,13 @@ function Btn({
       onMouseDown={keep}
       onClick={onClick}
       className={cn(
-        'flex size-8 items-center justify-center rounded-lg outline-none transition-[background-color,color,transform] duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring active:scale-90',
+        'flex size-8 origin-bottom items-center justify-center rounded-xl outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
         active ? 'liquid-active' : 'text-foreground/80 hover:bg-foreground/5 hover:text-foreground',
         className,
       )}
     >
       <Icon className="size-4" strokeWidth={2} />
-    </button>
+    </ToolbarButton>
   )
 }
 
@@ -129,7 +146,8 @@ export function BubbleToolbar({
   onPin: (text: string) => void
 }) {
   const [panel, setPanel] = useState<Panel>(null)
-  const lens = useLiquidLens({ bezel: 14, refraction: 12, dispersion: 0.09, frost: 5, variant: 'menu', fallback: 'liquid liquid-lava' })
+  const mouseX = useMotionValue(Infinity)
+  const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
   const [url, setUrl] = useState('')
   const linkInput = useRef<HTMLInputElement>(null)
 
@@ -201,67 +219,74 @@ export function BubbleToolbar({
           ref={lens.attach}
           role="toolbar"
           aria-label="Форматирование выделенного"
-          style={lens.style}
+          onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.clientX)}
+          onPointerLeave={() => mouseX.set(Infinity)}
+          style={{
+            ...lens.style,
+            background: 'linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)), linear-gradient(var(--lens-tint), var(--lens-tint))',
+          }}
           className={cn(lens.className, 'flex items-center gap-0.5 rounded-2xl p-1')}
         >
           {lens.extras}
-          <button
-            type="button"
-            onMouseDown={keep}
-            onClick={() => toggle('turn')}
-            aria-expanded={panel === 'turn'}
-            className="flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-foreground/85 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {BLOCKS.find((b) => b.id === s.block)?.label}
-            <ChevronDown className={cn('size-3.5 transition-transform duration-(--dur-fast)', panel === 'turn' && 'rotate-180')} />
-          </button>
-          {s.block !== 'code' && (
-            <>
-              <Sep />
-              <Btn icon={Bold} label="Жирный · Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
-              <Btn icon={Italic} label="Курсив · Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
-              <Btn icon={Underline} label="Подчёркнутый · Ctrl U" active={s.underline} onClick={() => c().toggleUnderline().run()} />
-              <Btn icon={Strikethrough} label="Зачёркнутый · Ctrl Shift S" active={s.strike} onClick={() => c().toggleStrike().run()} />
-              <Btn icon={Code} label="Код · Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
-              <Sep />
-              <Btn
-                icon={Link2}
-                label="Ссылка · Ctrl K"
-                active={s.link || panel === 'link'}
-                onClick={() => {
-                  setUrl(s.href)
-                  toggle('link')
-                }}
-              />
-              <Btn icon={Radical} label="В формулу · Ctrl Shift E" onClick={onFormula} />
-              <button
-                type="button"
-                title="Цвет · Ctrl Shift H — последний"
-                aria-label="Цвет текста и фона"
-                aria-expanded={panel === 'color'}
-                onMouseDown={keep}
-                onClick={() => toggle('color')}
-                className="flex h-8 items-center gap-0.5 rounded-lg px-1.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span
-                  className="flex size-5 items-center justify-center rounded-md"
-                  style={{ background: s.bgColor && s.bgColor !== 'default' ? `var(--hl-${s.bgColor})` : undefined }}
+          <ToolbarMouse.Provider value={mouseX}>
+            <ToolbarButton
+              type="button"
+              onMouseDown={keep}
+              onClick={() => toggle('turn')}
+              aria-expanded={panel === 'turn'}
+              className="flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-foreground/85 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {BLOCKS.find((b) => b.id === s.block)?.label}
+              <ChevronDown className={cn('size-3.5 transition-transform duration-(--dur-fast)', panel === 'turn' && 'rotate-180')} />
+            </ToolbarButton>
+            {s.block !== 'code' && (
+              <>
+                <Sep />
+                <Btn icon={Bold} label="Жирный · Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
+                <Btn icon={Italic} label="Курсив · Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
+                <Btn icon={Underline} label="Подчёркнутый · Ctrl U" active={s.underline} onClick={() => c().toggleUnderline().run()} />
+                <Btn icon={Strikethrough} label="Зачёркнутый · Ctrl Shift S" active={s.strike} onClick={() => c().toggleStrike().run()} />
+                <Btn icon={Code} label="Код · Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
+                <Sep />
+                <Btn
+                  icon={Link2}
+                  label="Ссылка · Ctrl K"
+                  active={s.link || panel === 'link'}
+                  onClick={() => {
+                    setUrl(s.href)
+                    toggle('link')
+                  }}
+                />
+                <Btn icon={Radical} label="В формулу · Ctrl Shift E" onClick={onFormula} />
+                <ToolbarButton
+                  type="button"
+                  title="Цвет · Ctrl Shift H — последний"
+                  aria-label="Цвет текста и фона"
+                  aria-expanded={panel === 'color'}
+                  onMouseDown={keep}
+                  onClick={() => toggle('color')}
+                  className="flex h-8 items-center gap-0.5 rounded-lg px-1.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <Baseline className="size-4" style={{ color: s.textColor ? `var(--tc-${s.textColor})` : undefined }} />
-                </span>
-                <ChevronDown className="size-3 text-muted-foreground" />
-              </button>
-              <Sep />
-              <Btn
-                icon={Pin}
-                label="В закреп"
-                onClick={() => {
-                  const text = selectionText()
-                  if (text) onPin(text)
-                }}
-              />
-            </>
-          )}
+                  <span
+                    className="flex size-5 items-center justify-center rounded-md"
+                    style={{ background: s.bgColor && s.bgColor !== 'default' ? `var(--hl-${s.bgColor})` : undefined }}
+                  >
+                    <Baseline className="size-4" style={{ color: s.textColor ? `var(--tc-${s.textColor})` : undefined }} />
+                  </span>
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </ToolbarButton>
+                <Sep />
+                <Btn
+                  icon={Pin}
+                  label="В закреп"
+                  onClick={() => {
+                    const text = selectionText()
+                    if (text) onPin(text)
+                  }}
+                />
+              </>
+            )}
+          </ToolbarMouse.Provider>
         </div>
 
         <AnimatePresence>

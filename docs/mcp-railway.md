@@ -148,7 +148,8 @@ tokens are not accepted. This mode does not use the auth volume or owner key.
 
 ## Tools and checks
 
-Remote MCP exposes twelve tools. `add_project_file` remains local-only and
+Remote MCP exposes fifteen tools, including `create_board`, `read_board`, and
+`update_board`. `add_project_file` remains local-only and
 appears only when the local MCP is allowed folders with `--files`.
 `create_note`, `update_note` and `import_tool` accept inline text; local file
 arguments are not exposed. `add_image` accepts only `data:image/...;base64`.
@@ -163,3 +164,20 @@ metadata, size limits, local-file restrictions and a real storage connection.
 Outside Docker, set an absolute writable `MCP_AUTH_DATA_DIR` and run
 `npm run mcp:http` with the same variables. The owner-key generator refuses to
 overwrite an existing file.
+
+## Missing board tools after an update
+
+Local and HTTP transports share the board tool definitions. If one connection
+exposes board tools and another does not, compare their `tools/list` responses.
+A missing tool can mean an older deployed server or a cached connector tool list;
+it does not establish a failure in board editing itself.
+
+1. Update the MCP service to the current source and restart it (redeploy the MCP
+   service on Railway). Updating the desktop executable alone does not update it.
+2. Verify that the endpoint lists `create_board`, `read_board`, and `update_board`.
+3. Refresh the installed connector's tools, or reconnect it if no refresh is
+   available, then select it in a new chat. Restart local stdio clients too.
+4. In a disposable test vault, create a board, read it, update a node, and read
+   it again. The local and authenticated HTTP protocol tests cover this flow.
+
+Never paste a storage connection link or device key into troubleshooting output.

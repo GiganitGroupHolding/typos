@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { useAccentSync } from '@/app/accent'
 import { Nebula } from '@/app/layout/Nebula'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -22,6 +23,7 @@ import { useVault } from '@/vault/store'
 
 /** Хранилище: подключить папку на диске, сервер хранения или остаться в браузере. */
 export function WelcomePage() {
+  useAccentSync(undefined)
   const navigate = useNavigate()
   const adapter = useVault((s) => s.adapter)
   const status = useVault((s) => s.status)

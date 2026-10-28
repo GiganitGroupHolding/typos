@@ -8,7 +8,7 @@ import { DavAdapter } from '@/storage/davAdapter'
 import { conflictCopy, fromBlob } from '@/storage/sync'
 import { SyncedAdapter } from '@/storage/syncedAdapter'
 import { sampleVault } from '@/test/sampleVault'
-import { parseFrontmatter } from '@/vault/format'
+import { parseFrontmatter, serializeFrontmatter } from '@/vault/format'
 import * as repo from '@/vault/repo'
 import { useVault } from '@/vault/store'
 import { deviceKey, startServer } from './typos-server.mjs'
@@ -131,6 +131,43 @@ describe('синхронизация с локальной копией', () => 
     await a.engine.syncNow()
     expect((await repo.loadVault(a)).notes).toHaveLength(1)
     expect(await a.engine.countPending()).toBe(0)
+  })
+
+  it('одинаковый конспект с разным временем сохранения не создаёт копию конфликта', async () => {
+    const { note } = await seed()
+    const [a, b] = [await device('a'), await device('b')]
+    const conflicts: string[] = []
+    a.engine.hooks.onConflict = (_path, copy) => conflicts.push(copy)
+    for (const [device, updated] of [
+      [a, '2026-01-01T00:00:00.000Z'],
+      [b, '2026-01-02T00:00:00.000Z'],
+    ] as const) {
+      const text = serializeFrontmatter({ id: note.id, created: note.created, updated }, note.body)
+      await device.writeText(note.path, device === a ? '\uFEFF' + text.replace(/\n/g, '\r\n') : text)
+    }
+    await b.engine.syncNow()
+    await a.engine.syncNow()
+    expect(conflicts).toEqual([])
+    expect((await repo.loadVault(a)).notes).toHaveLength(1)
+    expect(await a.engine.countPending()).toBe(0)
+    expect(await a.readText(note.path)).toBe(await onServer(note.path))
+  })
+
+  it('разные метаданные и значимые пробелы в конспекте остаются конфликтами', async () => {
+    const { note } = await seed()
+    const [a, b] = [await device('a'), await device('b')]
+    const meta = { id: note.id, created: note.created, updated: note.updated }
+    await a.writeText(note.path, serializeFrontmatter({ ...meta, source: 'локальный' }, note.body))
+    await b.writeText(note.path, serializeFrontmatter({ ...meta, source: 'серверный' }, note.body))
+    await b.engine.syncNow()
+    await a.engine.syncNow()
+    expect((await repo.loadVault(a)).notes).toHaveLength(2)
+    const c = await device('c')
+    await a.writeText(note.path, serializeFrontmatter(meta, note.body + '  \nперенос'))
+    await c.writeText(note.path, serializeFrontmatter(meta, note.body + '\nперенос'))
+    await c.engine.syncNow()
+    await a.engine.syncNow()
+    expect((await repo.loadVault(a)).notes).toHaveLength(3)
   })
 
   it('удалили на одном, правили на другом — правка важнее', async () => {

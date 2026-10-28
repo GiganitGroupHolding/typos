@@ -132,6 +132,38 @@ it('создаёт, читает, меняет и удаляет конспек�
   expect(data(await c.callTool({ name: 'search', arguments: { query: 'Вторая' } }))).toHaveLength(0)
 })
 
+it('публикует доски, создаёт и правит их через HTTP и сервер хранения', async () => {
+  const c = await connect()
+  expect((await c.listTools()).tools.map((tool) => tool.name)).toEqual(
+    expect.arrayContaining(['create_board', 'read_board', 'update_board']),
+  )
+  await c.callTool({ name: 'create_subject', arguments: { name: 'Схемы' } })
+  const board = data(
+    await c.callTool({ name: 'create_board', arguments: { subject: 'Схемы', name: 'Тема', nodes: [{ id: 'a', text: 'До' }] } }),
+  )
+  expect(data(await c.callTool({ name: 'read_board', arguments: { id: board.id } }))).toMatchObject({ nodes: [{ id: 'a', text: 'До' }] })
+  expect(
+    (
+      await c.callTool({
+        name: 'update_board',
+        arguments: {
+          id: board.id,
+          nodes: [
+            { id: 'a', text: 'После' },
+            { id: 'b', text: 'Пример' },
+          ],
+          edges: [{ from: 'a', to: 'b' }],
+        },
+      })
+    ).isError,
+  ).not.toBe(true)
+  expect(data(await c.callTool({ name: 'read_board', arguments: { id: board.id } }))).toMatchObject({
+    nodes: [{ id: 'a', text: 'После' }, { id: 'b' }],
+    edges: [{ from: 'a', to: 'b' }],
+  })
+  expect(await adapter.readText(board.path)).toContain('После')
+})
+
 it('не раскрывает файловые инструменты и не читает файлы или сетевые адреса для картинок', async () => {
   const c = await connect()
   const { tools } = await c.listTools()

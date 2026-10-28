@@ -1,4 +1,4 @@
-import { Droplets, FolderOpen, Home, Monitor, MonitorDown, Moon, Plus, Search, Server, Sparkles, Sun, Trash2 } from 'lucide-react'
+import { FolderOpen, Home, MonitorDown, Plus, Search, Server, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -28,21 +28,11 @@ import { useVault } from '@/vault/store'
 import { shuffleBackground } from '../accent'
 import { useInstallPrompt } from '../pwa'
 import { useUi } from '../store'
-
-const themeMeta = {
-  system: { icon: Monitor, label: 'Тема: как в системе' },
-  light: { icon: Sun, label: 'Тема: светлая' },
-  dark: { icon: Moon, label: 'Тема: тёмная' },
-} as const
+import { SettingsDialog } from './SettingsDialog'
 
 export function AppSidebar() {
   const { pathname } = useLocation()
-  const theme = useUi((s) => s.theme)
-  const cycleTheme = useUi((s) => s.cycleTheme)
-  const backdrop = useUi((s) => s.backdrop)
-  const toggleBackdrop = useUi((s) => s.toggleBackdrop)
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
-  const ThemeIcon = themeMeta[theme].icon
   const storage = useVault((s) => s.adapter)
   const connection = useConnection((s) => s.status)
   const pending = useSync((s) => s.pending)
@@ -148,16 +138,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={toggleBackdrop} aria-label={backdrop === 'metal' ? 'Фон: металл' : 'Фон: туманность'}>
-              {backdrop === 'metal' ? <Droplets /> : <Sparkles />}
-              <span>{backdrop === 'metal' ? 'Фон: металл' : 'Фон: туманность'}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={cycleTheme} aria-label={themeMeta[theme].label}>
-              <ThemeIcon />
-              <span>{themeMeta[theme].label}</span>
-            </SidebarMenuButton>
+            <SettingsDialog />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

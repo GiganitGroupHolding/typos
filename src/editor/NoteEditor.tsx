@@ -259,7 +259,8 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
           return true
         },
       },
-      onUpdate: () => {
+      onUpdate: ({ transaction }) => {
+        if (!transaction.docChanged) return
         setSaveState('dirty')
         if (timer.current !== null) clearTimeout(timer.current)
         timer.current = window.setTimeout(() => {
@@ -288,16 +289,11 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     toast('Конспект обновился с диска', { id: `reload-${id}` })
   }, [editor, id, note.body, loadFromDisk])
 
-  // старые конспекты, где формулы легли блоками кода / \(…\) — сохранить исправленными
-  useEffect(() => {
-    if (editor && !isBlank(note.body) && normalizeMarkdownMath(note.body) !== note.body) void save()
-  }, [editor, note.body, save])
-
   // режим чтения: текст не редактируется, панель скрыта
   const reading = useUi((s) => s.readingMode)
   const mapMode = useUi((s) => s.mapMode)
   useEffect(() => {
-    if (editor && !editor.isDestroyed) editor.setEditable(!reading)
+    if (editor && !editor.isDestroyed) editor.setEditable(!reading, false)
   }, [editor, reading])
 
   // сохранить при уходе: смена заметки, закрытие вкладки, сворачивание окна

@@ -83,21 +83,6 @@
   }
 }
 
-/* оттенок акцента — числом, чтобы при смене (клик по логотипу) все цвета плавно перетекали */
-@property --accent-h {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 4;
-}
-html.accent-anim {
-  transition: --accent-h 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  html.accent-anim {
-    transition: none;
-  }
-}
-
 /* ---------- Фон — то, что видно сквозь стекло ----------
  * Туманность (components/ui/liquid-shader.tsx, WebGL) во весь экран под интерфейсом.
  * Без неё стеклу нечего размывать, и оно выглядит как обычная белая панель.
