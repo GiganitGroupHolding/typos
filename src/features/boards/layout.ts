@@ -1,6 +1,5 @@
 import { boardBounds, type BoardData, type BoardNode } from './model'
 
-/** Размер карточки под текст: ширина фиксированная, высота — по примерному числу строк. */
 export function textSize(text: string, width = 260) {
   const perLine = Math.max(8, Math.floor((width - 28) / 8.5))
   const lines = text.split('\n').reduce((sum, l) => sum + Math.max(1, Math.ceil(l.length / perLine)), 0)
@@ -9,24 +8,20 @@ export function textSize(text: string, width = 260) {
 
 const GAP = 80
 const FRAME_PAD = 32
-// подпись рамки стоит над её верхним краем — столько места оставляем над рамкой
+
 const LABEL_ROOM = 40
 
 type Box = { x: number; y: number; width: number; height: number }
 
 const hit = (a: Box, b: Box) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
-/**
- * Куда поставить блок новых узлов. Висит на стрелке от уже стоящей карточки — рядом с ней (справа или снизу),
- * сдвигаясь, пока не найдётся свободное место; иначе — под всем, что есть.
- */
 function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block: Box, dir: 'TB' | 'LR', framed: boolean) {
   const below = boardBounds(placed)
   if (!below) return { x: 0, y: 0 }
   const fallback = { x: below.x, y: below.y + below.height + GAP + (framed ? LABEL_ROOM : 0) }
   const src = placed.find((p) => data.edges.some((e) => e.fromNode === p.id && fresh.has(e.toNode)))
   if (!src) return fallback
-  // занятое место: карточки с отступом, у рамок — ещё и подпись над ними
+
   const taken = placed.map((n) => ({
     x: n.x - 24,
     y: n.y - 24 - (n.type === 'group' ? LABEL_ROOM : 0),
@@ -43,16 +38,11 @@ function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block:
   return fallback
 }
 
-/**
- * Расставляет узлы без координат (их присылает MCP): схема по стрелкам между ними (dagre), блоком под тем,
- * что уже есть на доске. Рамка с children встаёт вокруг своих узлов; если они тоже новые, рамка — подграф
- * в схеме, и чужие карточки не налезают ни на неё, ни на её подпись.
- */
 export async function placeNodes(data: BoardData, unplaced: Set<string>, children: Map<string, string[]>, dir: 'TB' | 'LR' = 'LR') {
   const frames = new Set([...children.keys()].filter((id) => unplaced.has(id)))
   const fresh = data.nodes.filter((n) => unplaced.has(n.id) && !frames.has(n.id))
   const freshIds = new Set(fresh.map((n) => n.id))
-  // подграфом — только рамка, у которой все узлы расставляются сейчас; иначе она встанет вокруг них потом
+
   const clusters = [...frames].filter((id) => children.get(id)!.every((c) => freshIds.has(c)))
   const placed = data.nodes.filter((n) => !unplaced.has(n.id))
   const at = new Map<string, Box>()
@@ -65,7 +55,7 @@ export async function placeNodes(data: BoardData, unplaced: Set<string>, childre
     for (const n of fresh) g.setNode(n.id, { width: n.width, height: n.height })
     for (const id of clusters) {
       g.setNode(id, {})
-      // узел — только в одной рамке: первая забирает его
+
       for (const c of children.get(id)!) if (!g.parent(c)) g.setParent(c, id)
     }
     for (const e of data.edges) if (freshIds.has(e.fromNode) && freshIds.has(e.toNode)) g.setEdge(e.fromNode, e.toNode, {}, e.id)

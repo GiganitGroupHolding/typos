@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils'
 import { deviceFrame } from './deviceFrame'
 import { ToolFrame } from './ToolFrame'
 
-/** Картинка рамки и где на ней экран (px картинки). Пишет scripts/device-frame.mjs. */
 export interface DeviceFrame {
   src: string
   width: number
@@ -12,26 +11,20 @@ export interface DeviceFrame {
   screen: { x: number; y: number; width: number; height: number; radius: number }
 }
 
-/*
- * Мобильный просмотр HTML: страница в настоящую ширину iPhone Pro Max (440 CSS px), поэтому срабатывают её media queries.
- * Рамка — картинка поверх экрана с pointer-events: none, так что всё внутри нажимается и прокручивается.
- * Сцена целиком масштабируется под окно (transform), раскладка страницы при этом не меняется.
- */
-
 const SCREEN_W = 440
 const SCREEN_H = 956
 const STATUS_H = 62
-/** Без картинки рамки — только экран со скруглением, как у устройства. */
+
 const BARE = { width: SCREEN_W + 24, height: SCREEN_H + 24, screen: { x: 12, y: 12, width: SCREEN_W, height: SCREEN_H, radius: 62 } }
 
 export function PhonePreview({ html, title, runKey }: { html: string; title: string; runKey?: number }) {
   const box = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0)
   const theme = useResolvedTheme()
-  // картинка рамки лежит только локально (public/devices в .gitignore) — нет её, рисуем простую рамку
+
   const [missing, setMissing] = useState(false)
   const frame = missing ? null : deviceFrame
-  // CSS px на пиксель картинки: экран рамки = 440 CSS px
+
   const k = frame ? SCREEN_W / frame.screen.width : 1
   const g = frame ?? BARE
   const stageW = g.width * k
@@ -64,7 +57,7 @@ export function PhonePreview({ html, title, runKey }: { html: string; title: str
             {!frame && (
               <span aria-hidden className="absolute top-[11px] left-1/2 h-[37px] w-[125px] -translate-x-1/2 rounded-full bg-black" />
             )}
-            {/* iframe — только когда сцена уже разложена, иначе скрипт страницы успевает увидеть innerWidth = 0 */}
+
             <div className="min-h-0 flex-1">{scale > 0 && <ToolFrame html={html} title={title} runKey={runKey} />}</div>
             <span
               aria-hidden
@@ -87,7 +80,6 @@ export function PhonePreview({ html, title, runKey }: { html: string; title: str
   )
 }
 
-/** Строка статуса iOS: время слева, сеть / Wi-Fi / батарея справа, посередине место под Dynamic Island. */
 function StatusBar() {
   return (
     <div

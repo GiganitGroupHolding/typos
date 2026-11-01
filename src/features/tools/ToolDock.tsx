@@ -7,12 +7,6 @@ import { toolIcon } from '@/features/subjects/visuals'
 import { cn } from '@/lib/utils'
 import type { Tool } from '@/types'
 
-/*
- * Dock проектов предмета. Идея — 21st.dev «macOS Dock» (ssicevs) / «Dock Nav» (soralabs):
- * размер иконки зависит от расстояния до курсора. Заменить на оригинал после ключа 21st.
- * Анимируется только transform (scale), раскладка не дёргается.
- */
-
 const BASE = 48
 
 function DockIcon({ tool, mouseX }: { tool: Tool; mouseX: MotionValue<number> }) {

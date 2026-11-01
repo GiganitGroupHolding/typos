@@ -62,11 +62,10 @@ export interface OwnerAuthConfig {
   resource: URL
   passwordHash: string
   dataDir: string
-  /** За прокси хостинга (MCP_TRUST_PROXY=1): адрес клиента — последний в X-Forwarded-For. */
+
   trustProxy?: boolean
 }
 
-/** Проверяет настройки личного входа; открытый ключ владельца не нужен серверу. */
 export function ownerAuthConfig(resource: URL, env: NodeJS.ProcessEnv): OwnerAuthConfig {
   const passwordHash = env.MCP_OWNER_PASSWORD_HASH ?? ''
   if (!/^scrypt:[A-Za-z0-9_-]{22}:[A-Za-z0-9_-]{43}$/.test(passwordHash))
@@ -76,11 +75,6 @@ export function ownerAuthConfig(resource: URL, env: NodeJS.ProcessEnv): OwnerAut
   return { resource, passwordHash, dataDir, trustProxy: env.MCP_TRUST_PROXY === '1' }
 }
 
-/**
- * Ключ лимита запросов — адрес клиента, а не один общий: иначе посторонний исчерпал бы лимиты владельца.
- * За прокси берём адрес, который дописал сам прокси (последний в X-Forwarded-For); IPv6 — по сети /64,
- * у одного абонента обычно целая подсеть. Адрес не разбираем библиотекой: длинная строка из заголовка не должна тормозить.
- */
 export function clientKey(req: IncomingMessage, trustProxy = false): string {
   const forwarded = req.headers['x-forwarded-for']
   const ip = ((trustProxy && typeof forwarded === 'string' ? forwarded.split(',').at(-1) : undefined) ?? req.socket.remoteAddress ?? '')
@@ -99,7 +93,6 @@ export function clientKey(req: IncomingMessage, trustProxy = false): string {
     .join(':')}::/64`
 }
 
-/** Один владелец, отдельные разрешения клиентов и хэши токенов в постоянной базе. */
 class OwnerProvider implements OAuthServerProvider {
   readonly config: OwnerAuthConfig
   private readonly file: string
@@ -145,7 +138,7 @@ class OwnerProvider implements OAuthServerProvider {
       } finally {
         closeSync(fd)
       }
-      // Синхронная атомарная замена сохраняет ротацию токенов до ответа клиенту.
+
       renameSync(temporary, this.file)
       this.state = state
     } finally {
@@ -178,8 +171,7 @@ class OwnerProvider implements OAuthServerProvider {
         throw new InvalidClientMetadataError('Проверь название клиента и адреса возврата')
       for (const value of client.redirect_uris) {
         const url = new URL(value)
-        // настольные клиенты (Claude Code и др.) принимают код на своём компьютере по http (RFC 8252):
-        // туда код не уйдёт дальше этого компьютера, а PKCE не даст обменять его чужой программе без verifier
+
         const loopback = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
         if (url.username || url.password || url.hash || (url.protocol !== 'https:' && !loopback))
           throw new InvalidClientMetadataError('Адрес возврата должен быть HTTPS или http://localhost без пароля и фрагмента')
@@ -192,10 +184,6 @@ class OwnerProvider implements OAuthServerProvider {
     },
   }
 
-  /**
-   * Регистрация открыта всем: посторонний мог бы занять все 100 мест на 90 дней и не дать владельцу подключиться.
-   * Поэтому место освобождает самый старый клиент без разрешений — у него нет доступа к заметкам.
-   */
   private makeRoomForClient() {
     const clients = this.all<OAuthClientInformationFull>('client')
     if (clients.length < 100) return
@@ -222,7 +210,7 @@ class OwnerProvider implements OAuthServerProvider {
     if (!params.scopes?.includes('typos')) throw new InvalidScopeError('Для доступа к заметкам нужен scope typos')
     if (!/^[A-Za-z0-9_-]{43}$/.test(params.codeChallenge)) throw new InvalidRequestError('Нужен PKCE S256')
     this.prune()
-    // поток чужих запросов не должен закрыть вход владельцу: вытесняем самый старый незавершённый
+
     if (this.pending.size >= 100) this.pending.delete(this.pending.keys().next().value!)
     const id = random()
     const cookie = random()
@@ -239,7 +227,6 @@ class OwnerProvider implements OAuthServerProvider {
   }
 
   private page(res: Response, id: string, pending: Pending, error = '') {
-    // Chromium проверяет form-action и на редиректе после POST, включая возврат в ИИ-клиент.
     res.setHeader('Content-Security-Policy', consentCsp(pending.params.redirectUri))
     res.type('html')
       .send(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -264,7 +251,7 @@ class OwnerProvider implements OAuthServerProvider {
       this.page(res, id, pending, 'Ключ не подошёл — проверь его и попробуй снова')
       return
     }
-    // Повторный POST, успевший во время scrypt, не должен выдать ещё один код.
+
     if (!this.pending.delete(id)) {
       res.status(400).json({ error: 'Разрешение уже использовано — начни подключение заново' })
       return
@@ -359,21 +346,20 @@ class OwnerProvider implements OAuthServerProvider {
   }
 }
 
-/** SDK проверяет OAuth и PKCE; форма отдельно подтверждает доступ владельца к этому клиенту. */
 export function createOwnerAuth(config: OwnerAuthConfig) {
   const provider = new OwnerProvider(config)
   const app = express()
   app.disable('x-powered-by')
   app.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store')
-    // no-referrer превращает Origin обычной POST-формы в null и ломает проверку CSRF.
+
     res.setHeader('Referrer-Policy', 'same-origin')
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Content-Security-Policy', consentCsp())
     next()
   })
   app.use(express.json({ limit: '8kb' }), express.urlencoded({ extended: false, limit: '8kb' }))
-  // X-Forwarded-For проверяет clientKey: проверка библиотеки ругалась бы на него без «trust proxy» Express
+
   const byClient = {
     keyGenerator: (req: IncomingMessage) => clientKey(req, config.trustProxy),
     validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
@@ -382,7 +368,7 @@ export function createOwnerAuth(config: OwnerAuthConfig) {
   app.post(
     '/consent',
     rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: tooMany, ...byClient }),
-    // общий предел — только против нагрузки scrypt; подобрать 32-байтовый ключ владельца перебором нельзя
+
     rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, keyGenerator: () => 'all', message: tooMany }),
     async (req, res) => {
       if (req.headers.origin !== config.resource.origin) {

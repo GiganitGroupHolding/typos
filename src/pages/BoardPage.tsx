@@ -31,7 +31,6 @@ export function BoardPage() {
   )
 }
 
-/** Название доски = имя файла; правится прямо в шапке. Новая доска открывается с полем в фокусе. */
 function BoardTitle({ board }: { board: Board }) {
   const ref = useRef<HTMLInputElement>(null)
   const [params, setParams] = useSearchParams()
@@ -67,7 +66,7 @@ function BoardTitle({ board }: { board: Board }) {
       onKeyDown={(e) => {
         if (e.key !== 'Enter' && e.key !== 'Escape') return
         if (e.key === 'Escape') e.currentTarget.value = board.name
-        // дальше — сразу на доску: работают её клавиши (S, T, F…)
+
         document.querySelector<HTMLElement>('[data-board-canvas]')?.focus({ preventScroll: true })
       }}
       className="min-w-0 flex-1 truncate rounded-md bg-transparent px-1 py-0.5 text-[15px] font-semibold outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring"

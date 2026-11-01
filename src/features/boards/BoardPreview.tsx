@@ -4,7 +4,6 @@ import { boardBounds, type BoardData } from './model'
 
 const fill = (c?: string) => (c && /^[1-6]$/.test(c) ? `var(--board-${c})` : c || 'var(--card)')
 
-/** Уменьшенная доска: прямоугольники карточек и рамок, без текста. */
 export const BoardPreview = memo(function BoardPreview({ data, className }: { data: BoardData; className?: string }) {
   const b = boardBounds(data.nodes)
   const pad = b ? Math.max(b.width, b.height) * 0.06 : 0

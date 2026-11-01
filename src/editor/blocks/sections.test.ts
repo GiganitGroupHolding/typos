@@ -6,7 +6,7 @@ import { foldedBlocks, headingKey, sectionRange } from './sections'
 const schema = getSchema(buildExtensions())
 const h = (level: number, text: string) => schema.nodes.heading.create({ level }, schema.text(text))
 const p = (text: string) => schema.nodes.paragraph.create(null, schema.text(text))
-// 0 H1, 1 p, 2 H2 «А», 3 p, 4 H3, 5 p, 6 H2 «Б», 7 p
+
 const doc = schema.nodes.doc.create(null, [h(1, 'Конспект'), p('вступление'), h(2, 'А'), p('а1'), h(3, 'А.1'), p('а2'), h(2, 'Б'), p('б1')])
 
 describe('разделы под заголовками', () => {

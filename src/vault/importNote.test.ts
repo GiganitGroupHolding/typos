@@ -11,7 +11,8 @@ const physics = async () => {
 describe('импорт .md', () => {
   it('заголовок берётся из первой строки, чужой frontmatter сохраняется', async () => {
     const { a, s } = await physics()
-    const text = '---\nid: чужой-id\ncreated: 2026-09-01T10:00:00.000Z\nsource: https://example.com/lecture\n---\n\n# Колебания\n\nПериод \\(T = 2\\pi\\sqrt{l/g}\\)'
+    const text =
+      '---\nid: чужой-id\ncreated: 2026-09-01T10:00:00.000Z\nsource: https://example.com/lecture\n---\n\n# Колебания\n\nПериод \\(T = 2\\pi\\sqrt{l/g}\\)'
     const n = await repo.importNote(a, s, { name: 'whatever.md', text })
     expect(n.path).toBe('Физика/Конспекты/Колебания.md')
     expect(n.id).not.toBe('чужой-id')

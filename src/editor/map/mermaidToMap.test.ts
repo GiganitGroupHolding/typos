@@ -117,7 +117,7 @@ describe('файл карты', () => {
     const blocks = ['# Заголовок', 'Сегментирование рынка — это', 'Пример', 'Сегментирование рынка — это повтор']
     expect(resolveBlock(blocks, { text: 'Сегментирование рынка — это', index: 3 })).toBe(3)
     expect(resolveBlock(blocks, { text: 'Сегментирование рынка — это', index: 0 })).toBe(1)
-    // абзац переписали — остаёмся на том же месте по номеру
+
     expect(resolveBlock(blocks, { text: 'Удалённый текст', index: 2 })).toBe(2)
     expect(resolveBlock([], { text: 'x', index: 0 })).toBe(-1)
   })

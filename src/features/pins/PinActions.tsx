@@ -14,7 +14,6 @@ import type { Pin } from '@/types'
 import { useVault } from '@/vault/store'
 import { openPinEditor } from './PinEditorDialog'
 
-/** Меню карточки закрепа. «Выше/Ниже» — клавиатурная альтернатива перетаскиванию. */
 export function PinActions({ pin, siblings, className }: { pin: Pin; siblings: Pin[]; className?: string }) {
   const openWindow = useUi((s) => s.openWindow)
   const closeWindow = useUi((s) => s.closeWindow)

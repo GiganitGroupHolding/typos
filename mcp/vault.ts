@@ -12,12 +12,6 @@ import { boardForModel, editBoard, type BoardEdit } from './boards'
 import { fetchPublic } from './fetchPublic'
 import { LocalFiles } from './localFiles'
 
-/**
- * Операции MCP над vault. Всё пишется через repo.ts — те же функции, что у приложения,
- * поэтому frontmatter, id, имена файлов и переименование по заголовку совпадают один в один.
- * Удаления нет: только корзина (.studynotes/trash), откуда приложение умеет вернуть.
- */
-
 const MAX_IMAGE = 25 * 1024 * 1024
 const norm = (s: string) => s.toLowerCase().replaceAll('ё', 'е').trim()
 
@@ -28,7 +22,6 @@ export class StudyVault {
 
   readonly remote: boolean
 
-  /** Папки компьютера, из которых можно брать картинки по пути. */
   readonly files: LocalFiles
 
   constructor(adapter: VaultAdapter, options: { remote?: boolean; files?: LocalFiles } = {}) {
@@ -56,8 +49,6 @@ export class StudyVault {
     if (!b) throw new Error(`Нет доски с id «${id}». Id — из get_subject или search.`)
     return b
   }
-
-  // ---------- предметы ----------
 
   async listSubjects() {
     const d = await this.load()
@@ -109,8 +100,6 @@ export class StudyVault {
     }
   }
 
-  // ---------- конспекты ----------
-
   async readNote(id: string) {
     const d = await this.load()
     const n = this.note(d, id)
@@ -118,7 +107,6 @@ export class StudyVault {
     return { id: n.id, subject: s.name, title: n.title, path: n.path, updated: n.updated, ...n.meta, markdown: n.body }
   }
 
-  /** Новый конспект. С source, который уже есть в предмете, — обновляет тот конспект (повторный перенос не плодит дубли). */
   async createNote(input: { subject: string; title: string; markdown: string; source?: string }) {
     const d = await this.load()
     const s = this.subject(d, input.subject)
@@ -151,7 +139,6 @@ export class StudyVault {
     return { id: saved.id, path: saved.path, title: saved.title, warnings }
   }
 
-  /** Внешние картинки → assets/, формулы и разметка — проверка, как их поймёт редактор. */
   private async prepare(s: Subject, body: string) {
     const warnings: string[] = []
     const localized = await this.localizeImages(s, body, warnings)
@@ -176,7 +163,6 @@ export class StudyVault {
     return out
   }
 
-  /** Картинка в «<Предмет>/Конспекты/assets/» (webp, до 2400 px). Возвращает путь для Markdown. */
   async addImage(input: { subject: string; source: string; alt?: string }) {
     if (this.remote && !input.source.startsWith('data:'))
       throw new Error('Удалённый MCP принимает картинки только в формате data:image/…;base64')
@@ -191,8 +177,6 @@ export class StudyVault {
     await this.a.writeBlob(joinPath(s.dir, NOTES_DIR, rel), new Blob([new Uint8Array(data)]))
     return rel
   }
-
-  // ---------- закреп ----------
 
   async createPin(input: { subject: string; title: string; tex?: string; text?: string }) {
     const d = await this.load()
@@ -212,8 +196,6 @@ export class StudyVault {
     return { id: saved.id, path: saved.path, warnings: checkPin(next.tex, next.text) }
   }
 
-  // ---------- тулзы ----------
-
   async importTool(input: { subject: string; name: string; html: string; icon?: ToolIcon }) {
     const s = this.subject(await this.load(), input.subject)
     const t = await repo.importTool(this.a, s, { name: input.name, html: input.html, icon: input.icon ?? 'calculator' })
@@ -229,8 +211,6 @@ export class StudyVault {
     })
     return { id: t.id, path: t.path, kind: t.kind }
   }
-
-  // ---------- доски ----------
 
   async readBoard(id: string) {
     const d = await this.load()
@@ -254,8 +234,6 @@ export class StudyVault {
     if (input.name?.trim()) b = await repo.renameBoard(this.a, b, input.name)
     return { id: b.id, path: b.path, name: b.name, nodes: ids, warnings: checkBoard(data, ids) }
   }
-
-  // ---------- поиск и корзина ----------
 
   async search(input: { query: string; subject?: string; limit?: number }) {
     const d = await this.load()
@@ -292,9 +270,6 @@ export class StudyVault {
   }
 }
 
-// ---------- текст конспекта ----------
-
-/** Тело конспекта: первая строка — «# Заголовок», формулы приведены к $…$ / $$…$$. */
 export function composeBody(markdown: string, title?: string): string {
   let md = normalizeMarkdownMath(markdown.replace(/\r\n/g, '\n')).trim()
   const h1 = md.match(/^#\s+.*(\n|$)/)
@@ -307,7 +282,6 @@ export function composeBody(markdown: string, title?: string): string {
   return `${md}\n`
 }
 
-/** Заменяет содержимое раздела под заголовком (до следующего заголовка того же или старшего уровня). */
 export function replaceSection(body: string, section: string, markdown: string): string {
   const lines = body.split('\n')
   const heading = (l: string) => l.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/)
@@ -336,7 +310,6 @@ export function replaceSection(body: string, section: string, markdown: string):
   return [...lines.slice(0, start), ...head, md, '', ...lines.slice(end)].join('\n').replace(/\n{3,}/g, '\n\n')
 }
 
-/** Что редактор поймёт не так: формулы, которые KaTeX не разберёт, и непарные «$». */
 export function checkMarkdown(md: string): string[] {
   const warnings: string[] = []
   const tryTex = (tex: string, where: string) => {
@@ -346,7 +319,7 @@ export function checkMarkdown(md: string): string[] {
       warnings.push(`${where}: формула «${tex.trim().slice(0, 60)}» — ${(e as Error).message.replace(/^KaTeX parse error: /, '')}`)
     }
   }
-  // блоки $$…$$ вырезаем, оставляя переводы строк, — номера строк не сбиваются
+
   const rest = md.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex: string) => {
     tryTex(tex, `Блок у строки ${md.slice(0, md.indexOf(m)).split('\n').length}`)
     return '\n'.repeat(m.split('\n').length - 1)
@@ -365,7 +338,6 @@ export function checkMarkdown(md: string): string[] {
   return warnings
 }
 
-/** Формулы в карточках доски, которых KaTeX не поймёт (только в узлах из этого вызова). */
 function checkBoard(data: { nodes: { id: string; text?: string }[] }, ids: string[]): string[] {
   return data.nodes.filter((n) => ids.includes(n.id) && n.text).flatMap((n) => checkMarkdown(n.text!).map((w) => `Узел ${n.id}: ${w}`))
 }
@@ -376,8 +348,6 @@ function checkPin(tex?: string, text?: string): string[] {
   if (text?.includes('$')) w.push('В text формулы не рендерятся — это простой текст под формулой. Формулу клади в tex.')
   return w
 }
-
-// ---------- картинки ----------
 
 async function loadImage(source: string, files: LocalFiles): Promise<Buffer> {
   if (source.startsWith('data:')) {
@@ -395,7 +365,6 @@ async function loadImage(source: string, files: LocalFiles): Promise<Buffer> {
   return files.read(source, MAX_IMAGE)
 }
 
-/** Как в приложении: растровое → webp до 2400 px; svg и анимированный gif — как есть. */
 async function toWebImage(buf: Buffer): Promise<{ data: Buffer; ext: string }> {
   const meta = await sharp(buf, { animated: true }).metadata()
   if (meta.format === 'svg') return { data: buf, ext: 'svg' }

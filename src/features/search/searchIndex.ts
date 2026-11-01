@@ -2,15 +2,10 @@ import MiniSearch from 'minisearch'
 import { boardText } from '@/features/boards/model'
 import type { Board, Note, Pin, Subject, Tool } from '@/types'
 
-/**
- * Полнотекстовый поиск по всему vault. Индекс в памяти, пересобирается при изменении данных
- * (сотни конспектов — миллисекунды). Русский без стемминга: префикс + опечатки (fuzzy).
- */
-
 export type HitKind = 'note' | 'pin' | 'tool' | 'board' | 'subject'
 
 export interface SearchDoc {
-  id: string // `${kind}:${refId}`
+  id: string
   kind: HitKind
   refId: string
   subjectId: string
@@ -23,12 +18,10 @@ export interface SearchHit extends SearchDoc {
   terms: string[]
 }
 
-/** Нижний регистр и ё→е: «Ёмкость» находится по «емкость». */
 export const normalize = (s: string) => s.toLowerCase().replaceAll('ё', 'е')
 
 const tokenize = (s: string) => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
 
-/** Markdown → плоский текст для индекса и сниппетов. LaTeX оставляем: \det ищется как «det». */
 export function plainText(md: string): string {
   return md
     .replace(/<\/?(span|mark|u|s|b|i|em|strong|sub|sup)\b[^>]*>/gi, '')
@@ -118,7 +111,6 @@ export function search(ms: MiniSearch<SearchDoc>, query: string, limit = 30): Se
     }))
 }
 
-/** Кусок текста вокруг первого совпадения, разбитый на части для подсветки. */
 export function snippet(text: string, terms: string[], radius = 48): { text: string; hit: boolean }[] {
   if (!text) return []
   const norm = normalize(text)

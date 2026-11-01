@@ -1,10 +1,6 @@
 import { createStore, del, delMany, get, keys, set } from 'idb-keyval'
 import { FlatAdapter } from './flatAdapter'
 
-/**
- * Хранилище в IndexedDB браузера — пока папка на диске не подключена.
- * Структура путей та же, что и на диске, поэтому перенос в папку — простое копирование.
- */
 export function createBrowserAdapter() {
   const store = createStore('studynotes-vault', 'files')
   return new FlatAdapter(

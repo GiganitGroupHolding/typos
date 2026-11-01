@@ -1,14 +1,5 @@
 'use client'
 
-/*
- * Liquid Glass Button — компонент с 21st.dev.
- * Отличия от оригинала:
- *  - Slot из общего пакета `radix-ui` (как в остальных shadcn-компонентах проекта);
- *  - внутри <button> — <span>, а не <div> (валидный HTML);
- *  - слой со стеклом скруглён как капсула, чтобы искажение не выходило за её края.
- * Искажение через `backdrop-filter: url(#…)` работает в Chromium (Edge/Chrome) —
- * в остальных браузерах кнопка остаётся прозрачной капсулой с объёмной кромкой.
- */
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot } from 'radix-ui'
 import * as React from 'react'
@@ -121,13 +112,10 @@ export function GlassFilter() {
     <svg className="hidden" aria-hidden>
       <defs>
         <filter id="container-glass" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-          {/* Generate turbulent noise for distortion */}
           <feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="1" result="turbulence" />
 
-          {/* Blur the turbulence pattern slightly */}
           <feGaussianBlur in="turbulence" stdDeviation="2" result="blurredNoise" />
 
-          {/* Displace the source graphic with the noise */}
           <feDisplacementMap
             in="SourceGraphic"
             in2="blurredNoise"
@@ -137,10 +125,8 @@ export function GlassFilter() {
             result="displaced"
           />
 
-          {/* Apply overall blur on the final result */}
           <feGaussianBlur in="displaced" stdDeviation="4" result="finalBlur" />
 
-          {/* Output the result */}
           <feComposite in="finalBlur" in2="finalBlur" operator="over" />
         </filter>
       </defs>

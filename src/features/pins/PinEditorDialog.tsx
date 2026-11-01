@@ -10,9 +10,9 @@ import { useVault } from '@/vault/store'
 
 interface Target {
   subjectId: string
-  /** Есть — правка, нет — новая карточка. */
+
   pinId?: string
-  /** Заготовки (например, «В закреп» из конспекта). */
+
   tex?: string
   title?: string
   text?: string
@@ -25,7 +25,6 @@ const useTarget = create<{ target: Target | null; set: (t: Target | null) => voi
 
 export const openPinEditor = (t: Target) => useTarget.getState().set(t)
 
-/** Новая карточка закрепа или правка существующей. */
 export function PinEditorDialog() {
   const target = useTarget((s) => s.target)
   const close = () => useTarget.getState().set(null)

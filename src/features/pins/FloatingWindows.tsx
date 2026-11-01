@@ -8,12 +8,6 @@ import { dur, easeIn, springSoft } from '@/lib/motion'
 import { usePin, useTool } from '@/vault/hooks'
 import { PinBody } from './PinCard'
 
-/**
- * «Важные окна»: закреп или тулза поверх редактора.
- * Тянутся за шапку (dragControls), чтобы iframe тулзы не перехватывал указатель.
- * Карточка закрепа «перетекает» в окно через общий layoutId.
- */
-
 function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDivElement | null> }) {
   const controls = useDragControls()
   const close = useUi((s) => s.closeWindow)
@@ -40,7 +34,7 @@ function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDi
       exit={{ opacity: 0, scale: 0.97, transition: { duration: dur.base * 0.65, ease: easeIn } }}
       style={{
         top: 72 + win.slot * 28,
-        // на узком экране окно не уезжает за левый край
+
         right: `clamp(8px, ${380 + win.slot * 28}px, calc(100vw - ${(isTool ? 440 : 320) + 8}px))`,
         zIndex: win.z,
       }}

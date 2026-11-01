@@ -12,12 +12,6 @@ import { DiagramCodeBlock } from './diagrams'
 
 export const katexOptions = { throwOnError: false, strict: 'ignore' as const }
 
-/**
- * Привычный ввод формул:
- *   $x^2$       → inline-формула (плагин ниже, работает и для вставки)
- *   $$ + пробел  в начале пустой строки → блочная формула
- * (у официального расширения: $$x$$ и $$$x$$$ — неудобно)
- */
 export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => void }>({
   name: 'dollarMath',
   addOptions() {
@@ -37,7 +31,7 @@ export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => v
             .deleteRange({ from: pos, to: $from.after() })
             .insertContentAt(pos, { type: block.name, attrs: { latex: '' } })
             .run()
-          // открыть редактор формулы, когда view обновится
+
           if (onBlockCreated) setTimeout(() => onBlockCreated(pos))
         },
       }),
@@ -46,8 +40,7 @@ export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => v
   addProseMirrorPlugins() {
     const inline = this.editor.schema.nodes.inlineMath
     const block = this.editor.schema.nodes.blockMath
-    // Формулы, записанные текстом, → узлы формул. Ловит набор, вставку и автозамену:
-    //   $…$ и \(…\) в строке; абзац целиком из \[…\] или $$…$$ — блочная формула.
+
     return [
       new Plugin({
         key: new PluginKey('dollarMathConvert'),
@@ -83,23 +76,21 @@ export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => v
   },
 })
 
-/** $x$: без пробелов у краёв (чтобы «$5 и $10» не ломались), не после \ и не внутри $$. */
 const INLINE_DOLLAR = /(^|[^$\\])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?!\$)/g
-/** \( x \) — так пишет формулы ChatGPT. */
+
 const INLINE_PAREN = /\\\(\s*([^\n]+?)\s*\\\)/g
-/** Абзац, целиком состоящий из \[ … \] или $$ … $$. */
+
 const BLOCK_TEXT = /^\s*(?:\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$)\s*$/
 
 export interface ExtensionOptions {
   onMathClick?: (node: PMNode, pos: number, kind: 'inline' | 'block') => void
   onBlockMathCreated?: (pos: number) => void
-  /** Относительный путь картинки из Markdown → URL для <img>. */
+
   resolveImage?: (src: string) => Promise<string | null>
-  /** ```mermaid рисовать схемой (живой редактор; в тестах сериализации — обычный блок кода) */
+
   diagrams?: boolean
 }
 
-/** Картинка, чей src — путь внутри vault («assets/x.webp»), а не URL. */
 const VaultImage = Image.extend<{ resolve?: ExtensionOptions['resolveImage'] } & Record<string, unknown>>({
   addOptions() {
     return { ...this.parent?.(), resolve: undefined }
@@ -126,7 +117,6 @@ const VaultImage = Image.extend<{ resolve?: ExtensionOptions['resolveImage'] } &
   },
 })
 
-/** Общий набор расширений: редактор и (без UI-опций) тесты сериализации. */
 export function buildExtensions({ onMathClick, onBlockMathCreated, resolveImage, diagrams = false }: ExtensionOptions = {}) {
   return [
     StarterKit.configure({
@@ -137,7 +127,7 @@ export function buildExtensions({ onMathClick, onBlockMathCreated, resolveImage,
     DiagramCodeBlock.configure({ diagrams }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    // таблицы: в Markdown — GFM `| a | b |`; обёртка даёт горизонтальную прокрутку широким
+
     TableKit.configure({ table: { renderWrapper: true, cellMinWidth: 80 } }),
     VaultImage.configure({ inline: false, allowBase64: false, resolve: resolveImage }),
     InlineMath.configure({

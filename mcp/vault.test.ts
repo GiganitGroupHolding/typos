@@ -32,7 +32,7 @@ describe('адаптер', () => {
     try {
       writeFileSync(path.join(outside, 'marker.txt'), 'снаружи')
       symlinkSync(outside, path.join(dir, 'jump'), 'junction')
-      // В Windows битая junction не требует права на создание файлового симлинка.
+
       symlinkSync(path.join(outside, 'нет.txt'), path.join(dir, 'битая.txt'), process.platform === 'win32' ? 'junction' : 'file')
       mkdirSync(path.join(dir, '.typos-server'))
       writeFileSync(path.join(dir, '.typos-server', 'server.json'), '{}')
@@ -227,7 +227,7 @@ describe('доски', () => {
       ['root', 'n1', undefined],
       ['root', 'n2', 'сила'],
     ])
-    // файл читается приложением
+
     expect((await loadVault(a)).boards[0].data.nodes).toHaveLength(4)
   })
 
@@ -253,7 +253,7 @@ describe('доски', () => {
     })
     const { nodes } = await v.readBoard(r.id)
     const frame = nodes.find((n) => n.id === 'frame')!
-    // подпись — примерно 30 px над верхним краем
+
     const withLabel = { ...frame, y: frame.y - 30, height: frame.height + 30 }
     for (const n of nodes.filter((x) => x.id === 'root' || x.id === 'use')) expect(overlap(withLabel, n)).toBe(false)
     for (const id of ['rules', 'chain', 'table']) {

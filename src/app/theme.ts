@@ -11,14 +11,12 @@ function subscribe(cb: () => void) {
 
 const systemDark = () => window.matchMedia(query).matches
 
-/** Итоговая тема с учётом системной настройки. */
 export function useResolvedTheme(): 'light' | 'dark' {
   const pref = useUi((s) => s.theme)
   const isSystemDark = useSyncExternalStore(subscribe, systemDark, () => false)
   return pref === 'system' ? (isSystemDark ? 'dark' : 'light') : pref
 }
 
-/** Вешает класс .dark на <html>. */
 export function useThemeSync() {
   const theme = useResolvedTheme()
   useEffect(() => {

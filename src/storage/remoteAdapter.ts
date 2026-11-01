@@ -2,12 +2,6 @@ import { del, get, set } from 'idb-keyval'
 import { blockedAsMixedContent, MIXED_CONTENT_HINT, type RemoteConfig } from './remoteLink'
 import { settingsStore } from './settings'
 
-/**
- * Транспорт синхронизации с сервером хранения TYPOS (server/typos-server.mjs): файлы — WebDAV под /files/,
- * ключ устройства — в заголовке Authorization. Каждый вызов идёт в сеть.
- * Приложение с ним напрямую не работает: оно читает и пишет локальную копию (syncedAdapter), а SyncEngine гоняет файлы через этот класс.
- */
-
 export class RemoteError extends Error {
   readonly status?: number
   constructor(message: string, status?: number) {
@@ -16,7 +10,6 @@ export class RemoteError extends Error {
   }
 }
 
-/** Весь vault на сервере одним списком: путь → ETag. */
 export interface Manifest {
   files: Record<string, { etag: string; size: number; mtime: string }>
   dirs: string[]
@@ -29,12 +22,11 @@ export interface RemoteInfo {
   device: string
 }
 
-/** Чем закончился поток событий: сервер закрыл его (остановлен), замолчал дольше пульса или отозвал ключ. */
 export type EventsEnd = 'ended' | 'idle' | 'revoked'
 
 export class RemoteAdapter {
   readonly config: RemoteConfig
-  /** Запрос не дошёл до сервера или ключ не приняли — монитор связи перепроверит её сразу, не дожидаясь пульса. */
+
   onProblem?: (kind: 'unreachable' | 'unauthorized') => void
 
   constructor(config: RemoteConfig) {
@@ -55,7 +47,6 @@ export class RemoteAdapter {
     return `Сервер ${host} не отвечает. Проверь, что он запущен и это устройство в той же сети.`
   }
 
-  /** ok — статусы, которые не ошибка (например, 404 у чтения: файла нет). */
   protected async request(url: string, init: RequestInit & { headers?: Record<string, string> } = {}, ok: number[] = []) {
     let res: Response
     try {
@@ -75,19 +66,14 @@ export class RemoteAdapter {
     return res
   }
 
-  /** Проверка связи и ключа. */
   async info(): Promise<RemoteInfo> {
     const res = await this.request(`${this.config.url}/.typos/info`, {}, [404])
     const info = res.status === 404 ? null : ((await res.json().catch(() => null)) as RemoteInfo | null)
-    // со статусом: сервер ответил, это не «нет связи»
+
     if (!info?.protocol?.startsWith('typos-storage/')) throw new RemoteError('По этому адресу не сервер хранения TYPOS', res.status)
     return info
   }
 
-  /**
-   * Держит открытым поток /.typos/events. onOpen — сервер поздоровался (event: hello). Если за idleMs не пришло ничего
-   * (даже пульса), связь считается потерянной. Нет сети — бросает.
-   */
   async events(signal: AbortSignal, idleMs: number, onOpen: () => void, onChange?: () => void): Promise<EventsEnd> {
     const res = await fetch(`${this.config.url}/.typos/events`, {
       signal,
@@ -132,14 +118,12 @@ export class RemoteAdapter {
     return (await this.request(`${this.config.url}/.typos/manifest`)).json()
   }
 
-  /** Файл и его ETag; null — файла нет. */
   async get(path: string): Promise<{ blob: Blob; etag: string } | null> {
     const res = await this.request(this.fileUrl(path), {}, [404])
     if (res.status === 404) return null
     return { blob: await res.blob(), etag: res.headers.get('ETag') ?? '' }
   }
 
-  /** Запись с условием: ifMatch — только поверх этой версии, иначе — только если файла ещё нет. 'conflict' — условие не выполнено. */
   async put(path: string, blob: Blob, ifMatch?: string): Promise<{ etag: string } | 'conflict'> {
     const res = await this.request(
       this.fileUrl(path),
@@ -156,7 +140,6 @@ export class RemoteAdapter {
     return res.status === 412 ? 'conflict' : { etag: res.headers.get('ETag') ?? '' }
   }
 
-  /** Удаление этой версии файла; опустевшие папки над ним сервер убирает сам. 'conflict' — файл успели изменить. */
   async del(path: string, ifMatch?: string): Promise<'ok' | 'conflict'> {
     const headers: Record<string, string> = { 'X-Typos-Prune': '1', ...(ifMatch ? { 'If-Match': ifMatch } : {}) }
     const res = await this.request(this.fileUrl(path), { method: 'DELETE', headers }, [404, 412])
@@ -164,18 +147,12 @@ export class RemoteAdapter {
   }
 }
 
-/**
- * Перед подключением: связь, ключ и то же ли хранилище по адресу, что в ссылке.
- * Нет связи — RemoteError без status (как и у остальных запросов).
- */
 export async function checkRemote(config: RemoteConfig): Promise<RemoteInfo> {
   const info = await new RemoteAdapter(config).info()
   if (config.vaultId && info.vaultId !== config.vaultId)
     throw new Error('Ссылка от другого хранилища: сервер по этому адресу уже не тот. Возьми свежую ссылку командой link.')
   return info
 }
-
-// ---------- сохранённое подключение ----------
 
 const REMOTE_KEY = 'remote'
 

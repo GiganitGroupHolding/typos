@@ -18,7 +18,7 @@ import { useVault } from '@/vault/store'
 
 interface Target {
   subjectId: string
-  /** Есть — переименовать (у HTML — и сменить иконку). */
+
   toolId?: string
 }
 
@@ -32,7 +32,6 @@ export const openToolDialog = (t: Target) => useTarget.getState().set(t)
 const ICONS = Object.keys(toolIcons) as ToolIcon[]
 const looksLikeHtml = (s: string) => /<(html|body|script|div|canvas|svg|style)[\s>]/i.test(s)
 
-/** Иконка по ключевым словам названия — чтобы не выбирать вручную. */
 export function guessToolIcon(name: string): ToolIcon {
   const n = name.toLowerCase()
   if (/матриц|определител|слау|вектор/.test(n)) return 'grid'
@@ -45,7 +44,6 @@ export function guessToolIcon(name: string): ToolIcon {
   return 'calculator'
 }
 
-/** Читает HTML-файл и сразу добавляет его в предмет (перетаскивание). */
 export async function importHtmlFile(subjectId: string, file: File) {
   const html = await file.text()
   const name = guessToolName(html, file.name)
@@ -63,7 +61,7 @@ export function ToolDialog() {
   const [icon, setIcon] = useState<ToolIcon>('calculator')
   const [html, setHtml] = useState('')
   const [fileName, setFileName] = useState('')
-  /** Не HTML: файл кладётся как есть. */
+
   const [file, setFile] = useState<File | null>(null)
   const [iconTouched, setIconTouched] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -79,7 +77,6 @@ export function ToolDialog() {
     setMode('file')
   }, [target, tool])
 
-  /** Имя подставляется, пока его не правили руками. */
   const autoName = () => (file ? fileTitle(file.name) : guessToolName(html, fileName))
 
   const acceptHtml = (code: string, from?: string) => {

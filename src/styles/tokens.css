@@ -1,33 +1,23 @@
-/*
- * Дизайн-токены.
- * Нейтрали — «тёплый графит», матовое стекло (Liquid Glass) — по мотивам LM_SERVER.
- * Акцент — нейтральный на общих экранах, цвет предмета внутри него (app/accent.ts); цвета — в OKLCH.
- * Светлая и тёмная темы проектируются парами, не инверсией. Контраст проверен (WCAG).
- */
-
 :root {
-  /* поверхности */
-  --app-bg: #f3f2ed; /* подложка под стеклом */
-  --background: #faf9f6; /* бумага редактора */
-  --foreground: #1f1e1d; /* 15:1 */
+  --app-bg: #f3f2ed;
+  --background: #faf9f6;
+  --foreground: #1f1e1d;
   --card: #ffffff;
   --card-foreground: #1f1e1d;
   --popover: #ffffff;
   --popover-foreground: #1f1e1d;
   --muted: #efeee9;
-  --muted-foreground: #6b6a64; /* 5:1 на бумаге */
+  --muted-foreground: #6b6a64;
   --border: rgb(31 30 29 / 0.1);
   --input: rgb(31 30 29 / 0.14);
 
-  /* акцент — один оттенок --accent-h (OKLCH, задаёт app/accent.ts); светлота и насыщенность
-     фиксированы, поэтому контраст держится при любом оттенке */
   --accent-h: 4;
-  --accent-c: 1; /* насыщенность акцента: 1 — как у цвета предмета, у серого — почти 0 */
-  --primary: oklch(0.5 calc(0.17 * var(--accent-c)) var(--accent-h)); /* кнопки, ссылки: ~6:1 с белым */
+  --accent-c: 1;
+  --primary: oklch(0.5 calc(0.17 * var(--accent-c)) var(--accent-h));
   --primary-foreground: #ffffff;
-  --highlight: oklch(0.56 calc(0.18 * var(--accent-c)) var(--accent-h)); /* иконки, активные элементы, кольца фокуса: ~4.6:1 */
+  --highlight: oklch(0.56 calc(0.18 * var(--accent-c)) var(--accent-h));
   --accent-pastel: var(--highlight);
-  --accent: oklch(0.6 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.1); /* hover / выделенные строки */
+  --accent: oklch(0.6 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.1);
   --accent-foreground: #1f1e1d;
   --selection: oklch(0.62 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.22);
   --secondary: #efeee9;
@@ -35,7 +25,6 @@
   --destructive: #c4382b;
   --ring: var(--highlight);
 
-  /* колонки — стекло поверх подложки */
   --sidebar: rgb(255 255 255 / 0.24);
   --sidebar-foreground: #1f1e1d;
   --sidebar-primary: var(--primary);
@@ -47,7 +36,6 @@
   --list: rgb(255 255 255 / 0.22);
   --column-blur: 12px;
 
-  /* матовое стекло */
   --glass-mix: 48%;
   --glass-blur: 24px;
   --glass-sat: 150%;
@@ -57,7 +45,6 @@
   --sheen: 0.35;
   --grain-alpha: 0.05;
 
-  /* цвета предметов (всегда в паре с иконкой) */
   --subject-red: oklch(0.56 0.19 27);
   --subject-orange: oklch(0.62 0.17 50);
   --subject-amber: oklch(0.66 0.15 75);
@@ -74,7 +61,6 @@
   --subject-brown: oklch(0.5 0.07 55);
   --subject-slate: oklch(0.5 0.03 255);
 
-  /* палитра текста и фона в конспектах — как в Notion */
   --tc-gray: #787774;
   --hl-gray: #f1f1ef;
   --tc-brown: #9f6b53;
@@ -95,7 +81,6 @@
   --hl-red: #fdebec;
   --hl-default: oklch(0.65 calc(0.17 * var(--accent-c)) var(--accent-h) / 0.16);
 
-  /* доски: фон стикеров и цвет линий — пресеты JSON Canvas 1…6 */
   --board-1: #ffdcd8;
   --board-line-1: #d44c47;
   --board-2: #fde3c8;
@@ -116,7 +101,6 @@
   --chart-4: #7c3aed;
   --chart-5: #e11d48;
 
-  /* скругления: поверхность 24 → блок 16 → контрол 12 → чип 8 (Jobmatcher) */
   --radius: 0.75rem;
   --radius-surface: 1.5rem;
   --radius-block: 1rem;
@@ -124,7 +108,6 @@
   --shadow-card: 0 1px 2px rgb(31 30 29 / 0.04), 0 4px 14px rgb(31 30 29 / 0.05);
   --shadow-float: 0 10px 30px var(--glass-shadow), 0 2px 6px rgb(31 30 29 / 0.06);
 
-  /* движение: 150–300мс, выход ≈ 65% входа */
   --dur-fast: 150ms;
   --dur-base: 200ms;
   --dur-slow: 300ms;
@@ -136,17 +119,16 @@
 .dark {
   --app-bg: #191918;
   --background: #1f1f1d;
-  --foreground: #f2f1ec; /* 15:1 */
+  --foreground: #f2f1ec;
   --card: #2a2a28;
   --card-foreground: #f2f1ec;
   --popover: #2e2e2b;
   --popover-foreground: #f2f1ec;
   --muted: #2f2f2c;
-  --muted-foreground: #a6a39a; /* 6.7:1 */
+  --muted-foreground: #a6a39a;
   --border: rgb(245 244 238 / 0.09);
   --input: rgb(245 244 238 / 0.13);
 
-  /* тот же оттенок, светлее для тёмного фона (~5.8:1) */
   --primary: oklch(0.74 calc(0.14 * var(--accent-c)) var(--accent-h));
   --primary-foreground: oklch(0.24 calc(0.06 * var(--accent-c)) var(--accent-h));
   --highlight: var(--primary);
@@ -236,11 +218,6 @@
   }
 }
 
-/*
- * Нейтральный акцент — на общих экранах (главная, корзина). Внутри предмета data-accent = его цвет,
- * и акцент строится из --accent-h/--accent-c (app/accent.ts). Белый на белом не читается,
- * поэтому в светлой теме нейтральный акцент — графит.
- */
 :root[data-accent='neutral'] {
   --primary: #1f1e1d;
   --primary-foreground: #ffffff;

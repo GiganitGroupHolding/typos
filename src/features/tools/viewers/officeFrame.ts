@@ -1,8 +1,3 @@
-/**
- * Код внутри песочницы просмотра DOCX / PPTX. Собирается отдельно (scripts/build-viewers.mjs) в public/viewers/office.js.
- * iframe без allow-same-origin: библиотеки пишут разметку из файла через innerHTML,
- * поэтому чужой документ не должен дотянуться до приложения и папки с конспектами.
- */
 import { renderAsync } from 'docx-preview'
 import JSZip from 'jszip'
 import { init } from 'pptx-preview'
@@ -16,10 +11,6 @@ const post = (msg: { type: 'boot' } | { type: 'ready'; pages: number } | { type:
 let current: { kind: Kind; data: ArrayBuffer } | null = null
 let width = 0
 
-/**
- * pptx-preview читает части по [Content_Types].xml и молча показывает пустоту, если там упомянута несуществующая
- * (так пишут pptxgenjs и некоторые конвертеры; PowerPoint это прощает). Убираем такие записи.
- */
 async function tidyPptx(data: ArrayBuffer): Promise<ArrayBuffer> {
   const zip = await JSZip.loadAsync(data)
   const types = zip.file('[Content_Types].xml')
@@ -31,7 +22,6 @@ async function tidyPptx(data: ArrayBuffer): Promise<ArrayBuffer> {
   return zip.generateAsync({ type: 'arraybuffer' })
 }
 
-/** Страницы Word шире узкого окна — уменьшаем целиком, а не прокручиваем вбок. */
 function fitDocx() {
   const page = root.querySelector<HTMLElement>('section.docx')
   root.style.zoom = page ? String(Math.min(1, (document.documentElement.clientWidth - 24) / (page.offsetWidth + 32))) : ''
@@ -63,7 +53,7 @@ async function render() {
       if (!pptx.slides?.length) throw new Error('В презентации не нашлось слайдов, которые получается показать.')
       post({ type: 'ready', pages: pptx.slides.length })
     }
-    // ссылки из документа здесь всё равно не откроются (нет allow-popups) — не притворяемся кликабельными
+
     for (const a of root.querySelectorAll('a[href]')) a.removeAttribute('href')
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) })
@@ -76,7 +66,6 @@ addEventListener('message', (e: MessageEvent<Incoming>) => {
   void render()
 })
 
-// слайды рисуются под ширину окна — после изменения размера перерисовываем
 let timer = 0
 new ResizeObserver(() => {
   if (current?.kind === 'docx') return fitDocx()

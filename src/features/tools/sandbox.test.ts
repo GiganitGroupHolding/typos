@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TOOL_CSP, withCsp } from './sandbox'
 
-/** Как документ тулзы увидит браузер: активна только meta CSP внутри <head>, и она должна стоять раньше любого скрипта. */
 function parse(html: string) {
   const doc = new DOMParser().parseFromString(withCsp(html), 'text/html')
   const csp = [...doc.head.querySelectorAll('meta[http-equiv="Content-Security-Policy"]')]

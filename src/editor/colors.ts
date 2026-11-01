@@ -1,14 +1,6 @@
 import { Extension, Mark } from '@tiptap/core'
 import Highlight from '@tiptap/extension-highlight'
 
-/**
- * Цвет текста и фона — палитра как в Notion.
- * В Markdown цвета нет, поэтому пишем inline-HTML (Obsidian покажет текст, ничего не теряется):
- *   цвет текста     → <span data-text-color="red">…</span>
- *   цветной фон     → <mark data-color="green">…</mark>
- *   простой маркер  → ==…==
- */
-
 export const NOTE_COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const
 export type NoteColor = (typeof NOTE_COLORS)[number]
 
@@ -33,7 +25,6 @@ declare module '@tiptap/core' {
       unsetTextColor: () => ReturnType
     }
     lastColor: {
-      /** Ctrl+Shift+H: применить последний выбранный цвет (как в Notion). */
       applyLastColor: () => ReturnType
     }
   }
@@ -97,7 +88,7 @@ export const ColorHighlight = Highlight.extend({
       },
     }
   },
-  // Ctrl+Shift+H занят под «последний цвет»
+
   addKeyboardShortcuts() {
     return {}
   },
@@ -124,7 +115,6 @@ export const ColorHighlight = Highlight.extend({
   },
 }).configure({ multicolor: true })
 
-/** Запоминает последний цвет и применяет его по Ctrl+Shift+H. */
 export const LastColor = Extension.create({
   name: 'lastColor',
   addStorage() {

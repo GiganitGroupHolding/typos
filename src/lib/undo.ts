@@ -1,6 +1,5 @@
 import { toast } from 'sonner'
 
-/** Тост с «Отменить» для удалений в корзину. */
 export function toastUndo(message: string, undo: () => Promise<void>, after?: () => void) {
   toast(message, {
     duration: 8000,
@@ -17,7 +16,6 @@ export function toastUndo(message: string, undo: () => Promise<void>, after?: ()
 
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** Ctrl+Enter отправляет форму даже из многострочного поля. */
 export function submitOnCtrlEnter(e: React.KeyboardEvent<HTMLFormElement>) {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault()

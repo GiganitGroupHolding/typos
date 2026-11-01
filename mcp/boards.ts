@@ -10,7 +10,6 @@ import {
   type BoardNodeType,
 } from '@/features/boards/model'
 
-/** Узел доски от модели: всё необязательно; у существующего id — правка только переданных полей. */
 export interface BoardNodeInput {
   id?: string
   type?: BoardNodeType
@@ -23,7 +22,7 @@ export interface BoardNodeInput {
   y?: number
   width?: number
   height?: number
-  /** у рамки без координат — id узлов, вокруг которых она встанет */
+
   children?: string[]
 }
 
@@ -39,15 +38,14 @@ export interface BoardEdgeInput {
 export interface BoardEdit {
   nodes?: BoardNodeInput[]
   edges?: BoardEdgeInput[]
-  /** id узлов и стрелок; стрелки удалённых узлов уходят с ними */
+
   remove?: string[]
-  /** куда идёт схема у расставляемых узлов */
+
   direction?: 'LR' | 'TB'
 }
 
 const NAMED: Record<string, string> = { red: '1', orange: '2', yellow: '3', green: '4', cyan: '5', blue: '5', purple: '6', violet: '6' }
 
-/** Цвет от модели: пресет, имя по-английски или #rrggbb; «» — без цвета. */
 function color(v: string | undefined, where: string): string | undefined | null {
   if (v === undefined) return null
   const c = NAMED[v.trim().toLowerCase()] ?? v.trim()
@@ -56,7 +54,6 @@ function color(v: string | undefined, where: string): string | undefined | null 
   return c
 }
 
-/** Путь к картинке внутри хранилища — как его проверяют адаптеры, только раньше и с понятной ошибкой. */
 function imagePath(file: string) {
   const parts = file.split('/')
   if (file.startsWith('/') || /[\\:]/.test(file) || parts.some((p) => !p || p === '.' || p === '..' || p.startsWith('.')))
@@ -79,10 +76,6 @@ const DEFAULT_SIZE: Record<BoardNodeType, { width: number; height: number }> = {
 
 const size = (v: number | undefined, min: number) => (v === undefined ? undefined : Math.max(min, Math.round(v)))
 
-/**
- * Правка доски от MCP: добавить или поправить узлы и стрелки, удалить по id, расставить узлы без координат.
- * Возвращает новые данные и id узлов в порядке nodes (для стрелок в следующих вызовах).
- */
 export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ data: BoardData; ids: string[] }> {
   const gone = new Set(edit.remove ?? [])
   let nodes = data.nodes.filter((n) => !gone.has(n.id))
@@ -105,7 +98,7 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
       if (input.x !== undefined) next.x = Math.round(input.x)
       if (input.y !== undefined) next.y = Math.round(input.y)
       next.width = size(input.width, MIN_NODE_W) ?? next.width
-      // текст стал длиннее, а размер не задан — карточка растёт под него
+
       next.height =
         size(input.height, MIN_NODE_H) ??
         (next.type === 'text' && input.text !== undefined ? Math.max(next.height, textSize(input.text, next.width).height) : next.height)
@@ -132,7 +125,7 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
     }
     if (input.x === undefined || input.y === undefined) unplaced.add(id)
     if (type === 'group' && input.children?.length) children.set(id, input.children)
-    // рамки — первыми: они под карточками
+
     nodes = type === 'group' ? [node, ...nodes] : [...nodes, node]
     ids.push(id)
   }
@@ -169,7 +162,6 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
   return { data: unplaced.size ? await placeNodes(result, unplaced, children, edit.direction) : result, ids }
 }
 
-/** Доска для ответа модели: без пустых полей. */
 export function boardForModel(data: BoardData) {
   return {
     nodes: data.nodes.map((n) => ({

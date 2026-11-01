@@ -4,7 +4,7 @@ import { loadConfig } from './config.mjs'
 
 try {
   const { repo, link, files = [] } = await loadConfig()
-  // Запуск из кэша плагинов не должен менять базу относительных путей MCP.
+
   const child = spawn(
     process.execPath,
     [

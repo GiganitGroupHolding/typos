@@ -1,12 +1,6 @@
 import { RemoteAdapter, RemoteError } from './remoteAdapter'
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
-/**
- * Vault прямо на сервере хранения через WebDAV, без локальной копии: каждый вызов идёт в сеть.
- * Так работают MCP-сервер (--link) и тесты сервера; приложение ходит через локальную копию (syncedAdapter).
- */
-
-/** Тег с любым префиксом пространства имён: «<d:href>», «<D:href>», «<href>». */
 const tag = (name: string) => `<(?:[\\w-]+:)?${name}\\b`
 const RESPONSE = new RegExp(`${tag('response')}[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?response>`, 'g')
 const HREF = new RegExp(`${tag('href')}[^>]*>([^<]*)<`)
@@ -17,10 +11,6 @@ const unescapeXml = (s: string) =>
     hex ? String.fromCodePoint(parseInt(hex, 16)) : dec ? String.fromCodePoint(Number(dec)) : (ENTITIES[name!] ?? m),
   )
 
-/**
- * Ответ PROPFIND Depth: 1 → содержимое папки. Сама папка — запись с самым коротким путём.
- * Разбираем регулярками, а не DOMParser: его нет в Node, где работает MCP-сервер.
- */
 export function parseListing(xml: string): Entry[] {
   const items = [...xml.matchAll(RESPONSE)].map(([, body]) => {
     const href = unescapeXml(HREF.exec(body)?.[1] ?? '')

@@ -2,7 +2,6 @@ import { chmodSync, chownSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { register } from 'tsx/esm/api'
 
-// Railway монтирует новый том от root; права меняем только для отдельной папки авторизации.
 if (process.getuid?.() === 0) {
   if (process.env.MCP_AUTH_MODE === 'owner') {
     if (process.env.MCP_AUTH_DATA_DIR !== '/data/auth') throw new Error('В контейнере используй MCP_AUTH_DATA_DIR=/data/auth')

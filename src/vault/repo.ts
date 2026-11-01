@@ -23,8 +23,6 @@ import {
   TRASH_DIR,
 } from './format'
 
-/** Операции над vault поверх VaultAdapter. Не знает про React. */
-
 export interface VaultData {
   subjects: Subject[]
   notes: Note[]
@@ -68,7 +66,7 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
           order: Number(meta.order ?? 999),
         })
       }),
-      // старая папка «Инструменты» — тоже: до миграции (и в MCP, где миграции нет) файлы не пропадают
+
       readProjects(a, joinPath(subject.dir, PROJECTS_DIR), subject.id, data.tools),
       readProjects(a, joinPath(subject.dir, TOOLS_DIR), subject.id, data.tools),
       readFiles(a, joinPath(subject.dir, BOARDS_DIR), BOARD_EXT, async (path, text) => {
@@ -96,9 +94,7 @@ async function readSubject(a: VaultAdapter, dir: string, index: number): Promise
   let meta: Partial<Subject> = {}
   try {
     meta = JSON.parse((await a.readText(joinPath(dir, SUBJECT_META))) ?? '{}')
-  } catch {
-    // битый json — восстановим ниже
-  }
+  } catch {}
   const subject: Subject = {
     id: meta.id || genId(),
     name: dir,
@@ -107,7 +103,7 @@ async function readSubject(a: VaultAdapter, dir: string, index: number): Promise
     icon: ICONS.includes(meta.icon!) ? meta.icon! : 'book',
     order: typeof meta.order === 'number' ? meta.order : index,
   }
-  // папку создали руками (или в Obsidian) — допишем метаданные
+
   if (!meta.id) await writeSubjectMeta(a, subject)
   return subject
 }
@@ -130,16 +126,12 @@ async function readFiles(a: VaultAdapter, dir: string, ext: string, cb: (path: s
   )
 }
 
-// ---------- мини-карты ----------
-
-/** Карта лежит рядом с конспектом: Конспекты/.maps/<id>.json (имя файла конспекта может меняться, id — нет). */
 export const noteMapPath = (note: Pick<Note, 'id' | 'path'>) => joinPath(dirname(note.path), MAPS_DIR, `${note.id}.json`)
 
 export async function loadNoteMap(a: VaultAdapter, note: Pick<Note, 'id' | 'path'>): Promise<NoteMap> {
   return parseNoteMap(await a.readText(noteMapPath(note)))
 }
 
-/** Пустая карта — файл удаляется, чтобы не копить пустышки. */
 export async function saveNoteMap(a: VaultAdapter, note: Pick<Note, 'id' | 'path'>, map: NoteMap): Promise<void> {
   const path = noteMapPath(note)
   if (!map.nodes.length) {
@@ -149,7 +141,6 @@ export async function saveNoteMap(a: VaultAdapter, note: Pick<Note, 'id' | 'path
   await a.writeText(path, serializeNoteMap(map))
 }
 
-/** Файлы «Проектов»: HTML читается сразу (id и иконка — в <meta>), остальное только перечисляется. */
 async function readProjects(a: VaultAdapter, dir: string, subjectId: string, out: Tool[]) {
   const entries = (await a.list(dir)).filter((e) => e.kind === 'file' && !e.name.startsWith('.') && !e.name.endsWith('.tmp'))
   await Promise.all(
@@ -180,18 +171,12 @@ async function readProjects(a: VaultAdapter, dir: string, subjectId: string, out
   )
 }
 
-/** Стабильный id для файлов без frontmatter (тулзы, чужие .md). */
 function pathId(path: string) {
   let h = 0
   for (const ch of path) h = (Math.imul(31, h) + ch.charCodeAt(0)) | 0
   return `f${(h >>> 0).toString(36)}`
 }
 
-/**
- * Один id у нескольких файлов: конспект переименовали на двух устройствах сразу (синхронизация видит два разных файла)
- * или скопировали файл руками. id остаётся у первого по пути, остальным — id от пути: на всех устройствах выйдет одно и то же,
- * а при сохранении новый id запишется в файл.
- */
 function uniqueIds<T extends { id: string }>(items: T[], key: (x: T) => string): T[] {
   const seen = new Set<string>()
   const fixed = new Map<T, string>()
@@ -230,19 +215,23 @@ export async function createNote(a: VaultAdapter, subject: Subject, body = ''): 
   const dir = joinPath(subject.dir, NOTES_DIR)
   const title = extractTitle(body)
   const path = await uniquePath(a, dir, safeName(title), '.md')
-  const note: Note = { id: genId(), subjectId: subject.id, path, title, created: now, updated: now, excerpt: extractExcerpt(body), body, meta: {} }
+  const note: Note = {
+    id: genId(),
+    subjectId: subject.id,
+    path,
+    title,
+    created: now,
+    updated: now,
+    excerpt: extractExcerpt(body),
+    body,
+    meta: {},
+  }
   await a.writeText(path, noteFile(note))
   return note
 }
 
-/** Ссылки на картинки в Markdown: ![alt](путь "подпись"). */
 const IMAGE_LINK = /!\[([^\]]*)\]\(<?([^)\s>]+)>?(\s+"[^"]*")?\)/g
 
-/**
- * Конспект из .md-файла. Чужой frontmatter сохраняется (кроме id и дат), формулы приводятся к $…$,
- * заголовок — первая строка «# …» или имя файла. Картинки, перетащенные вместе с файлом и названные
- * в его ссылках, копируются в assets/, ссылки переписываются.
- */
 export async function importNote(
   a: VaultAdapter,
   subject: Subject,
@@ -262,29 +251,41 @@ export async function importNote(
       const blob = input.images.get(key)
       if (blob) copied.set(src, await saveAsset(a, dir, blob))
     }
-    body = body.replace(IMAGE_LINK, (m, alt: string, src: string, cap = '') => (copied.has(src) ? `![${alt}](${copied.get(src)}${cap})` : m))
+    body = body.replace(IMAGE_LINK, (m, alt: string, src: string, cap = '') =>
+      copied.has(src) ? `![${alt}](${copied.get(src)}${cap})` : m,
+    )
   }
 
   const now = new Date().toISOString()
   const title = extractTitle(body)
   const path = await uniquePath(a, dir, safeName(title), '.md')
-  const note: Note = { id: genId(), subjectId: subject.id, path, title, created: created || now, updated: now, excerpt: extractExcerpt(body), body: `${body}\n`, meta: rest }
+  const note: Note = {
+    id: genId(),
+    subjectId: subject.id,
+    path,
+    title,
+    created: created || now,
+    updated: now,
+    excerpt: extractExcerpt(body),
+    body: `${body}\n`,
+    meta: rest,
+  }
   await a.writeText(path, noteFile(note))
   return note
 }
 
-/** Текст конспекта на диске прямо сейчас (null — файла уже нет). */
 export async function readNoteBody(a: VaultAdapter, path: string): Promise<string | null> {
   const text = await a.readText(path)
   return text === null ? null : parseFrontmatter(text).body
 }
 
-/** Сохраняет текст; если сменился заголовок — переименовывает файл. */
 export async function saveNote(a: VaultAdapter, note: Note, body: string): Promise<Note> {
   const title = extractTitle(body)
   const next: Note = { ...note, body, title, excerpt: extractExcerpt(body), updated: new Date().toISOString() }
   const wantedBase = safeName(title)
-  const currentBase = basename(note.path).replace(/\.md$/, '').replace(/ \(\d+\)$/, '')
+  const currentBase = basename(note.path)
+    .replace(/\.md$/, '')
+    .replace(/ \(\d+\)$/, '')
   if (wantedBase !== currentBase) {
     next.path = await uniquePath(a, dirname(note.path), wantedBase, '.md', note.path)
   }
@@ -293,11 +294,8 @@ export async function saveNote(a: VaultAdapter, note: Note, body: string): Promi
   return next
 }
 
-// ---------- корзина ----------
-
 const TRASH_SEP = ' › '
 
-/** Удаление = перенос в корзину (файл или папку предмета). Возвращает путь в корзине для «Отменить». */
 export async function trashEntry(a: VaultAdapter, path: string): Promise<string> {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
   const to = joinPath(TRASH_DIR, `${stamp} ${path.replaceAll('/', TRASH_SEP)}`)
@@ -311,7 +309,6 @@ const splitExt = (name: string) => {
   return { base: m[1], ext: m[2] ?? '' }
 }
 
-/** Вернуть из корзины на прежнее место (с « (2)», если место занято). */
 export async function restoreFromTrash(a: VaultAdapter, trashPath: string, originalPath: string) {
   const { base, ext } = splitExt(basename(originalPath))
   const path = await uniquePath(a, dirname(originalPath), base, ext)
@@ -355,13 +352,10 @@ export async function listTrash(a: VaultAdapter): Promise<TrashItem[]> {
   return items.sort((x, y) => y.deletedAt.localeCompare(x.deletedAt))
 }
 
-/** Удалить навсегда всё, что лежит в корзине дольше days дней. */
 export async function purgeTrash(a: VaultAdapter, days = 30) {
   const limit = Date.now() - days * 864e5
   for (const item of await listTrash(a)) if (new Date(item.deletedAt).getTime() < limit) await a.remove(item.trashPath)
 }
-
-// ---------- закреп ----------
 
 export interface PinInput {
   title: string
@@ -385,14 +379,14 @@ export async function createPin(a: VaultAdapter, subject: Subject, input: PinInp
 export async function updatePin(a: VaultAdapter, pin: Pin, input: PinInput & { order?: number }): Promise<Pin> {
   const next: Pin = { ...pin, title: input.title.trim(), tex: clean(input.tex), text: clean(input.text), order: input.order ?? pin.order }
   const wanted = safeName(next.title, 'Карточка')
-  const current = basename(pin.path).replace(/\.md$/, '').replace(/ \(\d+\)$/, '')
+  const current = basename(pin.path)
+    .replace(/\.md$/, '')
+    .replace(/ \(\d+\)$/, '')
   if (wanted !== current) next.path = await uniquePath(a, dirname(pin.path), wanted, '.md', pin.path)
   await a.writeText(next.path, pinFile(next.id, next.order, next))
   if (next.path !== pin.path) await a.remove(pin.path)
   return next
 }
-
-// ---------- тулзы ----------
 
 const metaRe = (name: string) => new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"\\s*/?>`, 'i')
 
@@ -400,7 +394,6 @@ export function getHtmlMeta(html: string, name: string): string | undefined {
   return html.match(metaRe(name))?.[1]
 }
 
-/** Записывает <meta name=… content=…> в <head> (заменяет, если уже есть). */
 export function setHtmlMeta(html: string, name: string, content: string): string {
   const tag = `<meta name="${name}" content="${content.replace(/"/g, '&quot;')}">`
   if (metaRe(name).test(html)) return html.replace(metaRe(name), tag)
@@ -409,15 +402,16 @@ export function setHtmlMeta(html: string, name: string, content: string): string
   return `<!doctype html><html><head><meta charset="utf-8">${tag}</head><body>${html}</body></html>`
 }
 
-/** Имя тулзы из <title> или имени файла. */
-/** Имена файлов, по которым ничего не понять: тогда название берём из <title>. */
 const GENERIC_NAME = /^(index|document|untitled|page|artifact|new|file|download|без названия|документ|страница)( ?\(\d+\)| ?\d+)?$/i
 
-/** Название тулзы: имя файла как есть (кириллица, пробелы); <title> — если имя безликое или файла нет. */
 export function guessToolName(html: string, fileName?: string): string {
   const fromFile = fileName ? fileTitle(fileName) : ''
   if (fromFile.length > 2 && !GENERIC_NAME.test(fromFile)) return fromFile
-  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+  const title = html
+    .match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]
+    ?.replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
   return title || fromFile || 'Проект'
 }
 
@@ -426,10 +420,19 @@ export async function importTool(a: VaultAdapter, subject: Subject, input: { nam
   const html = setHtmlMeta(setHtmlMeta(input.html, 'studynotes-id', id), 'studynotes-icon', input.icon)
   const path = await uniquePath(a, joinPath(subject.dir, PROJECTS_DIR), safeName(input.name, 'Проект'), '.html')
   await a.writeText(path, html)
-  return { id, subjectId: subject.id, path, name: fileTitle(basename(path)), kind: 'html', ext: 'html', icon: input.icon, html, size: html.length }
+  return {
+    id,
+    subjectId: subject.id,
+    path,
+    name: fileTitle(basename(path)),
+    kind: 'html',
+    ext: 'html',
+    icon: input.icon,
+    html,
+    size: html.length,
+  }
 }
 
-/** Любой файл в «Проекты»: HTML — как тулза (песочница, иконка), остальное — как есть, байт в байт. */
 export async function importProjectFile(
   a: VaultAdapter,
   subject: Subject,
@@ -444,13 +447,19 @@ export async function importProjectFile(
   const title = safeName(input.title || fileTitle(input.name), 'Файл')
   const path = await uniquePath(a, joinPath(subject.dir, PROJECTS_DIR), title, ext ? `.${ext}` : '')
   await a.writeBlob(path, input.blob)
-  return { id: pathId(path), subjectId: subject.id, path, name: fileTitle(basename(path)) || title, kind, ext, icon: 'calculator', html: '', size: input.blob.size }
+  return {
+    id: pathId(path),
+    subjectId: subject.id,
+    path,
+    name: fileTitle(basename(path)) || title,
+    kind,
+    ext,
+    icon: 'calculator',
+    html: '',
+    size: input.blob.size,
+  }
 }
 
-/**
- * Старая папка «Инструменты» → «Проекты»: файлы переезжают целиком (HTML не трогаются, id остаются в <meta>).
- * Занятые имена получают « (2)»; ничего не перезаписывается и не удаляется, кроме опустевшей старой папки.
- */
 export async function migrateTools(a: VaultAdapter): Promise<number> {
   let moved = 0
   for (const root of await a.list('')) {
@@ -460,7 +469,7 @@ export async function migrateTools(a: VaultAdapter): Promise<number> {
     for (const e of entries) {
       const from = joinPath(old, e.name)
       const { base, ext } = splitExt(e.name)
-      // id без <meta> считался от пути — закрепляем старый, чтобы открытые окна и ссылки не потерялись
+
       if (e.kind === 'file' && fileKind(fileExt(e.name)) === 'html') {
         const html = await a.readText(from)
         if (html !== null && !getHtmlMeta(html, 'studynotes-id')) await a.writeText(from, setHtmlMeta(html, 'studynotes-id', pathId(from)))
@@ -481,19 +490,19 @@ export async function updateTool(a: VaultAdapter, tool: Tool, input: { name: str
     const ext = tool.ext ? `.${tool.ext}` : ''
     const path = wanted !== current ? await uniquePath(a, dirname(tool.path), wanted, ext, tool.path) : tool.path
     if (path !== tool.path) await a.move(tool.path, path)
-    // id тот же до перезагрузки — окна и адреса не ломаются
+
     return { ...tool, path, name: fileTitle(basename(path)) || wanted }
   }
   const html = setHtmlMeta(setHtmlMeta(tool.html, 'studynotes-id', tool.id), 'studynotes-icon', input.icon)
   const wanted = safeName(input.name, 'Инструмент')
-  const current = basename(tool.path).replace(/\.html?$/i, '').replace(/ \(\d+\)$/, '')
+  const current = basename(tool.path)
+    .replace(/\.html?$/i, '')
+    .replace(/ \(\d+\)$/, '')
   const path = wanted !== current ? await uniquePath(a, dirname(tool.path), wanted, '.html', tool.path) : tool.path
   await a.writeText(path, html)
   if (path !== tool.path) await a.remove(tool.path)
   return { ...tool, path, html, icon: input.icon, name: basename(path).replace(/\.html?$/i, '') }
 }
-
-// ---------- доски ----------
 
 export async function createBoard(a: VaultAdapter, subject: Subject, name: string, data: BoardData = emptyBoard()): Promise<Board> {
   const id = genId()
@@ -507,30 +516,22 @@ export async function saveBoard(a: VaultAdapter, board: Board, data: BoardData):
   return { ...board, data }
 }
 
-/** Переименование = перенос файла; id лежит внутри, поэтому не меняется. */
 export async function renameBoard(a: VaultAdapter, board: Board, name: string): Promise<Board> {
   const wanted = safeName(name, 'Доска')
   const current = fileTitle(basename(board.path)).replace(/ \(\d+\)$/, '')
   if (wanted === current) return board
   const path = await uniquePath(a, dirname(board.path), wanted, BOARD_EXT, board.path)
-  // в файле мог не быть id (доску сделали в Obsidian) — дописываем, иначе id сменится вместе с путём
+
   await a.writeText(board.path, serializeBoard(board.id, board.data))
   if (path !== board.path) await a.move(board.path, path)
   return { ...board, path, name: fileTitle(basename(path)) }
 }
 
-/**
- * Картинка на доску → `<Предмет>/Доски/assets/<id>.webp`.
- * Возвращает путь от корня хранилища — так ссылается на файлы JSON Canvas.
- */
 export async function saveBoardImage(a: VaultAdapter, board: Pick<Board, 'path'>, file: Blob): Promise<string> {
   const dir = dirname(board.path)
   return joinPath(dir, await saveAsset(a, dir, file))
 }
 
-// ---------- предметы ----------
-
-/** Переименование = перенос папки; цвет и иконка — в _subject.json. */
 export async function updateSubject(
   a: VaultAdapter,
   subject: Subject,
@@ -548,7 +549,6 @@ export async function updateSubject(
   return next
 }
 
-/** Сколько конспектов в хранилище (для вопроса «перенести?»). */
 export async function countNotes(a: VaultAdapter) {
   let n = 0
   for (const root of await a.list('')) {
@@ -558,8 +558,6 @@ export async function countNotes(a: VaultAdapter) {
   return n
 }
 
-/** Копирует всё из одного хранилища в другое, не перезаписывая существующие файлы. Корзину пропускает. */
-/** Копия хранилища без корзины. overwrite — файлы с теми же путями заменяются, иначе остаются как были. */
 export async function copyVault(from: VaultAdapter, to: VaultAdapter, dir = '', opts: { overwrite?: boolean } = {}): Promise<number> {
   let copied = 0
   for (const e of await from.list(dir)) {
@@ -591,10 +589,6 @@ export async function createSubject(
   return subject
 }
 
-/**
- * Картинка из буфера/перетаскивания → `<папка конспекта>/assets/<id>.webp`.
- * Возвращает путь относительно файла конспекта (как в Markdown).
- */
 export async function saveAsset(a: VaultAdapter, noteDir: string, file: Blob): Promise<string> {
   const blob = await toWebp(file)
   const ext = blob.type === 'image/webp' ? 'webp' : (file.type.split('/')[1] ?? 'png').replace('jpeg', 'jpg')
@@ -603,7 +597,6 @@ export async function saveAsset(a: VaultAdapter, noteDir: string, file: Blob): P
   return rel
 }
 
-/** Сжимает в webp (скриншоты доски весят в разы меньше). GIF/SVG и ошибки — как есть. */
 async function toWebp(file: Blob): Promise<Blob> {
   if (!/^image\/(png|jpeg|bmp)$/.test(file.type) || typeof createImageBitmap !== 'function') return file
   try {

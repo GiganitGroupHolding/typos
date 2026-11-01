@@ -1,6 +1,5 @@
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
-/** Хранилище «путь → содержимое». Папки неявные: существуют, пока в них есть файлы. */
 export interface FlatStore {
   get(path: string): Promise<string | Blob | undefined>
   set(path: string, value: string | Blob): Promise<void>
@@ -27,7 +26,7 @@ export class FlatAdapter implements VaultAdapter {
       const rest = key.slice(prefix.length)
       const [head, ...tail] = rest.split('/')
       if (!head) continue
-      // .keep — маркер пустой папки, наружу не показываем
+
       if (!tail.length && head === '.keep') continue
       seen.set(head, tail.length ? 'dir' : (seen.get(head) ?? 'file'))
     }

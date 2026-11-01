@@ -21,7 +21,6 @@ import { useBoardsOf, useCreateBoard, useCreateNote, useNotesOf, usePinsOf, useS
 
 const PINS_PREVIEW = 4
 
-/** Главная предмета — bento: конспекты, закреп, проекты, доски. */
 export function SubjectHome() {
   const { subjectId } = useParams()
   const [params] = useSearchParams()

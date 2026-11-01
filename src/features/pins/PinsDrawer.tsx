@@ -12,7 +12,6 @@ import { PinActions } from './PinActions'
 import { PinBody } from './PinCard'
 import { openPinEditor } from './PinEditorDialog'
 
-/** Выдвижная панель закрепа справа. Карточки переставляются за ручку. */
 export function PinsDrawer() {
   const { subjectId } = useParams()
   const subject = useSubject(subjectId)
@@ -69,7 +68,6 @@ export function PinsDrawer() {
 }
 
 function PinList({ pins, subjectId }: { pins: Pin[]; subjectId: string }) {
-  // локальный порядок во время перетаскивания, на диск — по отпусканию
   const [order, setOrder] = useState(pins)
   useEffect(() => setOrder(pins), [pins])
   const commit = () => {

@@ -1,10 +1,3 @@
-//! Папка vault на диске для десктопного приложения (src/storage/tauriAdapter.ts).
-//! Повторяет mcp/nodeAdapter.ts: пути относительные через «/», выйти за корень нельзя ни строкой, ни ссылкой (src/paths.rs),
-//! запись атомарная — во временный «имя.1a2b3c4d.tmp» и переименование.
-//!
-//! Корень приходит из JS, но Rust пускает только в папки, которые пользователь сам выбрал в системном диалоге
-//! (сейчас или раньше — тогда путь запомнен в настройках приложения). Скрипт в окне не прочитает произвольный файл на диске.
-
 use std::collections::HashSet;
 use std::fs;
 use std::io::ErrorKind;
@@ -21,9 +14,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::paths::{checked, inside, is_state_dir};
 
-/// Ошибка «файла нет» — адаптер превращает её в null.
 const MISSING: &str = "ENOENT";
-/// Запомненная папка в каталоге настроек приложения.
+
 const SAVED_FILE: &str = "vault.json";
 
 #[derive(Serialize)]
@@ -37,7 +29,6 @@ struct Saved {
   root: PathBuf,
 }
 
-/// Папки, которые пользователь выбрал сам. Только в них и ходят команды vault_*.
 #[derive(Default)]
 pub struct Granted(Mutex<HashSet<PathBuf>>);
 
@@ -46,7 +37,6 @@ impl Granted {
     self.0.lock().unwrap_or_else(PoisonError::into_inner).insert(root);
   }
 
-  /// Корень из JS → путь, если эту папку выбирал пользователь.
   fn check(&self, root: &str) -> Result<PathBuf, String> {
     let root = PathBuf::from(root);
     if self.0.lock().unwrap_or_else(PoisonError::into_inner).contains(&root) {
@@ -61,7 +51,6 @@ fn err(e: impl ToString) -> String {
   e.to_string()
 }
 
-/// Файловые операции — в пуле блокирующих задач, чтобы не занимать потоки асинхронного рантайма.
 async fn blocking<T: Send + 'static>(job: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
   tauri::async_runtime::spawn_blocking(job).await.map_err(err)?
 }
@@ -75,7 +64,6 @@ fn tmp_name(target: &Path) -> PathBuf {
   PathBuf::from(name)
 }
 
-/// Пишет во временный файл и переименовывает — никто не прочитает файл наполовину.
 fn write_atomic(target: &Path, data: &[u8]) -> Result<(), String> {
   if let Some(parent) = target.parent() {
     fs::create_dir_all(parent).map_err(err)?;
@@ -96,14 +84,10 @@ fn path_string(path: &Path) -> String {
   path.to_string_lossy().into_owned()
 }
 
-// ---------- выбор папки ----------
-
-/// Папка, выбранная в прошлый раз; None — не выбирали.
 #[tauri::command]
 pub async fn vault_saved(app: AppHandle, granted: State<'_, Granted>) -> Result<Option<String>, String> {
   let file = saved_file(&app)?;
   let saved = blocking(move || match fs::read(&file) {
-    // испорченный файл — как будто папку не выбирали: пользователь выберет снова
     Ok(bytes) => Ok(serde_json::from_slice::<Saved>(&bytes).ok()),
     Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
     Err(e) => Err(err(e)),
@@ -116,7 +100,6 @@ pub async fn vault_saved(app: AppHandle, granted: State<'_, Granted>) -> Result<
   }))
 }
 
-/// Системный диалог выбора папки; None — пользователь передумал.
 #[tauri::command]
 pub async fn vault_pick(app: AppHandle, granted: State<'_, Granted>) -> Result<Option<String>, String> {
   let picked = blocking(move || Ok(app.dialog().file().set_title("Папка для конспектов").blocking_pick_folder())).await?;
@@ -127,7 +110,6 @@ pub async fn vault_pick(app: AppHandle, granted: State<'_, Granted>) -> Result<O
   Ok(Some(path))
 }
 
-/// Запомнить выбранную папку до следующего запуска.
 #[tauri::command]
 pub async fn vault_remember(app: AppHandle, granted: State<'_, Granted>, root: String) -> Result<(), String> {
   let json = serde_json::to_vec(&Saved {
@@ -148,8 +130,6 @@ pub async fn vault_forget(app: AppHandle) -> Result<(), String> {
   .await
 }
 
-// ---------- файлы ----------
-
 #[tauri::command]
 pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) -> Result<Vec<Entry>, String> {
   let root = granted.check(&root)?;
@@ -168,11 +148,11 @@ pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) 
       if at_root && is_state_dir(&item.file_name().to_string_lossy()) {
         continue;
       }
-      // ссылку наружу не показываем: прочитать по ней всё равно нельзя
+
       if item.file_type().map_err(err)?.is_symlink() && !fs::canonicalize(item.path()).is_ok_and(|real| inside(&root_real, &real)) {
         continue;
       }
-      // ссылку на папку считаем папкой, как readdir + stat
+
       let is_dir = fs::metadata(item.path()).map(|m| m.is_dir()).unwrap_or(false);
       out.push(Entry {
         name: item.file_name().to_string_lossy().into_owned(),
@@ -184,7 +164,6 @@ pub async fn vault_list(granted: State<'_, Granted>, root: String, dir: String) 
   .await
 }
 
-/// Содержимое файла сырыми байтами (в JS — ArrayBuffer, без JSON).
 #[tauri::command]
 pub async fn vault_read(granted: State<'_, Granted>, root: String, path: String) -> Result<Response, String> {
   let root = granted.check(&root)?;
@@ -203,7 +182,6 @@ pub async fn vault_write_text(granted: State<'_, Granted>, root: String, path: S
   blocking(move || write_atomic(&checked(&root, &path)?, text.as_bytes())).await
 }
 
-/// Тело запроса — сырые байты, корень и путь — в заголовках x-root / x-path (encodeURIComponent).
 #[tauri::command]
 pub async fn vault_write_bytes(granted: State<'_, Granted>, request: Request<'_>) -> Result<(), String> {
   let header = |name: &str| -> Result<String, String> {

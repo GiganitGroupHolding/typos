@@ -1,9 +1,3 @@
-/**
- * Знак TYPOS: шестиугольник в шестиугольнике — стеклянная призма сверху (как в референсе).
- * Контур — currentColor, грани — полупрозрачное «стекло», центр — цвет акцента (в предмете — его цвет).
- * Та же геометрия в scripts/gen-icons.mjs (иконки, favicon).
- */
-
 const hex = (r: number) =>
   Array.from({ length: 6 }, (_, i) => {
     const a = (Math.PI / 3) * i - Math.PI / 2
@@ -12,7 +6,7 @@ const hex = (r: number) =>
 const OUTER = hex(26)
 const INNER = hex(11)
 const pts = (p: readonly (readonly [number, number])[]) => p.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ')
-/** Грани по часовой от верхней правой; свет сверху слева. */
+
 const FACE_ALPHA = [0.16, 0.08, 0.05, 0.07, 0.12, 0.22]
 
 export function TyposMark({ className }: { className?: string }) {

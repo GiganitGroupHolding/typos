@@ -3,10 +3,6 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { registerSW } from 'virtual:pwa-register'
 
-/**
- * Регистрирует сервис-воркер: офлайн-режим и «Доступна новая версия».
- * В десктопном приложении не нужен: его файлы и так лежат на диске.
- */
 export function setupPwa() {
   if (!('serviceWorker' in navigator) || import.meta.env.DEV || isTauri()) return
   const update = registerSW({
@@ -41,7 +37,6 @@ if (typeof window !== 'undefined') {
   })
 }
 
-/** Можно ли предложить «Установить приложение» (Edge/Chrome, ещё не установлено). */
 export function useInstallPrompt() {
   const [available, setAvailable] = useState(!!deferred)
   useEffect(() => {

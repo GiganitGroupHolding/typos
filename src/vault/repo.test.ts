@@ -80,7 +80,10 @@ describe('vault repo', () => {
     const s2 = await repo.createSubject(a, { name: 'Мат/анализ: 1 курс', color: 'rose', icon: 'book' }, 1)
     expect(s2.dir).toBe('Мат анализ 1 курс (2)')
     const v = await repo.loadVault(a)
-    expect(v.subjects.map((s) => [s.name, s.color])).toEqual([['Мат анализ 1 курс', 'blue'], ['Мат анализ 1 курс (2)', 'rose']])
+    expect(v.subjects.map((s) => [s.name, s.color])).toEqual([
+      ['Мат анализ 1 курс', 'blue'],
+      ['Мат анализ 1 курс (2)', 'rose'],
+    ])
   })
 
   it('картинка сохраняется рядом с конспектом', async () => {
@@ -94,14 +97,16 @@ describe('vault repo', () => {
 
   it('один id у двух конспектов (переименовали на двух устройствах) — записи разные, поиск строится', async () => {
     const file = (body: string) => `---\nid: kryo0jmd\ncreated: 2026-10-18T13:29:37.044Z\n---\n\n${body}`
-    const a = createMemoryAdapter({ 'Матан/Конспекты/Скибиди в.md': file('# Скибиди в'), 'Матан/Конспекты/Скибиди а.md': file('# Скибиди а') })
+    const a = createMemoryAdapter({
+      'Матан/Конспекты/Скибиди в.md': file('# Скибиди в'),
+      'Матан/Конспекты/Скибиди а.md': file('# Скибиди а'),
+    })
     const v = await repo.loadVault(a)
     expect(v.notes.find((n) => n.title === 'Скибиди а')?.id).toBe('kryo0jmd')
     const other = v.notes.find((n) => n.title === 'Скибиди в')!
     expect(other.id).not.toBe('kryo0jmd')
     expect(() => createIndex(buildDocs(v))).not.toThrow()
 
-    // на другом устройстве с теми же файлами — те же id, а после сохранения новый id уже в файле
     expect((await repo.loadVault(a)).notes.find((n) => n.title === 'Скибиди в')?.id).toBe(other.id)
     await repo.saveNote(a, other, '# Скибиди в\n\nправка')
     expect((await a.readText('Матан/Конспекты/Скибиди в.md'))!).toContain(`id: ${other.id}`)
@@ -111,7 +116,8 @@ describe('vault repo', () => {
     const a = sampleVault()
     const files = await repo.loadVault(a)
     const la = files.subjects.find((s) => s.name === 'Линейная алгебра')!
-    for (const n of files.notes.filter((x) => x.subjectId === la.id)) await a.writeText(n.path.replace(la.dir, 'Копия'), (await a.readText(n.path))!)
+    for (const n of files.notes.filter((x) => x.subjectId === la.id))
+      await a.writeText(n.path.replace(la.dir, 'Копия'), (await a.readText(n.path))!)
     await a.writeText('Копия/_subject.json', (await a.readText(`${la.dir}/_subject.json`))!)
 
     const v = await repo.loadVault(a)

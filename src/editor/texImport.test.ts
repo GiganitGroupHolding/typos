@@ -40,7 +40,7 @@ describe('normalizeMarkdownMath', () => {
     const cells: string[] = []
     editor.state.doc.descendants((n) => void (n.type.name === 'inlineMath' && cells.push(n.attrs.latex)))
     expect(cells).toEqual(['|E|>1'])
-    // при сохранении таблица остаётся таблицей, а формула — целой
+
     const saved = editor.getMarkdown()
     expect(normalizeMarkdownMath(saved)).toBe(saved)
     const again = new Editor({ extensions: buildExtensions(), content: saved, contentType: 'markdown' })

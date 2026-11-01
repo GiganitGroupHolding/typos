@@ -1,20 +1,4 @@
 #!/usr/bin/env node
-/*
- * Сервер хранения TYPOS: папка vault на своём сервере, приложение подключается по ссылке.
- * Один файл, без зависимостей, Node 18+ (правки прямо в папке устройства видят сразу с Node 20). Скопируй на сервер и запусти:
- *
- *   node typos-server.mjs --dir ./vault              запустить сервер
- *   node typos-server.mjs link --dir ./vault         показать ссылку подключения
- *   node typos-server.mjs link phone --dir ./vault   отдельный ключ для устройства (чтобы отключать по одному)
- *   node typos-server.mjs link mcp --read-only --dir ./vault  ключ только для чтения
- *   node typos-server.mjs revoke phone --dir ./vault отключить устройство
- *   node typos-server.mjs --help                     все команды и флаги
- *
- * Протокол — подмножество WebDAV под /files/ (папку можно подключить и в проводнике),
- * плюс /.typos/info, /.typos/manifest и /.typos/events (поток: приложение сразу видит, что сервер пропал).
- * Аккаунтов нет: доступ по ключу из ссылки. Все ключи открывают одно и то же хранилище; ключ может быть только для чтения.
- * Ключи лежат в .typos-server/server.json внутри vault; эту папку сервер не отдаёт ни под каким написанием и ни по какой ссылке.
- */
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createReadStream, promises as fs, watch as watchFs } from 'node:fs'
 import http from 'node:http'
@@ -29,7 +13,7 @@ const DEFAULT_PORT = 8787
 const FILES = '/files'
 const METHODS = 'OPTIONS, GET, HEAD, PUT, DELETE, MOVE, MKCOL, PROPFIND'
 const ALLOW_HEADERS = 'Authorization, Content-Type, Depth, Destination, Overwrite, If-Match, If-None-Match, X-Typos-Prune'
-/** Временные файлы атомарной записи: «имя.1a2b3c4d.tmp» (так же пишет MCP-сервер). */
+
 const TMP_RE = /\.[0-9a-f]{8}\.tmp$/
 const DEVICE_RE = /^[\p{L}\p{N}_.-]{1,40}$/u
 
@@ -51,15 +35,11 @@ class HttpError extends Error {
 /** @param {unknown} e */
 const isMissing = (e) => /** @type {NodeJS.ErrnoException} */ (e)?.code === 'ENOENT'
 
-/**
- * Служебная папка под любым написанием: на macOS и Windows «.TYPOS-SERVER» и «.typos-server.» — та же папка.
- * @param {string} name
+/** @param {string} name
  */
 const isStateDir = (name) => name.toLowerCase().replace(/[. ]+$/, '') === STATE_DIR
 
-/**
- * Пишет во временный «имя.1a2b3c4d.tmp» и переименовывает — никто не прочитает файл наполовину.
- * @param {string} file @param {string | Buffer} data @param {number} [mode]
+/** @param {string} file @param {string | Buffer} data @param {number} [mode]
  */
 async function writeAtomic(file, data, mode) {
   await fs.mkdir(path.dirname(file), { recursive: true })
@@ -72,8 +52,6 @@ async function writeAtomic(file, data, mode) {
     throw e
   }
 }
-
-// ---------- состояние: id хранилища, имя, ключи устройств ----------
 
 /** @param {string} root */
 const statePath = (root) => path.join(root, STATE_DIR, 'server.json')
@@ -113,10 +91,7 @@ const hashToken = (token) => createHash('sha256').update(token).digest('hex')
 
 export const DEFAULT_DEVICE = 'default'
 
-/**
- * Ключ устройства. Нового устройства ещё нет — заводит ключ; есть — возвращает тот же (ссылку можно показать снова).
- * Ключ лежит открыто, как и сами конспекты рядом: кто может прочитать server.json, прочитает и vault.
- * @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options] права нового устройства
+/** @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options] права нового устройства
  */
 export async function deviceKey(root, device = DEFAULT_DEVICE, options = {}) {
   const state = await ensureState(root)
@@ -125,9 +100,7 @@ export async function deviceKey(root, device = DEFAULT_DEVICE, options = {}) {
   return { ...(await rotateDevice(root, device, options)), created: true }
 }
 
-/**
- * Новый ключ устройству; старая ссылка этого устройства перестаёт работать. Права задаются заново.
- * @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options]
+/** @param {string} root @param {string} device @param {{ readOnly?: boolean }} [options]
  */
 export async function rotateDevice(root, device, { readOnly = false } = {}) {
   if (!DEVICE_RE.test(device)) throw new Error(`Имя устройства — буквы, цифры, «_.-», до 40 символов: ${device}`)
@@ -149,11 +122,7 @@ export async function revokeDevice(root, device) {
   return true
 }
 
-// ---------- ссылка подключения ----------
-
-/**
- * typos://host:port/путь?n=имя&id=vaultId&k=ключ[&tls=1] — вставляется в TYPOS.
- * @param {{ base: string, token: string, name: string, vaultId: string }} p
+/** @param {{ base: string, token: string, name: string, vaultId: string }} p
  */
 export function buildLink({ base, token, name, vaultId }) {
   const u = new URL(base)
@@ -162,12 +131,9 @@ export function buildLink({ base, token, name, vaultId }) {
   return `typos://${u.host}${u.pathname.replace(/\/+$/, '')}?${q}`
 }
 
-/** Туннели VPN: WireGuard, OpenVPN, Tailscale, ZeroTier. */
 const VPN_IF = /^(tun|tap|wg|tailscale|utun|zt|ppp)/
 
-/**
- * Кому подходит адрес: TYPOS открыт на этом же компьютере, в локальной сети, через VPN или из интернета.
- * @param {string} ip @param {string} [iface]
+/** @param {string} ip @param {string} [iface]
  */
 function addressKind(ip, iface = '') {
   if (ip === 'localhost' || ip === '::1' || ip.startsWith('127.')) return 'на этом же компьютере (localhost)'
@@ -178,12 +144,9 @@ function addressKind(ip, iface = '') {
   return `через интернет (${ip}) — лучше с HTTPS`
 }
 
-/** Виртуальные сети Docker, Kubernetes и виртуалок — с других устройств их не видно. */
 const VIRTUAL_IF = /^(docker|br-|veth|virbr|vmnet|cni|flannel|kube|podman|lxc|lxd)/
 
-/**
- * Адреса для ссылок, с подписью, когда какой брать.
- * @param {Listen} l @returns {{ label: string, base: string }[]}
+/** @param {Listen} l @returns {{ label: string, base: string }[]}
  */
 export function connectionTargets(l) {
   if (l.publicUrl) return [{ label: `по внешнему адресу (${new URL(l.publicUrl).host})`, base: l.publicUrl }]
@@ -196,16 +159,12 @@ export function connectionTargets(l) {
     .filter(([name]) => !VIRTUAL_IF.test(name))
     .flatMap(([name, list]) => (list ?? []).map((i) => ({ ...i, name })))
     .filter((i) => i.family === 'IPv4' && !i.internal && !i.address.startsWith('169.254.'))
-  // локальная сеть — первой, туннели — после
+
   found.sort((x, y) => Number(VPN_IF.test(x.name)) - Number(VPN_IF.test(y.name)))
   return [target('localhost'), ...found.map((i) => target(i.address, i.name))]
 }
 
-// ---------- пути ----------
-
-/**
- * «/files/Физика/Конспекты/x.md» → ['Физика', 'Конспекты', 'x.md']. Служебную папку и выход за корень не пускает.
- * @param {string} pathname
+/** @param {string} pathname
  */
 function vaultParts(pathname) {
   let parts
@@ -246,10 +205,8 @@ const CONTENT_TYPES = /** @type {Record<string, string>} */ ({
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
 })
-/** HTML тулз отдаём как байты: на сервере их не исполняем. @param {string} name */
+/** @param {string} name */
 const contentType = (name) => CONTENT_TYPES[path.extname(name).toLowerCase()] ?? 'application/octet-stream'
-
-// ---------- сервер ----------
 
 /**
  * @typedef {{
@@ -268,7 +225,7 @@ export async function startServer(opts) {
   await fs.mkdir(root, { recursive: true })
   const rootReal = await fs.realpath(root)
   const maxSize = opts.maxSize ?? 50 * 1024 * 1024
-  // утёкший ключ не должен заполнить диск сервера или исчерпать inode: общий предел объёма и числа файлов
+
   const maxVault = opts.maxVault ?? 10 * 1024 ** 3
   const maxFiles = opts.maxFiles ?? 100_000
   const maxStreams = opts.maxStreams ?? 64
@@ -281,7 +238,6 @@ export async function startServer(opts) {
   /** @param {string} real */
   const insideState = (real) => real === stateReal || real.startsWith(stateReal + path.sep)
 
-  // ключи можно добавить и отозвать командой, пока сервер работает — перечитываем server.json при изменении
   let stateMtime = (await fs.stat(statePath(root))).mtimeMs
   let stateChecked = 0
   const currentState = async () => {
@@ -304,7 +260,7 @@ export async function startServer(opts) {
     seenDirty = false
     await writeJson(seenPath(root), seen).catch((e) => log(`seen.json: ${e.message}`))
   }
-  /** Подбор ключа: 10 ошибок за минуту — минута паузы для этого адреса. */
+
   /** @type {Map<string, { fails: number, last: number, until: number }>} */
   const failures = new Map()
 
@@ -315,10 +271,9 @@ export async function startServer(opts) {
   }, 60_000)
   housekeeping.unref()
 
-  // открытые потоки /.typos/events: пульс держит связь, отозванному ключу — сразу сообщаем и закрываем
   /** @type {Set<{ res: http.ServerResponse, device: string }>} */
   const streams = new Set()
-  // что-то изменилось (запись через сервер или правка прямо в папке) — устройства сразу забирают изменения
+
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let changeTimer
   const notifyChange = () => {
@@ -330,7 +285,6 @@ export async function startServer(opts) {
   /** @type {import('node:fs').FSWatcher | undefined} */
   let watcher
   try {
-    // рекурсивное слежение есть в Node 20+ (на Linux); без него — только изменения через сам сервер
     watcher = watchFs(rootReal, { recursive: true }, (_event, name) => {
       const rel = String(name ?? '')
       if (isStateDir(rel.split(path.sep)[0]) || TMP_RE.test(rel)) return
@@ -352,18 +306,12 @@ export async function startServer(opts) {
         else s.res.end('event: revoked\ndata: {}\n\n')
       }
     } catch (e) {
-      // битый server.json не должен ронять сервер: пульс пропустим, потоки закроются по таймауту
       log(`пульс: ${e instanceof Error ? e.message : e}`)
     }
   }, opts.heartbeatMs ?? 10_000)
   heartbeat.unref()
 
-  /**
-   * Адрес клиента для счётчика неверных ключей. За прокси (--public-url) все запросы приходят с localhost,
-   * а за прокси хостинга (--trust-proxy, например Railway) — с его внутреннего адреса.
-   * Тогда берём адрес, который дописал сам прокси: последний в X-Forwarded-For (первые клиент может подделать).
-   * Иначе один чужой клиент с неверными ключами блокировал бы всех.
-   * @param {http.IncomingMessage} req
+  /** @param {http.IncomingMessage} req
    */
   const clientIp = (req) => {
     const peer = req.socket.remoteAddress ?? ''
@@ -383,14 +331,13 @@ export async function startServer(opts) {
     }
     if (!token) return null
     const hash = Buffer.from(hashToken(token), 'hex')
-    // сравниваем хэши: одинаковая длина для timingSafeEqual и время не зависит от совпавших символов
+
     for (const d of (await currentState()).devices) {
       if (timingSafeEqual(Buffer.from(hashToken(d.token), 'hex'), hash)) return d
     }
     return null
   }
 
-  // ETag — хэш содержимого; пересчитываем, только когда файл поменялся
   /** @type {Map<string, { key: string, etag: string }>} */
   const etags = new Map()
   /** @param {import('node:fs').Stats} st */
@@ -405,12 +352,12 @@ export async function startServer(opts) {
     etags.set(abs, { key: statKey(st), etag })
     return etag
   }
-  /** Файл или папку удалили или перенесли — их ETag больше не нужны. @param {string} abs */
+  /** @param {string} abs */
   const forgetEtags = (abs) => {
     for (const key of etags.keys()) if (key === abs || key.startsWith(abs + path.sep)) etags.delete(key)
   }
 
-  /** Абсолютный путь внутри корня; ссылки, ведущие наружу или в служебную папку, не пускает. @param {string[]} parts */
+  /** @param {string[]} parts */
   const resolve = async (parts) => {
     const abs = path.join(rootReal, ...parts)
     for (let probe = abs; ; probe = path.dirname(probe)) {
@@ -425,7 +372,6 @@ export async function startServer(opts) {
     }
   }
 
-  // изменения идут строго по очереди: проверка If-Match и запись не перемешиваются
   /** @type {Promise<unknown>} */
   let queue = Promise.resolve()
   /** @template T @param {() => Promise<T>} job @returns {Promise<T>} */
@@ -473,7 +419,7 @@ export async function startServer(opts) {
   /** @param {string} dir @param {string} name */
   const hidden = (dir, name) => (dir === rootReal && isStateDir(name)) || TMP_RE.test(name)
 
-  /** Содержимое папки без служебного и без ссылок, ведущих за корень или в служебную папку. @param {string} abs */
+  /** @param {string} abs */
   const children = async (abs) => {
     const out = []
     for (const d of await fs.readdir(abs, { withFileTypes: true })) {
@@ -505,12 +451,9 @@ export async function startServer(opts) {
     )
   }
 
-  /**
-   * Обходит весь vault без служебного.
-   * @param {(rel: string, c: { abs: string, st: import('node:fs').Stats }) => Promise<void> | void} visit
+  /** @param {(rel: string, c: { abs: string, st: import('node:fs').Stats }) => Promise<void> | void} visit
    */
   const walkVault = async (visit) => {
-    // ссылка внутри vault на свою же папку не должна зациклить обход
     const visited = new Set()
     /** @param {string} abs @param {string} rel */
     const walk = async (abs, rel) => {
@@ -526,7 +469,6 @@ export async function startServer(opts) {
     await walk(rootReal, '')
   }
 
-  /** Все файлы и папки vault одним списком — для синхронизации. */
   const manifest = async () => {
     /** @type {Record<string, ManifestFile>} */
     const files = {}
@@ -539,10 +481,7 @@ export async function startServer(opts) {
     return { files, dirs }
   }
 
-  /**
-   * Занятое место для пределов --max-vault и --max-files. Обход дорогой — помним минуту и поправляем при записи через сервер;
-   * правки мимо сервера догонятся при следующем пересчёте.
-   * @type {{ bytes: number, files: number, at: number } | null}
+  /** @type {{ bytes: number, files: number, at: number } | null}
    */
   let usage = null
   const currentUsage = async () => {
@@ -635,8 +574,7 @@ export async function startServer(opts) {
           forgetEtags(abs)
           if (usage && st.isFile()) Object.assign(usage, { bytes: usage.bytes - st.size, files: usage.files - 1 })
           else usage = null
-          // синхронизация удаляет файлы по одному; опустевшие папки (предмет ушёл в корзину) убираем следом.
-          // rmdir не трогает непустую папку — файл, который кто-то успел туда положить, не пропадёт
+
           if (req.headers['x-typos-prune']) {
             for (let dir = path.dirname(abs); dir.startsWith(rootReal + path.sep); dir = path.dirname(dir)) {
               if (
@@ -682,7 +620,7 @@ export async function startServer(opts) {
           if (!st) throw new HttpError(404)
           if (st.isFile()) checkPreconditions(req, await etagOf(abs, st))
           const destSt = await statOrNull(destAbs)
-          // «Note.md» → «note.md» на диске без учёта регистра — это тот же файл, не конфликт
+
           const sameFile = destSt && destSt.ino === st.ino && destSt.dev === st.dev
           if (destSt && !sameFile) {
             if (!overwrite) throw new HttpError(412, 'Уже существует')
@@ -710,7 +648,7 @@ export async function startServer(opts) {
     const origin = req.headers.origin
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Cache-Control', 'no-store')
-    // ключ идёт в заголовке, не в cookie, — чужая страница без ключа ничего не получит, поэтому по умолчанию пускаем любой адрес приложения
+
     if (origin && (!origins.length || origins.includes(origin))) {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Expose-Headers', 'ETag, DAV')
@@ -726,7 +664,7 @@ export async function startServer(opts) {
       res.end()
       return
     }
-    // страница для проверки сертификата: открыл в браузере, принял — можно возвращаться в TYPOS
+
     if (url.pathname === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
       const page =
         '<!doctype html><meta charset="utf-8"><title>TYPOS storage</title><p>Сервер хранения TYPOS работает. Можно вернуться в приложение.</p>'
@@ -748,7 +686,7 @@ export async function startServer(opts) {
       const fails = f && now - f.last < 60_000 ? f.fails + 1 : 1
       failures.set(ip, { fails, last: now, until: fails >= 10 ? now + 60_000 : 0 })
       log(`неверный ключ с ${ip}`)
-      // без Origin — это файловый менеджер, ему нужен запрос пароля; браузеру окно логина не показываем
+
       if (!origin) res.setHeader('WWW-Authenticate', 'Basic realm="TYPOS", charset="UTF-8"')
       throw new HttpError(401, 'Нужен ключ устройства')
     }
@@ -767,7 +705,6 @@ export async function startServer(opts) {
       return
     }
     if (url.pathname === '/.typos/events' && req.method === 'GET') {
-      // каждый поток держит соединение: без предела один ключ мог бы занять их все
       if (streams.size >= maxStreams) throw new HttpError(429, 'Слишком много открытых подключений к серверу — закрой лишние вкладки')
       res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'X-Accel-Buffering': 'no' })
       res.write(`event: hello\ndata: ${JSON.stringify({ vaultId: (await currentState()).vaultId })}\n\n`)
@@ -803,7 +740,7 @@ export async function startServer(opts) {
         listener,
       )
     : http.createServer(listener)
-  // медленные заголовки не должны держать соединения бесконечно (потоки событий это не задевает: ответ идёт после заголовков)
+
   server.headersTimeout = 20_000
   server.requestTimeout = 10 * 60_000
   const host = opts.host ?? '0.0.0.0'
@@ -814,7 +751,6 @@ export async function startServer(opts) {
   const address = server.address()
   const port = typeof address === 'object' && address ? address.port : (opts.port ?? DEFAULT_PORT)
 
-  // команда link без флагов строит ссылку на тот же адрес
   /** @type {Listen} */
   const listen = { port, host, tls, ...(opts.publicUrl ? { publicUrl: opts.publicUrl } : {}) }
   if (JSON.stringify(state.listen) !== JSON.stringify(listen)) {
@@ -843,8 +779,6 @@ export async function startServer(opts) {
   }
 }
 
-// ---------- командная строка ----------
-
 /** @param {string[]} argv */
 function parseArgs(argv) {
   /** @type {string[]} */
@@ -861,9 +795,7 @@ function parseArgs(argv) {
   return { positional, flags }
 }
 
-/**
- * Числовой флаг; неверное значение — ошибка, а не NaN (с NaN предел размера молча пропускал пустые файлы).
- * @param {Record<string, string>} flags @param {string} name @param {number} min @param {number} max
+/** @param {Record<string, string>} flags @param {string} name @param {number} min @param {number} max
  */
 function numberFlag(flags, name, min, max) {
   if (flags[name] === undefined) return undefined
@@ -921,7 +853,7 @@ const listenFromFlags = (flags, saved) => ({
   ...(flags['public-url'] ? { publicUrl: flags['public-url'] } : {}),
 })
 
-/** Командная строка; экспортирована для запуска в контейнере (server/container.mjs). @param {string[]} argv */
+/** @param {string[]} argv */
 export async function main(argv) {
   const { positional, flags } = parseArgs(argv)
   const command = positional[0] ?? 'serve'
@@ -956,14 +888,14 @@ export async function main(argv) {
     console.log(`TYPOS storage «${srv.state.name}» запущен`)
     console.log(`  папка:  ${root}`)
     console.log(`  доступ: ${everywhere ? 'этот компьютер и вся сеть' : listen.host} · порт ${srv.port}${listen.tls ? ' · HTTPS' : ''}`)
-    // ссылку с ключом при запуске не печатаем: журналы сервиса, записи терминала и демонстрации экрана её бы сохранили
+
     console.log(`\nСсылка подключения: node typos-server.mjs link [устройство] --dir ${JSON.stringify(dir)}`)
     if (srv.state.devices.length) console.log(`Устройства: ${srv.state.devices.map((d) => d.name).join(', ')}`)
     const stop = async () => {
       await srv.close()
       process.exit(0)
     }
-    // once: второй Ctrl+C завершает сразу, не дожидаясь закрытия
+
     process.once('SIGINT', stop)
     process.once('SIGTERM', stop)
     return

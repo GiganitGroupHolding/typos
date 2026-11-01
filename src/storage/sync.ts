@@ -5,68 +5,54 @@ import type { FlatStore } from './flatAdapter'
 import { RemoteError, type RemoteAdapter } from './remoteAdapter'
 import { basename, dirname, joinPath } from './VaultAdapter'
 
-/**
- * Синхронизация локальной копии vault с сервером хранения.
- * Приложение пишет только в локальную копию; движок сравнивает три состояния каждого файла —
- * локальное, серверное и то, что было при прошлой синхронизации, — и решает, что куда отправить.
- * Ничего не теряется: если файл правили с обеих сторон, наша версия сохраняется копией рядом.
- */
-
-/** Что известно о файле с прошлой синхронизации. */
 export interface MetaEntry {
-  /** ETag на сервере при прошлой синхронизации; нет — файла на сервере не было. */
   etag?: string
-  /** Счётчик правок на этом устройстве. */
+
   rev: number
-  /** rev, который уже на сервере. rev ≠ synced — есть неотправленные правки. */
+
   synced: number
 }
 
 export interface MetaStore {
   get(path: string): Promise<MetaEntry | undefined>
   set(path: string, entry: MetaEntry): Promise<void>
-  /** Атомарное чтение-изменение-запись (другие вкладки пишут в ту же базу). */
+
   update(path: string, fn: (cur: MetaEntry | undefined) => MetaEntry): Promise<void>
   del(path: string): Promise<void>
   entries(): Promise<[string, MetaEntry][]>
 }
 
-/** Локальная копия: файлы, сведения о синхронизации и замок, под которым меняются файлы. */
 export interface Replica {
   files: FlatStore
   meta: MetaStore
   lock<T>(job: () => Promise<T>): Promise<T>
 }
 
-/** Локальная правка: rev растёт, файл становится «неотправленным». */
 export const touched = (cur: MetaEntry | undefined): MetaEntry => ({ etag: cur?.etag, rev: (cur?.rev ?? 0) + 1, synced: cur?.synced ?? 0 })
 
 export interface SyncState {
-  /** Правки на этом устройстве, ещё не отправленные на сервер. */
   pending: number
   syncing: boolean
   lastSync?: number
-  /** Файлы, которые сервер не принимает (слишком большой и т. п.): путь → причина. */
+
   failed: Record<string, string>
 }
 
 export const useSync = create<SyncState>(() => ({ pending: 0, syncing: false, failed: {} }))
 
 export interface EngineHooks {
-  /** Файлы в локальной копии поменялись с сервера. */
   onPulled?: () => void
-  /** Файл правили и здесь, и на сервере: наша версия сохранена копией. */
+
   onConflict?: (path: string, copy: string) => void
-  /** Связи нет — запланированные синхронизации не дёргают сеть зря. */
+
   isOffline?: () => boolean
 }
 
 const TEXT_FILE = /\.(md|json|html?|txt|css|js|svg)$/i
 const toBlob = (v: string | Blob) => (typeof v === 'string' ? new Blob([v]) : v)
-// BOM оставляем в строке, битый UTF-8 — ошибка: строка обратно в байты должна дать ровно те же байты, иначе ложный конфликт
+
 const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
-/** В локальной копии текстовые файлы — строками (так их быстрее читать), остальное и текст не в UTF-8 — Blob. */
 export async function fromBlob(path: string, blob: Blob): Promise<string | Blob> {
   if (!TEXT_FILE.test(path)) return blob
   try {
@@ -85,7 +71,6 @@ async function sameBytes(a: Blob, b: Blob) {
   return true
 }
 
-/** У одного конспекта может отличаться только время повторного сохранения. */
 async function sameNote(path: string, a: Blob, b: Blob): Promise<boolean> {
   if (!path.endsWith('.md') || basename(dirname(path)) !== NOTES_DIR) return false
   try {
@@ -106,10 +91,6 @@ async function sameNote(path: string, a: Blob, b: Blob): Promise<boolean> {
   }
 }
 
-/**
- * Наша версия файла, который на сервере успели изменить: «Имя (конфликт 18.10 14-05).md».
- * У конспектов, карточек и тулз новый id и пометка в заголовке, чтобы в приложении это были две разные записи.
- */
 export function conflictCopy(
   path: string,
   value: string | Blob,
@@ -137,7 +118,6 @@ export function conflictCopy(
 }
 
 interface Pass {
-  /** Нужен ещё проход: появились копии конфликтов или файл поменяли, пока мы его разбирали. */
   more: boolean
   pulled: boolean
   taken: Set<string>
@@ -157,7 +137,6 @@ export class SyncEngine {
     this.remote = remote
   }
 
-  /** Синхронизировать чуть позже: правки подряд уходят одним проходом. */
   schedule(ms = 300) {
     clearTimeout(this.timer)
     this.timer = setTimeout(() => {
@@ -170,7 +149,6 @@ export class SyncEngine {
     clearTimeout(this.timer)
   }
 
-  /** Синхронизировать сейчас. Нет связи — бросает; неотправленное остаётся в локальной копии. */
   syncNow(): Promise<void> {
     if (this.running) {
       this.again = true
@@ -181,11 +159,9 @@ export class SyncEngine {
       try {
         do {
           this.again = false
-          // проход просит ещё один (копии конфликтов, правки во время прохода) — до трёх подряд
+
           let passes = 0
-          while ((await this.pass()) && ++passes < 3) {
-            // следующий проход
-          }
+          while ((await this.pass()) && ++passes < 3) {}
         } while (this.again)
         useSync.setState({ lastSync: Date.now() })
       } finally {
@@ -219,7 +195,6 @@ export class SyncEngine {
       try {
         await this.syncPath(path, meta.get(path), manifest.files[path]?.etag, local.has(path), ctx)
       } catch (e) {
-        // сервер отказал в одном файле — остальные синхронизируем; нет связи — прерываемся целиком
         if (!(e instanceof RemoteError) || e.status === undefined || e.status === 401) throw e
         ctx.failed[path] = e.message
       }
@@ -233,7 +208,6 @@ export class SyncEngine {
     const dirty = m ? m.rev !== m.synced : hasLocal
     const remoteChanged = remoteEtag !== m?.etag
     if (!dirty && !remoteChanged) {
-      // удалён с обеих сторон — сведения больше не нужны
       if (m && !hasLocal && remoteEtag === undefined) await this.replica.meta.del(path)
       return
     }
@@ -242,7 +216,6 @@ export class SyncEngine {
     return this.resolve(path, m, ctx)
   }
 
-  /** Правка здесь, на сервере без изменений — отправляем с условием «поверх той же версии». */
   private async push(path: string, m: MetaEntry | undefined, hasLocal: boolean, ctx: Pass) {
     const rev = m?.rev ?? 0
     if (!hasLocal) {
@@ -257,14 +230,12 @@ export class SyncEngine {
     await this.replica.meta.update(path, (cur) => ({ etag: res.etag, rev: cur?.rev ?? rev, synced: rev }))
   }
 
-  /** Сервер отказал по условию. Может, это другая вкладка уже отправила файл — тогда просто ещё проход. */
   private async retryOrResolve(path: string, m: MetaEntry | undefined, ctx: Pass) {
     const fresh = await this.replica.meta.get(path)
     if (fresh?.etag !== m?.etag) return void (ctx.more = true)
     return this.resolve(path, m, ctx)
   }
 
-  /** Здесь без правок, на сервере изменили — забираем. */
   private async pull(path: string, remoteEtag: string | undefined, ctx: Pass) {
     if (remoteEtag === undefined) {
       await this.replica.lock(async () => {
@@ -281,7 +252,7 @@ export class SyncEngine {
     const value = await fromBlob(path, got.blob)
     await this.replica.lock(async () => {
       const cur = await this.replica.meta.get(path)
-      // пока качали, здесь успели поправить — разберёмся на следующем проходе
+
       if (cur ? cur.rev !== cur.synced : (await this.replica.files.get(path)) !== undefined) return void (ctx.more = true)
       await this.replica.files.set(path, value)
       await this.replica.meta.set(path, { etag: got.etag, rev: cur?.rev ?? 0, synced: cur?.rev ?? 0 })
@@ -289,21 +260,18 @@ export class SyncEngine {
     })
   }
 
-  /** Меняли с обеих сторон. */
   private async resolve(path: string, m: MetaEntry | undefined, ctx: Pass) {
     const rev = m?.rev ?? 0
     const got = await this.remote.get(path)
     const mine = await this.replica.files.get(path)
     if (!got && mine === undefined) return this.dropMeta(path, rev)
     if (!got) {
-      // здесь правили, на сервере удалили — правка важнее удаления: возвращаем файл
       const res = await this.remote.put(path, toBlob(mine!))
       if (res === 'conflict') return void (ctx.more = true)
       await this.replica.meta.update(path, (cur) => ({ etag: res.etag, rev: cur?.rev ?? rev, synced: rev }))
       return
     }
-    // здесь удалили, на сервере правили — тоже правка важнее: берём серверную.
-    // Одинаковое содержимое — просто запоминаем версию. Цвет и порядок предмета — берём с сервера.
+
     if (
       mine === undefined ||
       (await sameBytes(toBlob(mine), got.blob)) ||
@@ -321,7 +289,6 @@ export class SyncEngine {
     ctx.more = true
   }
 
-  /** Кладём серверную версию в локальную копию (и, если надо, нашу — копией рядом). */
   private async adopt(path: string, got: { blob: Blob; etag: string }, rev: number, ctx: Pass, before?: () => Promise<void>) {
     const value = await fromBlob(path, got.blob)
     await this.replica.lock(async () => {
@@ -334,7 +301,6 @@ export class SyncEngine {
     })
   }
 
-  /** Удалить сведения о файле, если с тех пор его не создали заново. */
   private dropMeta(path: string, rev: number) {
     return this.replica.lock(async () => {
       const cur = await this.replica.meta.get(path)

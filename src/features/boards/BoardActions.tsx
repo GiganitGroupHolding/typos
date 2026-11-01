@@ -44,7 +44,6 @@ export function BoardActions({ board, className }: { board: Board; className?: s
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {/* название правится в шапке доски — открываем её с полем в фокусе */}
         <DropdownMenuItem onSelect={() => navigate(`/s/${board.subjectId}/b/${board.id}?rename=1`)}>
           <Pencil /> Переименовать
         </DropdownMenuItem>

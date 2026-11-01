@@ -256,7 +256,7 @@ it('чужие регистрации не занимают места клие�
   const fresh = await register()
   expect(owner.provider.clientsStore.getClient(fresh.client_id)).toBeDefined()
   expect(owner.provider.clientsStore.getClient(first.client_id)).toBeUndefined()
-  // клиент с выданным разрешением не вытесняется, хоть он и самый старый
+
   expect(owner.provider.clientsStore.getClient(client_id)).toBeDefined()
 })
 

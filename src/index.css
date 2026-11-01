@@ -1,4 +1,3 @@
-/* классы ищем только в коде приложения: vault внутри проекта (server/vault) иначе перезагружал бы страницу при каждой правке */
 @import 'tailwindcss' source('../src');
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -11,7 +10,7 @@
   --font-heading: var(--font-sans);
   --font-serif: 'PT Serif', Georgia, serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
-  /* логотип TYPOS */
+
   --font-brand: 'Unbounded Variable', var(--font-sans);
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -83,10 +82,6 @@
   }
 }
 
-/* ---------- Фон — то, что видно сквозь стекло ----------
- * Туманность (components/ui/liquid-shader.tsx, WebGL) во весь экран под интерфейсом.
- * Без неё стеклу нечего размывать, и оно выглядит как обычная белая панель.
- */
 @layer components {
   .ambient {
     position: fixed;
@@ -96,14 +91,10 @@
     pointer-events: none;
   }
 
-  /* бумага редактора: почти непрозрачная, аврора едва проступает */
-  /* лист конспекта прозрачный: туманности сами разлетаются от колонки текста, а под ней
-     шейдер гасит фон (liquid-shader.tsx, avoidText) */
   .paper {
     background: transparent;
   }
 
-  /* стеклянная полоса сверху: текст при прокрутке уходит под неё */
   .glass-bar {
     background: color-mix(in srgb, var(--background) 55%, transparent);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -120,23 +111,11 @@
   }
 }
 
-/* ---------- Стекло колонок ----------
- * Правило слоёв:
- *   .liquid         — 1-й слой (лежит на странице: правая панель, кнопки сверху, меню выделения, док тулз) —
- *                     ровно стекло левой колонки
- *   .liquid-2       — 2-й слой (лежит на другом стекле: поиск и вкладки в колонках, переключатели в окнах) —
- *                     то же стекло, матовее
- *   .liquid-active  — выбранная кнопка/вкладка внутри них (как выбранная строка сайдбара)
- *   .liquid-column  — левые колонки: прозрачное стекло, под ним — лава-лампа из угла (.ambient .lava)
- * (LiquidButton с 21st.dev — отдельно, со своим искажением #container-glass)
- */
 @layer components {
   :root {
     --liquid-edge: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
   }
 
-  /* размытие — на самом элементе, как у колонок: с псевдоэлементом внутри Chrome не видит,
-     что под панелью, и стекло только тонирует, ничего не размывая */
   .liquid,
   .liquid-2 {
     position: relative;
@@ -144,38 +123,32 @@
     -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
     backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
   }
-  /* первый слой — прозрачное стекло: своей заливки нет, только размытие того, что под ним, и кромка */
+
   .liquid {
     background: transparent;
   }
-  /* всплывающие меню лежат поверх текста — заливка как у колонки, иначе текст под ними мешает читать */
+
   .liquid.liquid-menu {
     background: var(--sidebar);
   }
-  /* второй слой: плотнее и размытие сильнее */
+
   .liquid-2 {
     background: color-mix(in srgb, var(--sidebar), var(--card) 14%);
     -webkit-backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
     backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
   }
 
-  /* Капсулы справа (панель форматирования, кнопки сверху) и карточки на главных — ровно стекло левой колонки:
-     та же заливка и то же размытие пятен под ними */
   .liquid.liquid-lava {
     background: var(--sidebar);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
   }
 
-  /*
-   * Линза Liquid Glass (правая панель): преломление и радужная кайма — SVG-фильтром из liquid-lens.tsx,
-   * здесь — лёгкий тон, тень, кромка и блики. Без поддержки url()-фильтра остаётся .liquid-lava.
-   */
   :root {
     --lens-tint: rgb(255 255 255 / 0.16);
     --lens-shadow: 0 10px 28px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
-    --prism-alpha: 0.64; /* блик под курсором */
-    --prism-corner-alpha: 0.32; /* постоянная призма — только на скруглениях */
-    /* спектр повторяется по кругу, чтобы у блика было видно сразу несколько цветов */
+    --prism-alpha: 0.64;
+    --prism-corner-alpha: 0.32;
+
     --prism-spectrum: repeating-conic-gradient(
       from 200deg,
       #ff6b6b 0deg,
@@ -194,15 +167,14 @@
     --prism-alpha: 0.72;
     --prism-corner-alpha: 0.36;
   }
-  /* меню поверх текста: то же стекло, но, как Regular у Apple, над текстом сильнее рассеивает
-     (frost в хуке) и чуть притемняет — текст под значками не спорит с ними */
+
   .liquid-lens-menu {
     --lens-tint: rgb(255 255 255 / 0.38);
   }
   .dark .liquid-lens-menu {
     --lens-tint: rgb(24 24 22 / 0.4);
   }
-  /* карточки — крупное стекло: тон как у колонки, под ним текст */
+
   .liquid-lens-card {
     --lens-tint: var(--sidebar);
   }
@@ -211,13 +183,12 @@
     background: var(--lens-tint);
     box-shadow: var(--lens-shadow);
   }
-  /* прокрутка: вместо дорогого фильтра-линзы — лёгкое размытие с той же живостью цвета (liquid-lens.tsx) */
+
   :root[data-scrolling] .liquid-lens {
     backdrop-filter: blur(3px) saturate(1.35) !important;
     -webkit-backdrop-filter: blur(3px) saturate(1.35) !important;
   }
-  /* постоянная призма — белая, только на скруглениях, вдоль сторон её нет.
-     --prism-corners — маска-картинка «близость к углам», её рисует liquid-lens.tsx по форме элемента */
+
   .liquid-lens::after {
     content: '';
     position: absolute;
@@ -241,10 +212,7 @@
   .dark .liquid-lens::after {
     mix-blend-mode: plus-lighter;
   }
-  /*
-   * Блик под курсором: в центре белый, по краям пятна свет раскладывается в спектр.
-   * Появляется только при наведении (data-lit ставит LensLight).
-   */
+
   .liquid-lens::before {
     content: '';
     position: absolute;
@@ -274,14 +242,14 @@
       linear-gradient(#000 0 0);
     mask-composite: intersect, exclude, add;
   }
-  /* на тёмном свет складывается со стеклом; на светлом сложение дало бы просто белое */
+
   .dark .liquid-lens::before {
     mix-blend-mode: plus-lighter;
   }
   .liquid-lens[data-lit]::before {
     opacity: var(--prism-alpha);
   }
-  /* свечение изнутри от точки нажатия */
+
   .lens-light {
     position: absolute;
     inset: 0;
@@ -314,7 +282,6 @@
     color: var(--highlight);
   }
 
-  /* под колонками зелёное пятно — вторичный текст темнее, чтобы держать 4.5:1 */
   .liquid-column,
   .liquid-column-soft,
   .liquid-lava,
@@ -365,9 +332,6 @@
   }
 }
 
-/* ---------- Матовое стекло (Liquid Glass, как в LM_SERVER) ----------
- * Слои: блик сверху → полупрозрачная заливка цвета поверхности → размытие фона → зерно.
- */
 @layer components {
   .glass {
     position: relative;
@@ -380,7 +344,7 @@
       inset 0 1px 0 rgb(255 255 255 / calc(var(--sheen) * 0.8)),
       0 8px 30px var(--glass-shadow);
   }
-  /* зерно — отдельным слоем, чтобы стекло было матовым, а не глянцевым */
+
   .glass::after {
     content: '';
     position: absolute;
@@ -393,7 +357,7 @@
     opacity: var(--grain-alpha);
     mix-blend-mode: overlay;
   }
-  /* панели-колонки: то же стекло, но без тени и рамки по краям */
+
   .glass-panel {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
@@ -423,7 +387,6 @@
   }
 }
 
-/* Типографика конспекта: 17px / 1.6 / 65–75ch */
 @layer components {
   .note-prose {
     font-size: 17px;
@@ -508,7 +471,6 @@
     font-size: 1.08em;
   }
 
-  /* ---------- редактор Tiptap ---------- */
   .note-prose .tiptap {
     outline: none;
     min-height: 50vh;
@@ -542,11 +504,10 @@
     font-size: inherit;
   }
 
-  /* схемы Mermaid: рисунок карточкой, как блок формулы; код под ним — только при правке */
   .note-prose .tiptap .diagram-block {
     margin: 1em 0;
   }
-  /* свёрнут, а не display:none — иначе курсор (стрелками или щелчком) не может войти в код */
+
   .note-prose .tiptap .diagram-block > pre {
     max-height: 0;
     padding-block: 0;
@@ -578,7 +539,7 @@
     flex: none;
     height: auto;
   }
-  /* схема стала мини-картой: рисунок не нужен, под карту — пустое место (высоту ставит diagrams.ts) */
+
   .note-prose .tiptap .diagram-map-slot {
     display: none;
   }
@@ -594,7 +555,6 @@
     color: var(--destructive);
   }
 
-  /* таблицы: тонкая сетка, шапка на чуть тёмном фоне, широкие — прокручиваются */
   .note-prose .tiptap .tableWrapper {
     overflow-x: auto;
     margin: 0 0 0.85em;
@@ -656,7 +616,7 @@
     outline-offset: 2px;
     border-radius: 6px;
   }
-  /* разделы: сворачивание заголовков и перетаскивание блоков (editor/blocks) */
+
   .tiptap .is-folded {
     display: none !important;
   }
@@ -723,7 +683,7 @@
     cursor: grabbing !important;
     user-select: none;
   }
-  /* подсказка «Пиши…» — только пока курсор в тексте (иначе висит в пустой строке, например в режиме карты) */
+
   .tiptap:not(.ProseMirror-focused) p.is-empty::before {
     content: none;
   }
@@ -733,7 +693,6 @@
     border-radius: 6px;
   }
 
-  /* формулы: кликабельны, редактируются во всплывающем окне */
   .tiptap [data-type='inline-math'] {
     cursor: pointer;
     border-radius: 4px;
@@ -772,7 +731,6 @@
     font-size: 0.9em;
   }
 
-  /* чек-листы */
   .tiptap ul[data-type='taskList'] {
     list-style: none;
     padding-left: 0.1em;
@@ -800,7 +758,6 @@
     text-decoration: line-through;
   }
 
-  /* режим чтения: E-Ink/Paper — тёплая бумага, без отвлечений */
   .note-reading {
     max-width: 64ch;
   }
@@ -819,7 +776,6 @@
     border-radius: 0;
   }
 
-  /* подчёркнутый, зачёркнутый, маркер и цвета как в Notion */
   .note-prose .tiptap u {
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
@@ -889,7 +845,6 @@
     background: var(--hl-red);
   }
 
-  /* MathLive в окне формулы */
   .math-field {
     display: block;
     width: 100%;
@@ -901,12 +856,6 @@
   }
 }
 
-/*
- * Переходы между экранами — View Transitions API (Link viewTransition в React Router).
- * Сайдбар и колонка списка не меняются, плавно сменяется только содержимое.
- */
-/* имя — только на время перехода: элемент с view-transition-name не даёт стеклу внутри себя
-   размывать фон (лава под карточками, правой панелью и кнопками сверху была бы чёткой) */
 :root:active-view-transition #main {
   view-transition-name: main;
 }
@@ -939,7 +888,6 @@
   }
 }
 
-/* Скроллбары потише */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

@@ -24,76 +24,69 @@ import { mergeBoards, parseBoard, serializeBoard, type BoardData } from '@/featu
 
 type Status = 'loading' | 'ready' | 'needs-permission' | 'error'
 type SubjectInput = { name: string; color: SubjectColor; icon: SubjectIcon }
-/** Отмена удаления. */
+
 type Undo = () => Promise<void>
 
 interface VaultState extends repo.VaultData {
   status: Status
   error?: string
   adapter: VaultAdapter | null
-  /** Папка, к которой браузер просит подтвердить доступ. */
+
   pendingFolder?: string
   init: () => Promise<void>
-  /** Перечитать vault (папку могли поменять снаружи). */
+
   refresh: () => Promise<void>
   grantAccess: () => Promise<boolean>
-  /** Выбрать папку. migrate — скопировать в неё то, что лежит в браузере. */
+
   connectFolder: (migrate: boolean) => Promise<{ copied: number } | null>
-  /** Подключить сервер хранения по ссылке (с локальной копией). migrate — скопировать на сервер то, что открыто сейчас (папку или браузер). */
+
   connectRemote: (config: RemoteConfig, migrate: boolean) => Promise<{ copied: number }>
   switchToBrowser: () => Promise<void>
-  /** Скопировать всё открытое хранилище в выбранную папку с заменой файлов; само хранилище не меняется. null — папку не выбрали. */
+
   copyToFolder: () => Promise<{ copied: number; folder: string } | null>
   createSubject: (input: SubjectInput) => Promise<Subject>
   updateSubject: (id: string, input: SubjectInput) => Promise<void>
   trashSubject: (id: string) => Promise<Undo>
-  /** Несколько предметов разом в корзину. Одна отмена на всё. */
+
   trashSubjects: (ids: string[]) => Promise<Undo>
   createNote: (subjectId: string, body?: string) => Promise<Note>
-  /** Конспекты из .md-файлов; картинки из того же набора файлов подставляются в их ссылки. */
+
   importNotes: (subjectId: string, files: File[]) => Promise<Note[]>
-  /**
-   * Сохраняет текст из редактора. Если файл на диске уже не тот, от которого шла правка
-   * (его поменяли снаружи: Claude, MCP, другое окно), — бросает NoteConflictError вместо перезаписи.
-   * force — записать поверх в любом случае.
-   */
+
   saveNote: (id: string, body: string, opts?: { force?: boolean }) => Promise<void>
-  /** Редактор показывает этот текст — от него и считаются следующие правки. */
+
   adoptNote: (id: string, body: string) => void
-  /** Текст, от которого идут правки в редакторе (последний загруженный или записанный). */
+
   noteBase: (id: string) => string | undefined
   trashNote: (id: string) => Promise<Undo>
-  /** Мини-карта конспекта (пустая, если её ещё нет). */
+
   loadNoteMap: (noteId: string) => Promise<NoteMap>
   saveNoteMap: (noteId: string, map: NoteMap) => Promise<void>
-  /** Удаляет конспект без текста (созданный и брошенный). */
+
   discardIfEmpty: (id: string) => Promise<void>
   saveImage: (noteId: string, file: Blob) => Promise<string>
   createPin: (subjectId: string, input: repo.PinInput) => Promise<Pin>
   updatePin: (id: string, input: repo.PinInput) => Promise<void>
-  /** Новый порядок карточек предмета (id сверху вниз). */
+
   reorderPins: (subjectId: string, ids: string[]) => Promise<void>
   trashPin: (id: string) => Promise<Undo>
   importTool: (subjectId: string, input: { name: string; html: string; icon: ToolIcon }) => Promise<Tool>
-  /** Любой файл в «Проекты» (HTML — как тулза). */
+
   importProjectFile: (subjectId: string, input: { name: string; blob: Blob; title?: string; icon?: ToolIcon }) => Promise<Tool>
   updateTool: (id: string, input: { name: string; icon: ToolIcon }) => Promise<void>
   trashTool: (id: string) => Promise<Undo>
   createBoard: (subjectId: string, name?: string) => Promise<Board>
-  /**
-   * Записывает доску. Если файл поменяли снаружи (MCP, другое устройство) с тех пор, как доска открыта,
-   * правки сливаются (mergeBoards). Возвращает то, что записано; null — доски уже нет.
-   */
+
   saveBoard: (id: string, data: BoardData) => Promise<BoardData | null>
-  /** Доска показывает эти данные — от них считаются следующие правки. */
+
   adoptBoard: (id: string, data: BoardData) => void
   renameBoard: (id: string, name: string) => Promise<void>
   trashBoard: (id: string) => Promise<Undo>
-  /** Картинка для доски; путь от корня хранилища. */
+
   saveBoardImage: (id: string, file: Blob) => Promise<string>
   listTrash: () => Promise<repo.TrashItem[]>
   restoreTrash: (item: repo.TrashItem) => Promise<void>
-  /** Необратимо. */
+
   deleteForever: (item: repo.TrashItem) => Promise<void>
 }
 
@@ -102,10 +95,9 @@ const isBlank = (body: string) => body.replace(/^#{1,6}\s*$/gm, '').trim() === '
 let initRun: Promise<void> | null = null
 let browser: VaultAdapter | null = null
 const browserAdapter = () => (browser ??= createBrowserAdapter())
-/** Забыть папку на диске: в десктопном приложении её помнит Rust, в браузере — хэндл в IndexedDB. */
+
 const forgetFolder = () => (isTauri() ? forgetPath() : forgetHandle())
 
-/** Сохранения одной заметки идут строго по очереди (переименование файла не гоняется само с собой). */
 const queues = new Map<string, Promise<unknown>>()
 function enqueue<T>(key: string, job: () => Promise<T>): Promise<T> {
   const prev = queues.get(key) ?? Promise.resolve()
@@ -116,7 +108,6 @@ function enqueue<T>(key: string, job: () => Promise<T>): Promise<T> {
 }
 const idle = () => Promise.allSettled([...queues.values()])
 
-/** Файл конспекта поменяли снаружи, пока в редакторе шли правки. disk — что теперь на диске (null — файла нет). */
 export class NoteConflictError extends Error {
   readonly disk: string | null
   constructor(disk: string | null) {
@@ -125,9 +116,8 @@ export class NoteConflictError extends Error {
   }
 }
 
-/** id конспекта → текст, от которого идут правки в редакторе. Перечитывание папки его не трогает. */
 const bases = new Map<string, string>()
-/** id доски → файл, от которого идут правки на доске. */
+
 const boardBases = new Map<string, string>()
 
 export const useVault = create<VaultState>()((set, get) => {
@@ -137,12 +127,12 @@ export const useVault = create<VaultState>()((set, get) => {
     return a
   }
   const replaceNote = (note: Note) => set((s) => ({ notes: s.notes.map((n) => (n.id === note.id ? note : n)) }))
-  /** После операций с папками (перенос предмета, восстановление) проще перечитать всё. */
+
   const reload = async () => {
     await idle()
     set(await repo.loadVault(need()))
   }
-  /** В корзину + функция «Отменить». */
+
   const trashWithUndo = async (path: string): Promise<Undo> => {
     const a = need()
     await idle()
@@ -154,15 +144,13 @@ export const useVault = create<VaultState>()((set, get) => {
     }
   }
 
-  /** Открыть хранилище и загрузить данные. */
   const open = async (a: VaultAdapter) => {
     set({ status: 'loading', adapter: a, pendingFolder: undefined })
     try {
-      // «Инструменты» → «Проекты» (один раз; сбой не мешает открыть — loadVault читает обе папки)
       await repo.migrateTools(a).catch((e) => console.warn('Перенос в «Проекты»', e))
       const data = await repo.loadVault(a)
       set({ ...data, status: 'ready', error: undefined })
-      // корзина хранит удалённое 30 дней
+
       void repo.purgeTrash(a).catch((e) => console.warn('Очистка корзины', e))
     } catch (e) {
       console.error(e)
@@ -180,13 +168,12 @@ export const useVault = create<VaultState>()((set, get) => {
     boards: [],
 
     init() {
-      // StrictMode и повторные монтирования зовут init несколько раз — открываем один раз
       if (initRun && get().status !== 'error') return initRun
       initRun = (async () => {
         const remote = await loadRemoteConfig()
         if (remote) {
           const synced = new SyncedAdapter(remote)
-          // копия уже есть — открываем сразу, даже без сети; первый раз — сначала забираем всё с сервера
+
           try {
             if (!(await synced.isReady())) await synced.initialSync()
           } catch (e) {
@@ -255,17 +242,17 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async connectRemote(config, migrate) {
       const info = await checkRemote(config)
-      // копия хранилища — по id с сервера: в старых ссылках его могло не быть
+
       const full = { ...config, name: info.name || config.name, vaultId: info.vaultId }
       await idle()
-      // переносим то, что открыто сейчас: папку на диске или хранилище браузера
+
       const current = get().adapter
       const source = current && current.kind !== 'remote' ? current : browserAdapter()
       resetSyncState()
       const synced = new SyncedAdapter(full)
       await synced.initialSync()
       const copied = migrate ? await repo.copyVault(source, synced) : 0
-      // перенесённое сразу на сервер; не вышло — уйдёт фоном
+
       if (copied) await synced.engine.syncNow().catch(() => {})
       await saveRemoteConfig(full)
       await forgetFolder()
@@ -286,7 +273,7 @@ export const useVault = create<VaultState>()((set, get) => {
         if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
         folder = new FsaAdapter(handle)
       }
-      // сначала дописать начатые сохранения, чтобы в копию попала последняя версия
+
       await idle()
       const copied = await repo.copyVault(source, folder, '', { overwrite: true })
       return { copied, folder: folder.label }
@@ -349,7 +336,8 @@ export const useVault = create<VaultState>()((set, get) => {
       const a = need()
       const images = imagesByName(files)
       const notes: Note[] = []
-      for (const f of files.filter(isMarkdownFile)) notes.push(await repo.importNote(a, subject, { name: f.name, text: await f.text(), images }))
+      for (const f of files.filter(isMarkdownFile))
+        notes.push(await repo.importNote(a, subject, { name: f.name, text: await f.text(), images }))
       set((s) => ({ notes: [...notes, ...s.notes] }))
       return notes
     },
@@ -420,12 +408,16 @@ export const useVault = create<VaultState>()((set, get) => {
       return repo.saveAsset(need(), dirname(note.path), file)
     },
 
-    // ---------- закреп ----------
-
     async createPin(subjectId, input) {
       const subject = get().subjects.find((s) => s.id === subjectId)
       if (!subject) throw new Error('Предмет не найден')
-      const order = Math.max(-1, ...get().pins.filter((p) => p.subjectId === subjectId).map((p) => p.order)) + 1
+      const order =
+        Math.max(
+          -1,
+          ...get()
+            .pins.filter((p) => p.subjectId === subjectId)
+            .map((p) => p.order),
+        ) + 1
       const pin = await repo.createPin(need(), subject, input, order)
       set((s) => ({ pins: [...s.pins, pin] }))
       return pin
@@ -442,7 +434,7 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async reorderPins(subjectId, ids) {
       const a = need()
-      // сразу показываем новый порядок, файлы дописываем следом
+
       const order = new Map(ids.map((id, i) => [id, i]))
       set((s) => ({
         pins: s.pins
@@ -460,8 +452,6 @@ export const useVault = create<VaultState>()((set, get) => {
       const pin = get().pins.find((p) => p.id === id)
       return pin ? trashWithUndo(pin.path) : async () => {}
     },
-
-    // ---------- тулзы ----------
 
     async importTool(subjectId, input) {
       const subject = get().subjects.find((s) => s.id === subjectId)
@@ -493,8 +483,6 @@ export const useVault = create<VaultState>()((set, get) => {
       return tool ? trashWithUndo(tool.path) : async () => {}
     },
 
-    // ---------- доски ----------
-
     async createBoard(subjectId, name = 'Новая доска') {
       const subject = get().subjects.find((s) => s.id === subjectId)
       if (!subject) throw new Error('Предмет не найден')
@@ -512,7 +500,8 @@ export const useVault = create<VaultState>()((set, get) => {
         const text = await a.readText(board.path)
         const disk = text === null ? null : serializeBoard(id, parseBoard(text).data)
         const base = boardBases.get(id)
-        const next = disk !== null && base !== undefined && disk !== base ? mergeBoards(parseBoard(base).data, data, parseBoard(disk).data) : data
+        const next =
+          disk !== null && base !== undefined && disk !== base ? mergeBoards(parseBoard(base).data, data, parseBoard(disk).data) : data
         const saved = await repo.saveBoard(a, board, next)
         boardBases.set(id, serializeBoard(id, next))
         set((s) => ({ boards: s.boards.map((b) => (b.id === id ? { ...b, data: saved.data } : b)) }))
@@ -542,8 +531,6 @@ export const useVault = create<VaultState>()((set, get) => {
       return repo.saveBoardImage(need(), board, file)
     },
 
-    // ---------- корзина ----------
-
     listTrash: () => repo.listTrash(need()),
 
     async restoreTrash(item) {
@@ -557,7 +544,6 @@ export const useVault = create<VaultState>()((set, get) => {
   }
 })
 
-/** Ссылка на файл из vault для <img>. Кэшируется до перезагрузки страницы. */
 const urlCache = new Map<string, Promise<string | null>>()
 export function vaultFileUrl(path: string): Promise<string | null> {
   const a = useVault.getState().adapter
@@ -566,7 +552,7 @@ export function vaultFileUrl(path: string): Promise<string | null> {
   if (!urlCache.has(key)) {
     urlCache.set(
       key,
-      // не дочитали (сервер пропал) — не запоминаем, после переподключения попробуем снова
+
       a.readBlob(path).then(
         (b) => (b ? URL.createObjectURL(b) : null),
         (e) => {

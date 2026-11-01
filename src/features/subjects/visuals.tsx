@@ -103,7 +103,6 @@ export const toolIconLabels: Record<ToolIcon, string> = {
   table: 'Таблица',
 }
 
-/** Иконка файла в «Проектах»: у HTML — выбранная, у остальных — по типу. */
 const kindIcons: Record<Exclude<ToolKind, 'html'>, LucideIcon> = {
   image: FileImage,
   pdf: FileText,
@@ -129,12 +128,10 @@ export const kindLabels: Record<ToolKind, string> = {
   other: 'Файл',
 }
 
-/** CSS-переменная цвета предмета, для `style`. */
 export const subjectColor = (s: Pick<Subject, 'color'>) => `var(--subject-${s.color})`
 
 export const subjectStyle = (s: Pick<Subject, 'color'>) => ({ '--subject': subjectColor(s) }) as CSSProperties
 
-/** Иконка предмета в цветной плашке. Цвет — не единственный признак: всегда есть иконка. */
 export function SubjectBadge({ subject, size = 'md', className }: { subject: Subject; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const Icon = subjectIcons[subject.icon]
   return (

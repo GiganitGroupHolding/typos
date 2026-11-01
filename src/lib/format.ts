@@ -11,7 +11,6 @@ export function relativeTime(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
-/** 1,4 МБ, 230 КБ. */
 export function fileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} Б`
   const [v, unit] = bytes < 1024 ** 2 ? [bytes / 1024, 'КБ'] : bytes < 1024 ** 3 ? [bytes / 1024 ** 2, 'МБ'] : [bytes / 1024 ** 3, 'ГБ']
@@ -26,7 +25,6 @@ export function plural(n: number, [one, few, many]: [string, string, string]): s
   return `${n} ${many}`
 }
 
-/** «папка …» → «Папка …» для начала строки. */
 export const upperFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function greeting(d = new Date()): string {

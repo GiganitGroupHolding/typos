@@ -54,7 +54,7 @@ it('плагин из отдельной папки запускает MCP и п
     )
     expect((await client.listTools()).tools).toHaveLength(16)
     await client.callTool({ name: 'create_subject', arguments: { name: 'Тест' } })
-    // файлы — только из папки, разрешённой при настройке
+
     const fromFile = await client.callTool({
       name: 'create_note',
       arguments: { subject: 'Тест', title: 'Из файла', file: path.join(files, 'lecture.md') },

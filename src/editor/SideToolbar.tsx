@@ -21,12 +21,6 @@ import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-/*
- * Панель форматирования: стеклянная капсула у правого края, по центру по вертикали.
- * При наведении иконки увеличиваются по расстоянию до курсора (как Dock в macOS).
- * Анимируется только transform; пока открыт закреп — отъезжает левее.
- */
-
 interface Item {
   icon: LucideIcon
   label: string

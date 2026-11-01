@@ -3,12 +3,6 @@ import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } 
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { blockPos, foldedBlocks, headingKey, headingLevel, sectionRange } from './sections'
 
-/*
- * Сворачивание разделов под заголовками. Только вид: в Markdown ничего не пишется.
- * Свёрнутость запоминается в браузере по конспекту (ключ — уровень и текст заголовка).
- * У каждого заголовка с содержимым — стрелка слева (видна при наведении и у свёрнутых).
- */
-
 export const foldingKey = new PluginKey<Set<string>>('folding')
 
 const storageKey = (id: string) => `typos-fold:${id}`
@@ -25,12 +19,9 @@ function writeFolded(id: string, set: Set<string>) {
   try {
     if (set.size) localStorage.setItem(storageKey(id), JSON.stringify([...set]))
     else localStorage.removeItem(storageKey(id))
-  } catch {
-    // приватный режим — свёрнутость просто не запомнится
-  }
+  } catch {}
 }
 
-/** Свернуть / развернуть раздел заголовка с номером index; null — это не заголовок с содержимым. */
 function toggleAt(state: EditorState, index: number): Transaction | null {
   const node = state.doc.maybeChild(index)
   if (!node || headingLevel(node) === null) return null
@@ -40,7 +31,7 @@ function toggleAt(state: EditorState, index: number): Transaction | null {
   if (folding) next.add(key)
   else next.delete(key)
   const tr = state.tr.setMeta(foldingKey, next)
-  // курсор в сворачиваемом — переносим в конец заголовка
+
   if (folding) {
     const [, to] = sectionRange(state.doc, index)
     const start = blockPos(state.doc, index)
@@ -52,7 +43,6 @@ function toggleAt(state: EditorState, index: number): Transaction | null {
 }
 
 export interface FoldingOptions {
-  /** id конспекта — по нему запоминается свёрнутость */
   noteId: string
 }
 
@@ -117,7 +107,7 @@ export const Folding = Extension.create<FoldingOptions>({
                     b.addEventListener('mousedown', (e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      // номер блока заново: документ мог поменяться
+
                       let at = -1
                       view.state.doc.forEach((_n, off, i) => {
                         if (off === offset) at = i
@@ -142,7 +132,6 @@ export const Folding = Extension.create<FoldingOptions>({
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     folding: {
-      /** Свернуть / развернуть раздел заголовка с номером index (блок верхнего уровня). */
       toggleFold: (index: number) => ReturnType
     }
   }

@@ -1,7 +1,5 @@
 import { createMemoryAdapter } from '@/storage/flatAdapter'
 
-/** Набор файлов для тестов: несколько предметов в формате vault. Только для vitest. */
-
 const meta = (id: string, color: string, icon: string, order: number) => JSON.stringify({ id, color, icon, order })
 const note = (id: string, daysAgo: number, body: string) => {
   const iso = new Date(Date.now() - daysAgo * 864e5).toISOString()

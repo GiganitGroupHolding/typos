@@ -48,7 +48,6 @@ const adapter = () => new DavAdapter({ url: base, token, name: 'Тест', vault
 const call = (p: string, init: RequestInit & { headers?: Record<string, string> } = {}) =>
   fetch(base + p, { ...init, headers: { Authorization: `Bearer ${token}`, ...init.headers } })
 
-/** Путь как есть: fetch сам схлопнул бы «%2e%2e» и до сервера бы не дошло. */
 const rawStatus = (p: string) =>
   new Promise<number>((resolve, reject) => {
     http
@@ -98,7 +97,7 @@ describe('сервер хранения', () => {
     expect(info).toMatchObject({ protocol: 'typos-storage/1', name: 'Тест', device: 'laptop', vaultId: srv.state.vaultId })
     expect((await fetch(`${base}/.typos/info`)).status).toBe(401)
     expect((await call('/.typos/info', { headers: { Authorization: 'Bearer wrong' } })).status).toBe(401)
-    // файловому менеджеру — Basic с ключом вместо пароля
+
     const basic = Buffer.from(`any:${token}`).toString('base64')
     expect((await call('/.typos/info', { headers: { Authorization: `Basic ${basic}` } })).status).toBe(200)
   })
@@ -155,7 +154,7 @@ describe('сервер хранения', () => {
 
   it('не выпускает за корень и прячет служебную папку', async () => {
     await fs.writeFile(path.join(path.dirname(dir), 'secret.txt'), 'x').catch(() => {})
-    // «%2e%2e» и «..» URL схлопывает до разбора — запрос уходит мимо /files/
+
     expect(await rawStatus('/files/%2e%2e/secret.txt')).toBe(404)
     expect(await rawStatus('/files/../../secret.txt')).toBe(404)
     expect(await rawStatus('/files/..%2fsecret.txt')).toBe(400)
@@ -186,7 +185,7 @@ describe('сервер хранения', () => {
       call('/.typos/info', { headers: { Authorization: `Bearer ${key}`, 'X-Forwarded-For': `1.1.1.1, ${ip}` } })
     for (let i = 0; i < 10; i++) expect((await from('203.0.113.7')).status).toBe(401)
     expect((await from('203.0.113.7')).status).toBe(429)
-    // другой клиент за тем же прокси не заблокирован
+
     expect((await from('198.51.100.2', token)).status).toBe(200)
   })
 
@@ -194,7 +193,7 @@ describe('сервер хранения', () => {
     const from = (ip: string, key = 'wrong') =>
       call('/.typos/info', { headers: { Authorization: `Bearer ${key}`, 'X-Forwarded-For': `1.1.1.1, ${ip}` } })
     for (let i = 0; i < 10; i++) expect((await from('203.0.113.7')).status).toBe(401)
-    // без доверия к прокси заголовок не меняет адрес: подставным адресом блокировку не обойти
+
     expect((await from('198.51.100.2', token)).status).toBe(429)
 
     await srv.close()
@@ -218,7 +217,7 @@ describe('сервер хранения', () => {
     await expect(ro.remove('A/x.md')).rejects.toMatchObject({ status: 403 })
     await expect(ro.move('A/x.md', 'B/x.md')).rejects.toMatchObject({ status: 403 })
     expect(await fs.readFile(path.join(dir, 'A/x.md'), 'utf8')).toBe('текст')
-    // rotate задаёт права заново
+
     const full = await rotateDevice(dir, 'mcp')
     expect(full.readOnly).toBe(false)
     expect((await deviceKey(dir, 'mcp')).readOnly).toBe(false)
@@ -230,7 +229,7 @@ describe('сервер хранения', () => {
     base = `http://127.0.0.1:${srv.port}`
     expect((await call('/files/a.md', { method: 'PUT', body: '12345' })).status).toBe(201)
     expect((await call('/files/b.md', { method: 'PUT', body: '123456' })).status).toBe(507)
-    // перезапись того же файла считается по разнице
+
     expect((await call('/files/a.md', { method: 'PUT', body: '1234567890' })).status).toBe(204)
     expect((await call('/files/a.md', { method: 'DELETE' })).status).toBe(204)
     expect((await call('/files/b.md', { method: 'PUT', body: '1' })).status).toBe(201)
@@ -305,12 +304,11 @@ describe('сервер хранения', () => {
     expect(pre.headers.get('access-control-allow-headers')).toMatch(/Authorization/)
     const res = await call('/.typos/info', { headers: { Origin: 'http://192.168.1.5:4173', Authorization: 'Bearer wrong' } })
     expect(res.headers.get('access-control-allow-origin')).toBe('http://192.168.1.5:4173')
-    // браузеру не показываем системное окно логина
+
     expect(res.headers.get('www-authenticate')).toBeNull()
   })
 })
 
-/** Всё содержимое хранилища: путь → текст. */
 async function snapshot(a: VaultAdapter, dir = ''): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
   for (const e of await a.list(dir)) {
@@ -368,7 +366,7 @@ describe('связь с сервером', () => {
       const stopped = Date.now()
       await srv.close()
       await statusBecomes('offline')
-      // поток рвётся сразу, а не по таймауту пульса
+
       expect(Date.now() - stopped).toBeLessThan(1000)
       srv = await startServer({ dir, port, host: '127.0.0.1' })
       await statusBecomes('online')
@@ -394,7 +392,6 @@ describe('связь с сервером', () => {
   })
 
   it('сервер молчит дольше пульса — связь считается потерянной', async () => {
-    // здоровается и замолкает навсегда: так выглядит пропавшая сеть
     const silent = http.createServer((_req, res) =>
       res.writeHead(200, { 'Content-Type': 'text/event-stream' }).write('event: hello\ndata: {}\n\n'),
     )

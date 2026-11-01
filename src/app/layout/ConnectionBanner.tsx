@@ -7,7 +7,6 @@ import { useConnection } from '@/storage/connection'
 import { useSync } from '@/storage/sync'
 import { useVault } from '@/vault/store'
 
-/** Секунд до следующей попытки, обновляется раз в секунду. */
 function useSecondsUntil(at?: number) {
   const [left, setLeft] = useState(0)
   useEffect(() => {
@@ -23,7 +22,6 @@ function useSecondsUntil(at?: number) {
   return at ? left : 0
 }
 
-/** Плашка над содержимым: связи с сервером нет или ключ отозван. */
 export function ConnectionBanner() {
   const status = useConnection((s) => s.status)
   const retryAt = useConnection((s) => s.retryAt)

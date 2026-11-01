@@ -1,6 +1,3 @@
-// Песочница просмотра DOCX/PPTX — отдельный IIFE-бандл в public/viewers/office.js.
-// iframe без same-origin грузит его обычным <script src> (модулям нужен CORS), а приложение его не импортирует.
-// Пересобирается, только если поменялся код песочницы или зависимости.
 import { existsSync, statSync } from 'node:fs'
 import { build } from 'vite'
 

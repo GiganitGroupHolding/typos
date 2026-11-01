@@ -10,12 +10,6 @@ import { useBoardsOf, useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/v
 import { tabOfPath } from './tabs'
 import { SubjectBadge } from './visuals'
 
-/*
- * Дерево предметов. Идея — 21st.dev «Tree Root Trace» (nikolas-sapa):
- * линии отступа — SVG-пути, которые прорисовываются при раскрытии.
- * Заменить на оригинал после подключения ключа 21st.
- */
-
 const ROW = 30
 
 function TraceLine({ index, last }: { index: number; last: boolean }) {

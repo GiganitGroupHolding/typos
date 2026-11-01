@@ -4,7 +4,6 @@ import { Copy, Minus, Square, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Кнопки окна в десктоп-версии: системная шапка выключена (decorations: false), рисуем свои. */
 export function WindowControls() {
   const [maximized, setMaximized] = useState(false)
 

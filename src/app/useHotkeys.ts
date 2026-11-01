@@ -3,11 +3,6 @@ import { useParams } from 'react-router'
 import { useCreateNote } from '@/vault/hooks'
 import { useUi } from './store'
 
-/**
- * Глобальные сочетания. Сравниваем e.code, а не e.key — работают и на русской раскладке.
- * Новый конспект: Alt N (в вкладке браузера Ctrl N занят), Ctrl N — в установленном PWA.
- * Ctrl B (сайдбар) обрабатывает сам shadcn Sidebar.
- */
 export function useHotkeys() {
   const createNote = useCreateNote()
   const { subjectId } = useParams()
@@ -18,7 +13,6 @@ export function useHotkeys() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // редактор уже обработал (например, Ctrl+K с выделением — ссылка)
       if (e.defaultPrevented) return
       const ui = useUi.getState()
       const ctrl = e.ctrlKey || e.metaKey

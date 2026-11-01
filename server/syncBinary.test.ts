@@ -1,5 +1,5 @@
 // @vitest-environment node
-// Картинки — Blob; в jsdom поддельный IndexedDB их портит, а в браузере и в Node они хранятся как есть
+
 import 'fake-indexeddb/auto'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'

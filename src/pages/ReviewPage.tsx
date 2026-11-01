@@ -11,10 +11,6 @@ import { Tex } from '@/lib/tex'
 import type { Pin } from '@/types'
 import { usePinsOf, useSubject } from '@/vault/hooks'
 
-/**
- * «Повторение» перед экзаменом: карточки закрепа по одной.
- * Сначала название — вспомни формулу — переверни. «Не помню» возвращает карточку в конец круга.
- */
 export function ReviewPage() {
   const { subjectId } = useParams()
   const subject = useSubject(subjectId)

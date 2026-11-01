@@ -1,5 +1,3 @@
-/** Шаблоны новых конспектов. Первая строка — заголовок. */
-
 export type TemplateId = 'blank' | 'lecture' | 'seminar'
 
 const today = () => new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long' }).format(new Date())

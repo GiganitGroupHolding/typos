@@ -42,15 +42,10 @@ const SAVE_DELAY = 500
 
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict'
 
-/** Открытые сейчас редакторы — чтобы не удалить «пустой» конспект, который снова на экране. */
 const mounted = new Set<string>()
 
 const isBlank = (md: string) => md.replace(/^#{1,6}\s*$/gm, '').trim() === ''
 
-/*
- * Редактор конспекта (Tiptap). Панель — по мотивам 21st.dev «Rich Text Editor» (uvain).
- * Первая строка — заголовок, файл переименовывается по нему.
- */
 export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolean }) {
   const font = useUi((s) => s.noteFont)
   const setNoteFont = useUi((s) => s.setNoteFont)
@@ -69,12 +64,10 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   const [linkRequest, setLinkRequest] = useState(0)
   const formulaRef = useRef<() => void>(() => {})
 
-  // ---------- файл поменяли снаружи (Claude, MCP, другое окно) ----------
   const conflict = useRef(false)
-  /** Правки, которые не записались из-за конфликта, — на случай «Оставить мою» после ухода с заметки. */
+
   const unsaved = useRef('')
 
-  /** Показать в редакторе текст с диска; правки дальше идут от него. */
   const loadFromDisk = useCallback(
     (body: string) => {
       const ed = editorRef.current
@@ -129,12 +122,11 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     })
   }, [id, loadFromDisk, navigate, note.subjectId])
 
-  // ---------- автосохранение ----------
   const save = useCallback(async () => {
     const ed = editorRef.current
     if (!ed || ed.isDestroyed) return
     const md = ed.getMarkdown()
-    // пока не выбрали версию — ничего не пишем
+
     if (conflict.current) return void (unsaved.current = md)
     setSaveState('saving')
     try {
@@ -157,7 +149,6 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     void save()
   }, [save])
 
-  // ---------- формулы ----------
   const openMath = useCallback((pos: number, kind: MathEdit['kind'], mode: MathEdit['mode'], to?: number) => {
     const ed = editorRef.current
     if (!ed || !ed.isEditable) return
@@ -191,7 +182,6 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     [openMath, note.id],
   )
 
-  // ---------- картинки: вставка, перетаскивание, кнопка ----------
   const insertImages = useCallback(
     async (files: File[], at?: number) => {
       const ed = editorRef.current
@@ -221,7 +211,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       autofocus: autoFocus ? 'start' : false,
       editorProps: {
         attributes: { 'aria-label': 'Текст конспекта', spellcheck: 'true', lang: 'ru' },
-        // как в Notion: Ctrl+K — ссылка (если есть выделение), Ctrl+Shift+E — в формулу
+
         handleKeyDown: (view, event) => {
           const mod = event.ctrlKey || event.metaKey
           if (!mod || view.state.selection.empty) return false
@@ -242,7 +232,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
             void insertImages(files)
             return true
           }
-          // ответ нейросети / .md как обычный текст → разобрать Markdown с формулами
+
           const text = data?.getData('text/plain') ?? ''
           const ed = editorRef.current
           if (!ed || data?.getData('text/html') || view.state.selection.$from.parent.type.spec.code) return false
@@ -250,7 +240,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
           ed.commands.insertContent(normalizeMarkdownMath(text), { contentType: 'markdown' })
           return true
         },
-        // отрендеренные KaTeX/MathJax и блоки кода с LaTeX → формулы
+
         transformPastedHTML: (html) => htmlMathToNodes(html),
         handleDrop: (view, event, _slice, moved) => {
           const files = imagesOf(event.dataTransfer?.files)
@@ -275,12 +265,9 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     editorRef.current = editor
   }, [editor])
 
-  // правки идут от текста, с которым открыли заметку
   const openedBody = useRef(note.body)
   useEffect(() => useVault.getState().adoptNote(id, openedBody.current), [id])
 
-  // папку перечитали (фокус окна), а файл уже другой: без своих правок — тихо подгружаем.
-  // Если правки есть, их сохранение упрётся в проверку и покажет выбор версии.
   useEffect(() => {
     if (!editor || conflict.current || timer.current !== null) return
     const base = useVault.getState().noteBase(id)
@@ -289,14 +276,12 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     toast('Конспект обновился с диска', { id: `reload-${id}` })
   }, [editor, id, note.body, loadFromDisk])
 
-  // режим чтения: текст не редактируется, панель скрыта
   const reading = useUi((s) => s.readingMode)
   const mapMode = useUi((s) => s.mapMode)
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.setEditable(!reading, false)
   }, [editor, reading])
 
-  // сохранить при уходе: смена заметки, закрытие вкладки, сворачивание окна
   useEffect(() => {
     mounted.add(id)
     const onHide = () => document.visibilityState === 'hidden' && flush()
@@ -307,8 +292,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       window.removeEventListener('beforeunload', flush)
       document.removeEventListener('visibilitychange', onHide)
       flush()
-      // пустой конспект не оставляем (как Apple Notes). Через тик: StrictMode
-      // и смена ключа размонтируют и сразу монтируют тот же редактор.
+
       setTimeout(() => {
         if (!mounted.has(id)) void useVault.getState().discardIfEmpty(id)
       })
@@ -329,7 +313,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     } else {
       chain.insertContentAt({ from: math.pos, to: math.to ?? math.pos }, { type, attrs: { latex } })
     }
-    // курсор — сразу за формулой, чтобы продолжить писать
+
     chain
       .command(({ tr }) => {
         const at = math.mode === 'edit' ? math.pos : tr.mapping.map(math.pos, -1)
@@ -361,7 +345,6 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   }
 
   const cancelMath = () => {
-    // пустая формула (только что из «$$ ») — убрать
     if (editor && math?.mode === 'edit' && !editor.state.doc.nodeAt(math.pos)?.attrs.latex) return deleteMath()
     editor?.commands.focus()
     setMath(null)
@@ -469,7 +452,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         <p className="mb-5 text-center text-[13px] text-muted-foreground">
           {note.created === note.updated ? 'Новый конспект' : `Изменено ${relativeTime(note.updated)}`}
         </p>
-        {/* карта — слоем над текстом, в той же колонке */}
+
         <div className="relative">
           <EditorContent editor={editor} />
           {editor && <BlockHandle editor={editor} disabled={reading || mapMode} />}

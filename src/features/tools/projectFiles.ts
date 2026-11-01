@@ -28,14 +28,12 @@ const MIME: Record<string, string> = {
   aac: 'audio/aac',
 }
 
-/** Файл с диска с правильным MIME (без него Chrome не покажет PDF, а видео может не запуститься). */
 export async function readProjectBlob(path: string, ext: string): Promise<Blob> {
   const blob = await useVault.getState().adapter?.readBlob(path)
   if (!blob) throw new Error('Файла нет на месте: возможно, его переместили или удалили в проводнике')
   return blob.slice(0, blob.size, MIME[ext] ?? (blob.type || 'application/octet-stream'))
 }
 
-/** «Скачать оригинал»: файл как он лежит в папке. */
 export async function downloadProjectFile(tool: Tool) {
   try {
     const url = URL.createObjectURL(await readProjectBlob(tool.path, tool.ext))

@@ -83,7 +83,12 @@ describe('проекты', () => {
     const s = v.subjects.find((x) => x.name === 'Физика')!
     const bytes = new Uint8Array([37, 80, 68, 70, 45])
     const t = await repo.importProjectFile(a, s, { name: 'Лабораторная №3 — маятник.PDF'.normalize('NFD'), blob: new Blob([bytes]) })
-    expect(t).toMatchObject({ path: 'Физика/Проекты/Лабораторная №3 — маятник.pdf', name: 'Лабораторная №3 — маятник', kind: 'pdf', size: 5 })
+    expect(t).toMatchObject({
+      path: 'Физика/Проекты/Лабораторная №3 — маятник.pdf',
+      name: 'Лабораторная №3 — маятник',
+      kind: 'pdf',
+      size: 5,
+    })
     expect(new Uint8Array(await (await a.readBlob(t.path))!.arrayBuffer())).toEqual(bytes)
     const r = await repo.updateTool(a, t, { name: 'Маятник: отчёт', icon: 'calculator' })
     expect(r.path).toBe('Физика/Проекты/Маятник отчёт.pdf')
@@ -126,7 +131,6 @@ describe('предметы и корзина', () => {
     await repo.purgeTrash(a, -1)
     expect(await repo.listTrash(a)).toEqual([])
   })
-
 
   it('конспект по шаблону получает имя из заголовка', async () => {
     const { a, v } = await sample()

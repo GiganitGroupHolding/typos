@@ -3,19 +3,8 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Entry, VaultAdapter } from '@/storage/VaultAdapter'
 
-/**
- * Папка vault на диске для Node (MCP-сервер). Тот же интерфейс, что у приложения,
- * поэтому repo.ts пишет файлы ровно так же, как само приложение.
- * Выйти за корень нельзя: «..», абсолютные пути и ссылки наружу отклоняются.
- */
-
 const isMissing = (e: unknown) => (e as NodeJS.ErrnoException)?.code === 'ENOENT'
 
-/**
- * Ключи сервера хранения, если vault — его папка. Под любым написанием: на macOS и Windows «.TYPOS-SERVER» — та же папка.
- * Держи в согласии с STATE_DIR и isStateDir в server/typos-server.mjs (сервер без зависимостей, импортировать оттуда нельзя)
- * и с is_state_dir в src-tauri/src/paths.rs.
- */
 const isServerStateDir = (name: string) => name.toLowerCase().replace(/[. ]+$/, '') === '.typos-server'
 
 export class NodeFsAdapter implements VaultAdapter {
@@ -29,7 +18,6 @@ export class NodeFsAdapter implements VaultAdapter {
     this.label = path.basename(this.root)
   }
 
-  /** Относительный путь vault («Физика/Конспекты/x.md») → абсолютный внутри корня. Проверяет только строку — на диске проверяет safe(). */
   abs(rel: string): string {
     const parts = rel.split('/').filter(Boolean)
     if (
@@ -42,7 +30,6 @@ export class NodeFsAdapter implements VaultAdapter {
     return p
   }
 
-  /** Настоящий путь (после symlink и junction) лежит в корне и не в служебной папке сервера хранения? */
   private async inside(real: string) {
     this.rootReal ??= fs.realpath(this.root).catch((e: unknown) => {
       this.rootReal = undefined
@@ -53,10 +40,6 @@ export class NodeFsAdapter implements VaultAdapter {
     return !(rel && isServerStateDir(rel.split(path.sep)[0]))
   }
 
-  /**
-   * abs() + проверка на диске: ссылка внутри vault не выведет за корень и не приведёт к ключам сервера хранения.
-   * Несуществующий путь проверяется по ближайшей существующей папке над ним.
-   */
   private async safe(rel: string): Promise<string> {
     const target = this.abs(rel)
     for (let probe = target; ; probe = path.dirname(probe)) {
@@ -65,7 +48,7 @@ export class NodeFsAdapter implements VaultAdapter {
         real = await fs.realpath(probe)
       } catch (e) {
         if (!isMissing(e)) throw e
-        // битая ссылка: цели нет, но сама ссылка есть — запись или mkdir по ней ушли бы наружу
+
         if (
           await fs.lstat(probe).then(
             () => true,
@@ -90,7 +73,6 @@ export class NodeFsAdapter implements VaultAdapter {
         if (atRoot && isServerStateDir(d.name)) continue
         let isDir = d.isDirectory()
         if (d.isSymbolicLink()) {
-          // ссылку наружу не показываем: прочитать по ней всё равно нельзя
           const real = await fs.realpath(path.join(abs, d.name)).catch(() => null)
           if (!real || !(await this.inside(real))) continue
           isDir = (await fs.stat(real)).isDirectory()
@@ -122,7 +104,6 @@ export class NodeFsAdapter implements VaultAdapter {
     }
   }
 
-  /** Пишет во временный файл и переименовывает — приложение не прочитает файл наполовину. */
   private async writeBuffer(p: string, data: Buffer | string) {
     const target = await this.safe(p)
     await fs.mkdir(path.dirname(target), { recursive: true })

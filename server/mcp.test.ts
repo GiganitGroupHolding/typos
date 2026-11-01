@@ -1,5 +1,5 @@
 // @vitest-environment node
-// MCP-сервер работает в Node: без DOMParser и без браузера — проверяем там же
+
 import 'fake-indexeddb/auto'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
@@ -16,12 +16,12 @@ import { buildLink, DEFAULT_DEVICE, deviceKey, startServer, STATE_DIR } from './
 let dir: string
 let srv: Awaited<ReturnType<typeof startServer>>
 let link: string
-/** Ключ «телефона» — устройства с локальной копией. */
+
 let phoneToken: string
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'typos-mcp-'))
-  // ключи заводим до запуска: работающий сервер перечитывает их не чаще раза в секунду
+
   const { token } = await deviceKey(dir, 'mcp')
   phoneToken = (await deviceKey(dir, 'phone')).token
   srv = await startServer({ dir, port: 0, host: '127.0.0.1', name: 'Дом' })

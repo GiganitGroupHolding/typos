@@ -19,7 +19,6 @@ const KIND: Record<TrashKind, { icon: LucideIcon; label: string }> = {
   file: { icon: FileText, label: 'Файл' },
 }
 
-/** Корзина: всё удалённое за 30 дней. Восстановление — на прежнее место. */
 export function TrashPage() {
   const listTrash = useVault((s) => s.listTrash)
   const restoreTrash = useVault((s) => s.restoreTrash)

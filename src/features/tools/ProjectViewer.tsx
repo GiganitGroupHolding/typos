@@ -9,15 +9,9 @@ import type { Tool } from '@/types'
 import { downloadProjectFile, readProjectBlob } from './projectFiles'
 import { ToolFrame } from './ToolFrame'
 
-/*
- * Просмотр файла из «Проектов» прямо в приложении.
- * HTML — песочница тулз; PDF — встроенный просмотрщик браузера; DOCX/PPTX — отдельная песочница (viewers/officeFrame.ts);
- * картинки, текст, видео и аудио — штатными элементами. Содержимое читается с диска только при открытии.
- */
-
 export function ProjectViewer({ tool, runKey = 0 }: { tool: Tool; runKey?: number }) {
   if (tool.kind === 'html') return <ToolFrame html={tool.html} title={tool.name} runKey={runKey} />
-  // key: новый файл или «Перезапустить» — состояние просмотра с нуля
+
   return <FileView key={`${tool.path}:${runKey}`} tool={tool} />
 }
 
@@ -108,7 +102,6 @@ function FileCard({ tool, size, note, children }: { tool: Tool; size?: number; n
   )
 }
 
-/** Картинка по размеру окна; щелчок — в натуральную величину с прокруткой. */
 function ImageView({ url, name }: { url: string; name: string }) {
   const [actual, setActual] = useState(false)
   return (
@@ -151,8 +144,6 @@ function TextView({ blob }: { blob: Blob }) {
   )
 }
 
-// ---------- DOCX / PPTX в песочнице ----------
-
 const OFFICE_CSS = `
 html,body{margin:0;min-height:100%;background:transparent;font-family:system-ui,sans-serif}
 #root{min-height:100vh}
@@ -162,7 +153,6 @@ html,body{margin:0;min-height:100%;background:transparent;font-family:system-ui,
 .pptx-preview-slide-wrapper{margin:0 auto 16px!important;border-radius:10px;box-shadow:0 1px 3px rgb(0 0 0/.14),0 10px 30px rgb(0 0 0/.1)}
 `
 
-/** Документ песочницы: только скрипт просмотрщика с нашего адреса, без сети и без доступа к приложению. */
 function officeDoc() {
   const src = `${location.origin}/viewers/office.js`
   const csp = [

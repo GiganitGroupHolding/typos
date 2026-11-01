@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { useUi } from './store'
 import { zoomShortcut } from './zoomValue'
 
-/** Применяет масштаб последовательно, чтобы быстрые нажатия не возвращали старое значение. */
 export function useDesktopZoom() {
   useEffect(() => {
     if (!isTauri()) return

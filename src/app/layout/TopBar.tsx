@@ -24,7 +24,6 @@ export function TopBar() {
   const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
 
   return (
-    // в десктоп-версии панель — шапка окна: за пустое место окно тянется, двойной щелчок разворачивает
     <div data-tauri-drag-region className="flex h-12 shrink-0 items-center gap-1 px-2">
       <Tooltip>
         <TooltipTrigger asChild>

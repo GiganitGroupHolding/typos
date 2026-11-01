@@ -23,7 +23,7 @@ describe('markdown ↔ tiptap', () => {
     expect(doc.content?.[1].type).toBe('table')
     expect(out).toContain('$TR = P \\cdot Q$')
     expect(out).toContain('**Цена**')
-    expect(md.serialize(doc)).toBe(out) // стабильно при повторном сохранении
+    expect(md.serialize(doc)).toBe(out)
   })
 
   it('матрицы с \\\\ и & внутри формулы', () => {

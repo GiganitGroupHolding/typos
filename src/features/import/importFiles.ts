@@ -10,7 +10,6 @@ type Go = (to: string) => void
 
 const isHtmlFile = (f: File) => /\.html?$/i.test(f.name) || f.type === 'text/html'
 
-/** .md → конспекты (картинки из того же набора — в их ссылки), остальное → «Проекты» (HTML — тулзой). */
 export async function importFiles(subjectId: string, files: File[], go: Go) {
   const md = files.filter(isMarkdownFile)
   if (md.length) {
@@ -27,7 +26,6 @@ export async function importFiles(subjectId: string, files: File[], go: Go) {
     }
   }
 
-  // картинки рядом с .md — иллюстрации к конспекту, в проекты их не дублируем
   const rest = files.filter((f) => !isMarkdownFile(f) && !(md.length && isImageFile(f)))
   const added: Tool[] = []
   for (const f of rest) {
@@ -51,7 +49,6 @@ export async function importFiles(subjectId: string, files: File[], go: Go) {
   }
 }
 
-/** Кнопка «Импорт из .md»: выбрать файлы (можно сразу с картинками) и добавить. */
 export async function pickAndImportNotes(subjectId: string, go: Go) {
   const files = await pickFiles('.md,.markdown,.txt,text/markdown,image/*')
   if (files.length) await importFiles(subjectId, files, go)

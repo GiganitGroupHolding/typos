@@ -23,7 +23,6 @@ import { ListColumn } from './ListColumn'
 import { Nebula } from './Nebula'
 import { TopBar } from './TopBar'
 
-/** Режим фокуса прячет обе левые колонки; выход — возвращает сайдбар. */
 function FocusSync() {
   const focusMode = useUi((s) => s.focusMode)
   const { setOpen } = useSidebar()
@@ -33,7 +32,6 @@ function FocusSync() {
   return null
 }
 
-/** Папку или сервер могли изменить снаружи (проводник, Obsidian, другое устройство) — перечитываем при возврате в окно. */
 function useRefreshOnFocus() {
   useEffect(() => {
     const onFocus = () => {
@@ -45,7 +43,6 @@ function useRefreshOnFocus() {
   }, [])
 }
 
-/** Пока открыт сервер хранения — синхронизация в фоне; о конфликтах и вернувшейся связи говорим тостом. */
 function useServerSync() {
   const adapter = useVault((s) => s.adapter)
   useEffect(() => {
@@ -63,7 +60,6 @@ function useServerSync() {
   }, [adapter])
 }
 
-/** Ярлык «Поиск» у установленного приложения открывает /?search=1. */
 function useSearchShortcut() {
   const [params, setParams] = useSearchParams()
   useEffect(() => {
@@ -80,7 +76,7 @@ export function AppShell() {
   useServerSync()
   useSearchShortcut()
   const { subjectId } = useParams()
-  // внутри предмета акцент — цвет его иконки, вне предметов — нейтральный
+
   useAccentSync(useSubject(subjectId)?.color)
   const { pathname } = useLocation()
   const focusMode = useUi((s) => s.focusMode)
@@ -94,9 +90,8 @@ export function AppShell() {
       <AppSidebar />
       <SidebarInset className="flex-row overflow-hidden bg-transparent">
         {subjectId && !focusMode && <ListColumn />}
-        {/* бумага — под конспектом; на остальных экранах стеклянные карточки лежат прямо на авроре */}
+
         <div id="main" className={cn('relative flex min-w-0 flex-1 flex-col', pathname.includes('/n/') && 'paper')}>
-          {/* панель поверх прокрутки: текст уходит под матовое стекло */}
           <div className="glass-bar absolute inset-x-0 top-0 z-20">
             <TopBar />
           </div>

@@ -1,10 +1,3 @@
-/*
- * Схема mermaid (flowchart / graph) → блоки и стрелки мини-карты.
- * Понимает направление, формы узлов [] () {} (()) ([]) [[]] {{}} >] [/ /], стрелки --> --- -.-> ==> <-->,
- * подписи |…| и «-- текст -->», цепочки A --> B --> C, группы A & B --> C, подграфы (разворачиваются).
- * Остальные типы диаграмм (sequence, gantt…) не переводятся — для них null.
- */
-
 export interface ParsedFlow {
   dir: 'TB' | 'BT' | 'LR' | 'RL'
   nodes: { id: string; text: string }[]
@@ -12,7 +5,7 @@ export interface ParsedFlow {
 }
 
 const ID = /^[\p{L}\p{N}_]+/u
-// длинные скобки раньше коротких
+
 const SHAPES: [string, string][] = [
   ['(((', ')))'],
   ['([', '])'],
@@ -29,9 +22,9 @@ const SHAPES: [string, string][] = [
   ['{', '}'],
   ['>', ']'],
 ]
-// «-- подпись -->», «-. подпись .->», «== подпись ==>»
+
 const LABELLED = /^\s*<?(--|==|-\.)\s+(.+?)\s+(-{2,}>|-{3,}|={2,}>|={3,}|\.-+>|\.-+)/
-// --> --- -.-> ==> <--> --o --x и подпись |…|
+
 const LINK = /^\s*<?(-{2,}[>ox]?|={2,}[>ox]?|-\.+-+[>ox]?)(?:\s*\|([^|]*)\|)?/
 
 const clean = (s: string) =>
@@ -64,7 +57,6 @@ export function parseFlowchart(code: string): ParsedFlow | null {
     else if (!texts.has(id)) texts.set(id, id)
   }
 
-  /** Узел в начале строки: id и необязательный текст в скобках. */
   const node = (s: string): { id: string; text?: string; rest: string } | null => {
     const m = s.match(ID)
     if (!m) return null
@@ -83,7 +75,6 @@ export function parseFlowchart(code: string): ParsedFlow | null {
     return { id: m[0], text, rest }
   }
 
-  /** «A & B» — несколько узлов сразу. */
   const group = (s: string): { ids: string[]; rest: string } | null => {
     const ids: string[] = []
     let rest = s
@@ -130,7 +121,6 @@ export interface LaidOut {
 
 export type Measure = (text: string) => { w: number; h: number }
 
-/** Размер блока под текст: не уже 96 и не шире 248 px, строки по 20 px. */
 export function blockSize(text: string, lineWidth: (line: string) => number, max = 216): { w: number; h: number } {
   const lines: number[] = []
   for (const para of (text || ' ').split('\n')) {
@@ -147,7 +137,6 @@ export function blockSize(text: string, lineWidth: (line: string) => number, max
   return { w: Math.round(Math.min(248, Math.max(96, Math.max(...lines) + 32))), h: Math.round(lines.length * 20 + 24) }
 }
 
-/** Раскладка как у mermaid (dagre), но в размерах стеклянных блоков; левый верхний угол — (0, 0). */
 export async function layoutFlow(flow: ParsedFlow, measure: Measure): Promise<LaidOut> {
   const { default: dagre } = await import('@dagrejs/dagre')
   const g = new dagre.graphlib.Graph({ multigraph: true })

@@ -10,7 +10,6 @@ import { useVault } from '@/vault/store'
 
 const useOpen = create<{ open: boolean; set: (v: boolean) => void }>((set) => ({ open: false, set: (open) => set({ open }) }))
 
-/** «Удалить все предметы». Всё уходит в корзину, есть «Отменить». */
 export const openClearSubjects = () => useOpen.getState().set(true)
 
 export function ClearSubjectsDialog() {

@@ -2,11 +2,6 @@ import { del, get, set } from 'idb-keyval'
 import { settingsStore } from './settings'
 import { basename, dirname, type Entry, type VaultAdapter } from './VaultAdapter'
 
-/**
- * Папка на диске через File System Access API (Edge/Chrome).
- * Хэндл папки хранится в IndexedDB, доступ подтверждается браузером.
- */
-
 const isNotFound = (e: unknown) => e instanceof DOMException && (e.name === 'NotFoundError' || e.name === 'TypeMismatchError')
 
 export class FsaAdapter implements VaultAdapter {
@@ -96,7 +91,7 @@ export class FsaAdapter implements VaultAdapter {
   async move(from: string, to: string) {
     if (from === to) return
     if (await this.exists(to)) throw new Error(`Уже существует: ${to}`)
-    // Нативный move есть не везде — копируем и удаляем
+
     await this.copy(from, to)
     await this.remove(from)
   }
@@ -112,8 +107,6 @@ export class FsaAdapter implements VaultAdapter {
   }
 }
 
-// ---------- хранение хэндла и права ----------
-
 const HANDLE_KEY = 'vaultHandle'
 
 export const fsaSupported = () => typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
@@ -126,12 +119,10 @@ export async function hasPermission(h: FileSystemDirectoryHandle) {
   return (await h.queryPermission({ mode: 'readwrite' })) === 'granted'
 }
 
-/** Нужен жест пользователя (клик). */
 export async function requestPermission(h: FileSystemDirectoryHandle) {
   return (await h.requestPermission({ mode: 'readwrite' })) === 'granted'
 }
 
-/** Диалог выбора папки. null — пользователь передумал. */
 export async function pickFolder(): Promise<FileSystemDirectoryHandle | null> {
   try {
     return (await window.showDirectoryPicker!({ id: 'studynotes', mode: 'readwrite', startIn: 'documents' })) ?? null

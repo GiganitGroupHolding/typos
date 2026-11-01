@@ -21,7 +21,6 @@ import { storageLabel } from '@/storage/VaultAdapter'
 import { countNotes } from '@/vault/repo'
 import { useVault } from '@/vault/store'
 
-/** Хранилище: подключить папку на диске, сервер хранения или остаться в браузере. */
 export function WelcomePage() {
   useAccentSync(undefined)
   const navigate = useNavigate()
@@ -51,7 +50,6 @@ export function WelcomePage() {
     countNotes(createBrowserAdapter()).then(setBrowserNotes, () => setBrowserNotes(0))
   }, [init])
 
-  // открыта папка — при подключении сервера предложим перенести её
   useEffect(() => {
     if (adapter?.kind !== 'folder') return
     countNotes(adapter).then(setFolderNotes, () => setFolderNotes(0))

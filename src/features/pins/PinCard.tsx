@@ -2,7 +2,6 @@ import { Tex } from '@/lib/tex'
 import { cn } from '@/lib/utils'
 import type { Pin } from '@/types'
 
-/** Содержимое карточки закрепа: заголовок, формула, пояснение. */
 export function PinBody({ pin, size = 'md', hideTitle = false }: { pin: Pin; size?: 'sm' | 'md'; hideTitle?: boolean }) {
   return (
     <>

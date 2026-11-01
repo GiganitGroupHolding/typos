@@ -6,7 +6,7 @@ import { TOOL_SANDBOX, withCsp, type ToolMessage } from './sandbox'
 interface Props {
   html: string
   title: string
-  /** Меняется → iframe пересоздаётся («Перезапустить»). */
+
   runKey?: number
   className?: string
 }

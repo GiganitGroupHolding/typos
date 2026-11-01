@@ -1,5 +1,3 @@
-# Публичные домены: сертификаты Let's Encrypt выпускаются сами. Адреса — в deploy/.env.
-
 {$APP_DOMAIN} {
 	root * /srv/app
 	encode zstd gzip

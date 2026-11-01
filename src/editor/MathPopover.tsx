@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils'
 export interface MathEdit {
   mode: 'new' | 'edit'
   kind: 'inline' | 'block'
-  /** Позиция узла (edit) или место вставки (new). */
+
   pos: number
-  /** Конец выделения, которое заменит новая формула. */
+
   to?: number
   latex: string
   rect: DOMRect
@@ -21,16 +21,12 @@ interface Props {
   onSave: (latex: string) => void
   onDelete: () => void
   onCancel: () => void
-  /** «В закреп»: сделать из формулы карточку предмета. */
+
   onPin?: (latex: string) => void
 }
 
 type MathfieldEl = HTMLElement & { value: string }
 
-/**
- * Редактор формулы: LaTeX с живым превью + визуальный ввод MathLive (грузится лениво,
- * только при первом открытии вкладки «Визуально»).
- */
 export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) {
   const [latex, setLatex] = useState('')
   const [visual, setVisual] = useState(false)
@@ -47,7 +43,6 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
 
   const anchor = useMemo(() => ({ current: { getBoundingClientRect: () => edit?.rect ?? new DOMRect() } }), [edit])
 
-  // MathLive: ленивая загрузка и синхронизация с LaTeX
   useEffect(() => {
     if (!visual || !edit) return
     let cancelled = false
@@ -55,7 +50,7 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
     import('mathlive')
       .then(({ MathfieldElement }) => {
         if (cancelled || !fieldHost.current) return
-        // шрифты KaTeX уже подключены глобально, звуки не нужны
+
         MathfieldElement.fontsDirectory = null
         MathfieldElement.soundsDirectory = null
         const mf = new MathfieldElement() as unknown as MathfieldEl
@@ -72,7 +67,6 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
     return () => {
       cancelled = true
     }
-    // latex намеренно не в зависимостях: поле создаётся один раз на открытие вкладки
   }, [visual, edit])
 
   const switchTo = (v: boolean) => {
@@ -141,7 +135,6 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
           {visual ? (
             <div
               onKeyDown={(e) => {
-                // события из shadow DOM MathLive всплывают сюда
                 if (e.key === 'Enter' && (block ? e.ctrlKey || e.metaKey : !e.shiftKey)) {
                   e.preventDefault()
                   commit()

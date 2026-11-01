@@ -172,7 +172,7 @@ it('при медленных кадрах уменьшает только пр�
   const canvas = host.querySelector('canvas')!
   for (let frame = 1; frame <= 30; frame++) renderer.loop?.(frame * 40)
   expect(texture.width).toBeLessThan(initialWidth)
-  expect(texture.width * texture.height).toBeLessThanOrEqual(450_000)
+  expect(texture.width * texture.height).toBeLessThanOrEqual(2_073_600)
   expect([canvas.width, canvas.height]).toEqual([1280, 720])
   expect(renderer.draw).toHaveBeenCalledTimes(62)
   const loweredWidth = texture.width

@@ -14,8 +14,6 @@ import { useDesktopZoom } from './desktopZoom'
 import { AppShell } from './layout/AppShell'
 import { useThemeSync } from './theme'
 
-// Тяжёлые экраны (редактор Tiptap, повторение, корзина) — отдельными чанками.
-// Редактор догружается заранее, как только приложение простаивает.
 const loadNote = () => import('@/pages/NotePage').then((m) => ({ Component: m.NotePage }))
 const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500))
 idle(() => void loadNote())
@@ -38,7 +36,6 @@ const router = createBrowserRouter([
   },
 ])
 
-/** Ждёт загрузки vault и только потом рисует оболочку. */
 function VaultShell() {
   return (
     <VaultGate>
@@ -72,12 +69,11 @@ function VaultGate({ children }: { children: React.ReactNode }) {
         )}
       </div>
     )
-  // загрузка из IndexedDB — доли секунды, спиннер не показываем, чтобы не мигал
+
   if (status === 'loading') return <div className="min-h-dvh bg-sidebar" aria-busy="true" />
   return children
 }
 
-/** Браузер забывает разрешение на папку между сессиями — просим подтвердить одним кликом. */
 function PermissionScreen() {
   const folder = useVault((s) => s.pendingFolder)
   const grantAccess = useVault((s) => s.grantAccess)
@@ -107,7 +103,6 @@ export function App() {
   useThemeSync()
   useDesktopZoom()
   return (
-    // reducedMotion="user": уважает «уменьшить движение» в Windows
     <MotionConfig reducedMotion="user">
       <TooltipProvider delayDuration={400}>
         <RouterProvider router={router} />

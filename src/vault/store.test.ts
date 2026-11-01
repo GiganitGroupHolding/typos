@@ -14,7 +14,7 @@ beforeEach(async () => {
 })
 
 const firstNote = () => useVault.getState().notes[0]
-/** Кто-то снаружи (Claude, MCP) переписал файл конспекта. */
+
 const writeOutside = async (body: string) => {
   const n = firstNote()
   await a.writeText(n.path, serializeFrontmatter({ id: n.id, created: n.created, updated: n.updated }, body))
@@ -75,7 +75,6 @@ describe('сохранение доски и правки снаружи', () =>
     expect(saved?.nodes.map((n) => n.id)).toEqual(['m', 't'])
     expect(parseBoard(await a.readText(b.path)).data.nodes.map((n) => n.text)).toEqual(['моя', 'от Claude'])
 
-    // следующее сохранение идёт уже от слитой версии — ничего не теряется и не двоится
     await s.saveBoard(b.id, { nodes: [{ ...mine, x: 40 }, theirs], edges: [] })
     expect(parseBoard(await a.readText(b.path)).data.nodes.map((n) => [n.id, n.x])).toEqual([
       ['m', 40],

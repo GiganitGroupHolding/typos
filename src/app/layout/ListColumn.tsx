@@ -45,7 +45,6 @@ function useCurrentTab(): SubjectTab {
   return tabOfPath(pathname)
 }
 
-/** Кнопка «создать» меняется по вкладке: конспект (с шаблонами), карточка, файл в проекты, доска. */
 function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
   const createNote = useCreateNote()
   const createBoard = useCreateBoard()

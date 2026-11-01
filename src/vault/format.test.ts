@@ -52,7 +52,9 @@ describe('заголовок и превью', () => {
   })
 
   it('LaTeX в превью — символами', () => {
-    expect(extractExcerpt('# Т\n\nРазмер $m \\times n$, $A = (a_{ij})$, $\\frac{1}{\\det A}$, $\\lambda \\le 2$')).toBe('Размер m × n, A = (aij), 1/det A, λ ≤ 2')
+    expect(extractExcerpt('# Т\n\nРазмер $m \\times n$, $A = (a_{ij})$, $\\frac{1}{\\det A}$, $\\lambda \\le 2$')).toBe(
+      'Размер m × n, A = (aij), 1/det A, λ ≤ 2',
+    )
   })
 })
 

@@ -1,4 +1,3 @@
-# сборка и зависимости
 dist
 dev-dist
 node_modules
@@ -6,7 +5,7 @@ src-tauri/target
 src-tauri/gen
 package-lock.json
 src-tauri/Cargo.lock
-# Rust форматирует cargo fmt, тексты и картинки — не трогаем
+
 src-tauri/src
 *.md
 docs

@@ -1,13 +1,12 @@
-/** Чтение и запись форматов файлов vault. Чистые функции — покрыты тестами. */
 import type { ToolKind } from '@/types'
 
 export const NOTES_DIR = 'Конспекты'
 export const PINS_DIR = 'Закреп'
-/** мини-карты конспектов: Конспекты/.maps/<id>.json */
+
 export const MAPS_DIR = '.maps'
 export const PROJECTS_DIR = 'Проекты'
 export const BOARDS_DIR = 'Доски'
-/** старое имя «Проектов»: при открытии хранилища содержимое переезжает (repo.migrateTools) */
+
 export const TOOLS_DIR = 'Инструменты'
 
 const KINDS: [RegExp, ToolKind][] = [
@@ -21,7 +20,6 @@ const KINDS: [RegExp, ToolKind][] = [
   [/^(mp3|wav|ogg|m4a|flac|aac)$/, 'audio'],
 ]
 
-/** Тип файла по расширению. */
 export const fileKind = (ext: string): ToolKind => KINDS.find(([re]) => re.test(ext.toLowerCase()))?.[1] ?? 'other'
 export const SUBJECT_META = '_subject.json'
 export const SYSTEM_DIR = '.studynotes'
@@ -31,8 +29,6 @@ export function genId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(6))
   return [...bytes].map((b) => (b % 36).toString(36)).join('') + Date.now().toString(36).slice(-2)
 }
-
-// ---------- frontmatter ----------
 
 export interface Parsed {
   meta: Record<string, string>
@@ -60,20 +56,54 @@ export function serializeFrontmatter(meta: Record<string, string>, body: string)
   return `---\n${head}\n---\n\n${body.replace(/^\n+/, '')}`
 }
 
-/** Тот же текст конспекта (пустые строки в начале и пробелы в конце не считаются). */
 export const sameBody = (x: string, y: string) => x.replace(/^\n+/, '').trimEnd() === y.replace(/^\n+/, '').trimEnd()
 
-// ---------- заголовок и превью ----------
-
 const TEX_SYMBOLS: Record<string, string> = {
-  times: '×', cdot: '·', neq: '≠', ne: '≠', le: '≤', leq: '≤', ge: '≥', geq: '≥', approx: '≈', pm: '±',
-  to: '→', rightarrow: '→', Rightarrow: '⇒', infty: '∞', in: '∈', sum: '∑', prod: '∏', int: '∫',
-  sqrt: '√', partial: '∂', nabla: '∇', forall: '∀', exists: '∃', cup: '∪', cap: '∩', subset: '⊂',
-  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', Delta: 'Δ', epsilon: 'ε', theta: 'θ', lambda: 'λ',
-  mu: 'μ', pi: 'π', rho: 'ρ', sigma: 'σ', Sigma: 'Σ', tau: 'τ', phi: 'φ', omega: 'ω', Omega: 'Ω',
+  times: '×',
+  cdot: '·',
+  neq: '≠',
+  ne: '≠',
+  le: '≤',
+  leq: '≤',
+  ge: '≥',
+  geq: '≥',
+  approx: '≈',
+  pm: '±',
+  to: '→',
+  rightarrow: '→',
+  Rightarrow: '⇒',
+  infty: '∞',
+  in: '∈',
+  sum: '∑',
+  prod: '∏',
+  int: '∫',
+  sqrt: '√',
+  partial: '∂',
+  nabla: '∇',
+  forall: '∀',
+  exists: '∃',
+  cup: '∪',
+  cap: '∩',
+  subset: '⊂',
+  alpha: 'α',
+  beta: 'β',
+  gamma: 'γ',
+  delta: 'δ',
+  Delta: 'Δ',
+  epsilon: 'ε',
+  theta: 'θ',
+  lambda: 'λ',
+  mu: 'μ',
+  pi: 'π',
+  rho: 'ρ',
+  sigma: 'σ',
+  Sigma: 'Σ',
+  tau: 'τ',
+  phi: 'φ',
+  omega: 'ω',
+  Omega: 'Ω',
 }
 
-/** LaTeX → читаемый текст для превью: \neq → ≠, \frac{a}{b} → a/b, a_{ij} → aij. */
 export function prettyTex(tex: string): string {
   return tex
     .replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, '$1/$2')
@@ -87,7 +117,7 @@ export function prettyTex(tex: string): string {
 
 const stripInline = (s: string) =>
   s
-    .replace(/<\/?(span|mark|u|s|b|i|em|strong|sub|sup)\b[^>]*>/gi, '') // цвета и прочий inline-HTML
+    .replace(/<\/?(span|mark|u|s|b|i|em|strong|sub|sup)\b[^>]*>/gi, '')
     .replace(/==([^=]+)==/g, '$1')
     .replace(/\+\+([^+]+)\+\+/g, '$1')
     .replace(/!\[[^\]]*]\([^)]*\)/g, '')
@@ -98,7 +128,6 @@ const stripInline = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-/** Строки текста без блоков формул и кода. */
 function textLines(body: string): string[] {
   const out: string[] = []
   let fence: string | null = null
@@ -108,13 +137,26 @@ function textLines(body: string): string[] {
       if (line.startsWith(fence)) fence = null
       continue
     }
-    if (line.startsWith('```')) { fence = '```'; continue }
-    if (line === '$$') { fence = '$$'; continue }
+    if (line.startsWith('```')) {
+      fence = '```'
+      continue
+    }
+    if (line === '$$') {
+      fence = '$$'
+      continue
+    }
     if (/^\$\$.*\$\$$/.test(line)) continue
-    // таблица: разделитель шапки пропускаем, ячейки строки — через «·»
+
     if (line.startsWith('|')) {
       if (/^[\s|:-]+$/.test(line)) continue
-      out.push(line.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => c.trim()).filter(Boolean).join(' · '))
+      out.push(
+        line
+          .replace(/^\||\|$/g, '')
+          .split(/(?<!\\)\|/)
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .join(' · '),
+      )
       continue
     }
     out.push(line)
@@ -122,13 +164,10 @@ function textLines(body: string): string[] {
   return out
 }
 
-// пустая строка из редактора сохраняется как &nbsp; — для заголовка и превью это пусто
 const plainLine = (l: string) => stripInline(l.replace(/&nbsp;| /g, ' ').replace(/^#{1,6}\s+|^([-*+]|\d+\.)\s+(\[[ x]]\s+)?|^>\s*/g, ''))
 
-/** Строки с текстом (картинки, формулы и пустые строки пропускаются). */
 const plainLines = (body: string) => textLines(body).map(plainLine).filter(Boolean)
 
-/** Заголовок — первая строка с текстом (обычно «# …»). */
 export function extractTitle(body: string): string {
   return plainLines(body)[0] ?? ''
 }
@@ -137,8 +176,6 @@ export function extractExcerpt(body: string, max = 140): string {
   const text = plainLines(body).slice(1).join(' ')
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
 }
-
-// ---------- закреп ----------
 
 export function parsePinBody(body: string): { title: string; tex?: string; text?: string } {
   const title = extractTitle(body)

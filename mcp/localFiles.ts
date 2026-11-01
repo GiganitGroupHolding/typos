@@ -1,11 +1,6 @@
 import { constants, existsSync, promises as fs, statSync } from 'node:fs'
 import path from 'node:path'
 
-/**
- * Файлы на компьютере, которые локальный MCP может прочитать по пути от ИИ (file в create_note, add_project_file, add_image).
- * Только из папок, явно разрешённых при запуске (--files или STUDYNOTES_FILES): иначе ошибочное разрешение
- * или prompt injection скопировали бы в vault любой файл, доступный процессу (ключи SSH, .env, настройки).
- */
 export class LocalFiles {
   readonly roots: string[]
 
@@ -17,7 +12,6 @@ export class LocalFiles {
     return this.roots.length > 0
   }
 
-  /** Настоящий путь файла (после ссылок) внутри разрешённой папки, без скрытых файлов и папок. */
   async resolve(file: string): Promise<string> {
     if (!this.enabled) throw new Error('Чтение файлов с компьютера выключено. Передай текст напрямую или разреши папку: --files <папка>')
     if (!path.isAbsolute(file)) throw new Error(`Нужен полный путь к файлу: ${file}`)
@@ -27,17 +21,16 @@ export class LocalFiles {
     for (const root of this.roots) {
       const rel = path.relative(await fs.realpath(root).catch(() => root), real)
       if (!rel || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) continue
-      // .env, .ssh, .git и прочее скрытое не нужно для конспектов, а утечь может
+
       if (rel.split(path.sep).some((part) => part.startsWith('.'))) throw new Error(`Скрытые файлы и папки недоступны: ${file}`)
       return real
     }
     throw new Error(`Файл вне разрешённых папок (${this.roots.join(', ')}): ${file}. Перенеси его туда или передай текст напрямую`)
   }
 
-  /** Читает разрешённый файл не больше max байт. */
   async read(file: string, max: number): Promise<Buffer> {
     const real = await this.resolve(file)
-    // O_NOFOLLOW: файл не подменят ссылкой между проверкой и открытием (на Windows флага нет)
+
     const handle = await fs.open(real, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
     try {
       const st = await handle.stat()
@@ -50,7 +43,6 @@ export class LocalFiles {
   }
 }
 
-/** Разрешённые папки из флагов --files (можно несколько) и STUDYNOTES_FILES (через «;» на Windows, «:» на остальных). */
 export function localFilesFrom(argv: string[], env: NodeJS.ProcessEnv): LocalFiles {
   const roots = argv.flatMap((a, i) => (a === '--files' && argv[i + 1] ? [argv[i + 1]] : []))
   if (!roots.length && env.STUDYNOTES_FILES) roots.push(...env.STUDYNOTES_FILES.split(path.delimiter).filter(Boolean))

@@ -33,10 +33,6 @@ const TOOLS: { id: BoardTool; label: string; key: string; icon: LucideIcon }[] =
   { id: 'frame', label: 'Рамка', key: 'F', icon: Frame },
 ]
 
-/**
- * Плашка — то же стекло, что у капсул панели, но без линзы: панель лежит поверх доски, которая всё время
- * двигается, и перерисовывать преломление на каждый кадр незачем.
- */
 function Glass({ children }: { children: ReactNode }) {
   return (
     <div
@@ -149,10 +145,8 @@ export function BoardToolbar({
   )
 }
 
-/** Цвет пресета для кружка палитры. */
 const swatch = (c: string) => `var(--board-line-${c})`
 
-/** Действия с выделенным: цвет, стрелки, порядок, копия, удаление. */
 export function SelectionBar({
   color,
   edge,
@@ -162,9 +156,8 @@ export function SelectionBar({
   onDuplicate,
   onDelete,
 }: {
-  /** текущий цвет выделенного (если у всех один) */
   color?: string
-  /** выделена стрелка — показываем её концы */
+
   edge?: BoardEdge
   onColor: (c: string | undefined) => void
   onArrows?: () => void

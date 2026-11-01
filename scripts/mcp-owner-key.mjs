@@ -11,6 +11,6 @@ if (relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !rela
 const key = randomBytes(32).toString('base64url')
 const salt = randomBytes(16)
 const passwordHash = `scrypt:${salt.toString('base64url')}:${scryptSync(key, salt, 32).toString('base64url')}`
-// Открытый ключ записывается только в личный файл, а в Railway передаётся хэш.
+
 writeFileSync(file, `${key}\n`, { flag: 'wx', mode: 0o600 })
 console.log(JSON.stringify({ file, MCP_OWNER_PASSWORD_HASH: passwordHash }))

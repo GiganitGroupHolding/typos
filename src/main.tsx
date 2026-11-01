@@ -12,7 +12,6 @@ import { initAccent } from './app/accent'
 import { App } from './app/App'
 import { setupPwa } from './app/pwa'
 
-// Dev: ?noanim — мгновенные анимации для скриншотов и автотестов.
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('noanim')) {
   MotionGlobalConfig.skipAnimations = true
 }
@@ -20,8 +19,6 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('noanim')) {
 initAccent()
 setupPwa()
 
-// Браузер отменяет View Transition, если окно скрыто или переход прерван новым кликом.
-// Это нормально (навигация всё равно происходит), но React Router не ловит отказ — гасим шум.
 if (typeof document.startViewTransition === 'function') {
   const start = document.startViewTransition.bind(document)
   document.startViewTransition = ((arg?: Parameters<typeof start>[0]) => {

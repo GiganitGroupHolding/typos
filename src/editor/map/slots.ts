@@ -1,7 +1,3 @@
-/**
- * Какие схемы mermaid уже стали картой и сколько места под ней оставить в тексте: хеш кода → высота, px.
- * Пишет NoteCanvas, читает блок схемы (diagrams.ts): вместо рисунка — пустое место, код в .md не трогается.
- */
 const heights = new Map<string, number>()
 const listeners = new Set<() => void>()
 

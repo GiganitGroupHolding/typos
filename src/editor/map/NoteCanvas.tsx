@@ -9,15 +9,6 @@ import { blockSize, layoutFlow, parseFlowchart, type LaidOut } from './mermaidTo
 import { mapSlots } from './slots'
 import { blockKey, codeHash, mapId, MIN_H, MIN_W, resolveBlock, type MapGroup, type MapNode, type NoteMap } from './types'
 
-/*
- * Мини-карта поверх текста конспекта: стеклянные блоки (та же линза, что у правой панели) и стрелки.
- * Обычно слой не ловит мышь — текст под ним правится как всегда, а под стеклом он преломляется.
- * В режиме «Карта» (кнопка в правой панели): протянуть по пустому месту — блок, тянуть блок — перенос,
- * угол — размер, точка на стороне — стрелка (в пустоту — новый связанный блок), двойной щелчок — текст,
- * Delete — удалить, Ctrl+Z — отменить, стрелки — сдвиг, Esc — выйти.
- * Схемы mermaid (flowchart) переводятся в карту сами; код схемы остаётся в .md, в тексте под карту — пустое место.
- */
-
 const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
 const NEW_W = 150
 const NEW_H = 44
@@ -31,7 +22,6 @@ type Drag =
 
 type Selection = { kind: 'node' | 'edge'; id: string } | null
 
-/** Блоки mermaid верхнего уровня: хеш и код. */
 function mermaidBlocks(editor: Editor) {
   const out: { hash: string; code: string }[] = []
   editor.state.doc.forEach((n) => {
@@ -40,7 +30,6 @@ function mermaidBlocks(editor: Editor) {
   return out
 }
 
-/** Ширина строки шрифтом текста конспекта — для размеров блоков из схемы. */
 function textMeasure(el: HTMLElement) {
   const ctx = document.createElement('canvas').getContext('2d')
   const font = `500 15px ${getComputedStyle(el).fontFamily}`
@@ -52,7 +41,6 @@ function textMeasure(el: HTMLElement) {
     })
 }
 
-/** Схема → группа карты по центру колонки. */
 function withFlow(map: NoteMap, hash: string, laid: LaidOut, width: number): NoteMap {
   const group: MapGroup = { id: mapId('g'), anchor: { kind: 'mermaid', hash } }
   const dx = Math.max(0, Math.round((width - laid.width) / 2))
@@ -78,7 +66,6 @@ function withoutGroup(map: NoteMap, groupId: string): NoteMap {
   }
 }
 
-/** Правка руками помечает группы схем: при смене кода такую карту не пересобираем. */
 function markEdited(map: NoteMap, nodeIds: string[]): NoteMap {
   const groups = new Set(map.nodes.filter((n) => nodeIds.includes(n.id)).map((n) => n.group))
   if (!map.groups.some((g) => groups.has(g.id) && g.anchor.kind === 'mermaid' && !g.edited)) return map
@@ -113,14 +100,12 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     setDragState(d)
   }
 
-  // ---------- чтение и запись ----------
-
   const save = useCallback(() => {
     clearTimeout(saveTimer.current)
     saveTimer.current = 0
     const m = mapRef.current
     if (!m) return
-    // где были якоря — на случай, если абзац или схему удалят
+
     const t = topsRef.current
     const next = { ...m, groups: m.groups.map((g) => (t[g.id] !== undefined ? { ...g, lastY: Math.round(t[g.id]) } : g)) }
     void useVault
@@ -129,7 +114,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       .catch((e) => console.warn('Карта не сохранилась', e))
   }, [noteId])
 
-  /** record — положить прежнее состояние в историю (Ctrl+Z); при переносе мышью кладётся один раз в начале. */
   const commit = useCallback(
     (next: NoteMap, record = true) => {
       if (record && mapRef.current) history.current = [...history.current.slice(-49), mapRef.current]
@@ -158,13 +142,8 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     }
   }, [noteId, save])
 
-  // ---------- где якоря в тексте ----------
-
   const blocks = useCallback(() => [...editor.view.dom.children] as HTMLElement[], [editor])
-  /**
-   * Якоря — только блоки с содержимым: пустые строки под картой можно стирать и добавлять, карта не съедет
-   * (у пустой строки нет текста, её можно найти лишь по номеру, а номера при этом сдвигаются).
-   */
+
   const contentBlocks = useCallback(
     () =>
       blocks().filter(
@@ -186,12 +165,12 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     const keys = list.map((b) => blockKey(b.textContent ?? ''))
     const topOf = (b: HTMLElement) => b.getBoundingClientRect().top - base
     const next: Record<string, number> = {}
-    // якорь устарел (пустая строка из прежних версий, другой текст или номер) — перепривязать к блоку с содержимым
+
     const fixed = new Map<string, { anchor: MapGroup['anchor']; shift: number }>()
     for (const g of m.groups) {
       if (g.anchor.kind === 'mermaid') {
         const d = editor.view.dom.querySelector<HTMLElement>(`.diagram-block[data-map-hash="${g.anchor.hash}"]`)
-        // в свёрнутом разделе — карта прячется вместе с ним
+
         if (d && !d.classList.contains('is-folded')) next[g.id] = topOf(d)
       } else if (g.anchor.kind === 'block') {
         if (!g.anchor.text) {
@@ -209,8 +188,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
         if (i < 0 || list[i].classList.contains('is-folded')) continue
         let top = topOf(list[i])
         let shift = 0
-        // якорь должен быть над картой: иначе правка текста между картой и якорем тянет карту за собой.
-        // Оказался ниже верхнего блока — перепривязать к ближайшему блоку над картой, не сдвигая её на экране.
+
         const own = m.nodes.filter((n) => n.group === g.id)
         if (own.length) {
           const upper = top + Math.min(...own.map((n) => n.y))
@@ -258,7 +236,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(measure)
     }
-    // любое изменение документа, в том числе подгрузка версии с диска (она не шлёт update)
+
     const onUpdate = ({ transaction }: { transaction: { docChanged: boolean } }) => {
       if (!transaction.docChanged) return
       setSig(
@@ -287,8 +265,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     if (map) measure()
   }, [map, measure])
 
-  // ---------- схемы mermaid → карта ----------
-
   useEffect(() => {
     if (!map) return
     let cancelled = false
@@ -301,7 +277,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       let changed = false
       for (const g of m.groups) {
         if (g.anchor.kind !== 'mermaid' || hashes.has(g.anchor.hash)) continue
-        // код сменили: нетронутую карту пересобираем, правленую оставляем на прежнем месте
+
         m = g.edited
           ? {
               ...m,
@@ -318,7 +294,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
         if (!flow) continue
         const sizes = textMeasure(editor.view.dom)
         let laid = await layoutFlow(flow, sizes)
-        // не влезла в колонку слева направо — сверху вниз; всё ещё шире — сжать по горизонтали
+
         if (laid.width > el.clientWidth && (flow.dir === 'LR' || flow.dir === 'RL')) {
           const tall = await layoutFlow({ ...flow, dir: 'TB' }, sizes)
           if (tall.width < laid.width) laid = tall
@@ -342,10 +318,8 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       cancelled = true
       clearTimeout(t)
     }
-    // map === null → загрузилась; sig — набор схем в тексте
   }, [map === null, sig, editor, commit]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // место под карту на месте схемы
   useEffect(() => {
     if (!map) return
     const next = new Map<string, number>()
@@ -356,8 +330,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     }
     mapSlots.set(next)
   }, [map])
-
-  // ---------- геометрия ----------
 
   const rects = useMemo(() => {
     const out = new Map<string, Rect & { node: MapNode }>()
@@ -376,7 +348,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
   const nodeAt = (p: { x: number; y: number }, except?: string) =>
     [...rects.values()].reverse().find((r) => r.node.id !== except && contains(r, p, 6))
 
-  /** Группа для нового блока: ближайший блок с содержимым на уровне точки или выше (своя группа на каждый). */
   const groupAt = (m: NoteMap, y: number): { map: NoteMap; group: string; top: number } => {
     const base = layer.current!.getBoundingClientRect().top
     const list = contentBlocks()
@@ -393,7 +364,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     const keys = list.map((b) => blockKey(b.textContent ?? ''))
     const same = m.groups.find((g) => g.anchor.kind === 'block' && resolveBlock(keys, g.anchor) === i)
     if (same) return { map: m, group: same.id, top }
-    // на месте переведённой схемы — к ней
+
     const hash = el.dataset.mapHash
     const mermaid = hash && m.groups.find((g) => g.anchor.kind === 'mermaid' && g.anchor.hash === hash)
     if (mermaid) return { map: m, group: mermaid.id, top }
@@ -438,8 +409,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     setSel(null)
     setEditing(null)
   }
-
-  // ---------- мышь ----------
 
   const capture = (e: ReactPointerEvent) => layer.current?.setPointerCapture(e.pointerId)
 
@@ -531,7 +500,7 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       }
       const from = rects.get(d.from)
       if (!from || Math.hypot(p.x - sidePoint(from, d.side).x, p.y - sidePoint(from, d.side).y) < 24) return
-      // в пустоту — новый связанный блок, как в майнд-карте
+
       const made = addNode(m, { x: p.x - NEW_W / 2, y: p.y - NEW_H / 2, w: NEW_W, h: NEW_H })
       commit(markEdited({ ...made.map, edges: [...made.map.edges, { id: mapId('e'), from: d.from, to: made.id }] }, [d.from]))
       setSel({ kind: 'node', id: made.id })
@@ -539,8 +508,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
       setEditing(made.id)
     }
   }
-
-  // ---------- клавиатура ----------
 
   useEffect(() => {
     if (!mode) return
@@ -578,7 +545,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     return () => window.removeEventListener('keydown', onKey, true)
   })
 
-  // из режима вышли — ничего не выделено
   useEffect(() => {
     if (!mode) {
       setSel(null)
@@ -592,7 +558,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
     if (!m) return
     const t = text.replace(/\n{3,}/g, '\n\n').trim()
     if (!t && fresh === n.id) {
-      // пустой новый блок — не нужен
       commit({ ...m, nodes: m.nodes.filter((x) => x.id !== n.id), edges: m.edges.filter((e) => e.from !== n.id && e.to !== n.id) }, false)
       setSel(null)
     } else if (t !== n.text || height > n.h) patchNode(n.id, { text: t, h: Math.max(n.h, Math.ceil(height)) }, fresh !== n.id)
@@ -719,7 +684,6 @@ export function NoteCanvas({ editor, noteId, readOnly }: { editor: Editor; noteI
 
 const rectStyle = (r: Rect) => ({ left: r.x, top: r.y, width: r.w, height: r.h })
 
-/** Блок карты — стекло правой панели; текст по центру. */
 function MapBlock({
   node,
   rect,
@@ -761,7 +725,6 @@ function MapBlock({
       {lens.extras}
       <NodeText text={node.text} editing={editing} onCommit={onCommit} />
       {mode && !editing && (
-        // слой ручек: у прямых детей линзы position: relative — поэтому absolute задан в style
         <div
           style={{ position: 'absolute', inset: 0, zIndex: 3 }}
           className={cn('pointer-events-none opacity-0 transition-opacity group-hover/node:opacity-100', selected && 'opacity-100')}
@@ -845,7 +808,6 @@ function NodeText({ text, editing, onCommit }: { text: string; editing: boolean;
   )
 }
 
-/** Подсказка режима — стеклянная плашка внизу, как остальные панели. */
 function MapHint() {
   const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
   return (

@@ -3,20 +3,12 @@ import type { Node as PMNode } from '@tiptap/pm/model'
 import { mapSlots } from './map/slots'
 import { codeHash } from './map/types'
 
-/*
- * Блок кода; с языком mermaid — рисуется схемой (как на GitHub и в Obsidian).
- * В Markdown остаётся ```mermaid … ```. Щелчок по схеме — правка кода под ней, курсор ушёл — снова схема.
- * Библиотека Mermaid грузится, только когда в конспекте есть схема.
- * Схему, переведённую в мини-карту (map/NoteCanvas), блок не рисует — оставляет под карту пустое место нужной высоты.
- */
-
 type MermaidApi = typeof import('mermaid').default
 let loading: Promise<MermaidApi> | null = null
 const loadMermaid = () => (loading ??= import('mermaid').then((m) => m.default))
 
 const isDark = () => document.documentElement.classList.contains('dark')
 
-// узлы — тёмные (светлые) плашки с тонкой рамкой, линии серые; Mermaid считает оттенки сам, поэтому только hex
 const PALETTE = {
   light: {
     primaryColor: '#ffffff',
@@ -36,7 +28,6 @@ const PALETTE = {
   },
 }
 
-// скруглённые узлы без теней, тонкие линии
 const DIAGRAM_CSS = `
   .node rect, .node polygon, .node circle, .node ellipse, .node path { stroke-width: 1px; }
   .node rect { rx: 10px; ry: 10px; }
@@ -52,13 +43,13 @@ async function renderDiagram(code: string): Promise<string> {
   const fontFamily = getComputedStyle(document.body).fontFamily
   mermaid.initialize({
     startOnLoad: false,
-    securityLevel: 'strict', // разметка из схемы чистится — вставлять её в страницу безопасно
+    securityLevel: 'strict',
     theme: 'base',
     look: 'classic',
-    // классическая раскладка: в Mermaid 12 по умолчанию стрелки идут под прямыми углами, а нужны плавные кривые
+
     layout: 'dagre',
     fontFamily,
-    // натуральный размер; под колонку подгоняет fit() — не мельче 80 %, дальше прокрутка
+
     flowchart: { curve: 'basis', padding: 14, nodeSpacing: 28, rankSpacing: 40, useMaxWidth: false, wrappingWidth: 220 },
     themeCSS: DIAGRAM_CSS,
     themeVariables: { ...(dark ? PALETTE.dark : PALETTE.light), darkMode: dark, background: 'transparent', fontFamily, fontSize: '15px' },
@@ -67,13 +58,11 @@ async function renderDiagram(code: string): Promise<string> {
   try {
     return (await mermaid.render(id, code)).svg
   } finally {
-    // при ошибке Mermaid оставляет в body свой черновик
     document.getElementById(id)?.remove()
     document.getElementById(`d${id}`)?.remove()
   }
 }
 
-/** Схема шире колонки — ужать, но не мельче MIN_SCALE (текст остаётся читаемым); шире и так — прокрутка. */
 const MIN_SCALE = 0.8
 function fit(view: HTMLElement) {
   const svg = view.querySelector('svg')
@@ -85,7 +74,6 @@ function fit(view: HTMLElement) {
 }
 
 export interface DiagramCodeBlockOptions extends CodeBlockOptions {
-  /** рисовать ```mermaid схемой (только в живом редакторе; в тестах сериализации — обычный блок) */
   diagrams: boolean
 }
 
@@ -100,7 +88,6 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
     return ({ node, editor, getPos }) => {
       const lang = node.attrs.language as string | null
 
-      // обычный блок кода — как без node view
       if (lang !== 'mermaid') {
         const pre = document.createElement('pre')
         const code = document.createElement('code')
@@ -132,10 +119,8 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
       let mapped = false
       let stale = true
 
-      // код виден, пока курсор внутри, схема не нарисовалась или она пустая
       const sync = () => dom.toggleAttribute('data-editing', inside || (failed && !mapped) || !current.textContent.trim())
 
-      // стала картой — место под карту вместо рисунка; перестала — дорисовать схему
       const applySlot = () => {
         const hash = codeHash(current.textContent)
         const h = mapSlots.height(hash)
@@ -174,12 +159,11 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
         sync()
       }
 
-      // щелчок по схеме (или по месту под картой) — курсор в конец её кода
       const openCode = (e: MouseEvent) => {
         e.preventDefault()
         const pos = getPos()
         if (pos === undefined || !editor.isEditable) return
-        // сначала раскрыть код, потом ставить в него курсор
+
         inside = true
         sync()
         editor
@@ -204,7 +188,6 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
       }
       editor.on('selectionUpdate', onSelection)
 
-      // сменилась тема — перерисовать в новых цветах
       const themeWatch = new MutationObserver(() => {
         if (isDark() !== dark) {
           dark = isDark()
@@ -216,7 +199,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
         stale = true
         if (!mapped) void draw()
       }
-      // колонка сузилась или расширилась — подогнать масштаб без перерисовки
+
       const resize = new ResizeObserver(() => fit(view))
       resize.observe(view)
 
@@ -236,8 +219,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           }
           return true
         },
-        // документ — только текст кода; рисунок и свои атрибуты (data-editing) ProseMirror не касаются,
-        // иначе он принимает их за чужую правку и пересоздаёт блок
+
         ignoreMutation: (m) => m.type !== 'selection' && (!code.contains(m.target) || (m.type === 'attributes' && m.target === code)),
         stopEvent: (e: Event) => view.contains(e.target as Node) || slot.contains(e.target as Node),
         destroy() {

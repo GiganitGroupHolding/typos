@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils'
 const key = new PluginKey('tableMenu')
 const keep = (e: React.MouseEvent) => e.preventDefault()
 
-/** DOM таблицы, в которой стоит курсор (обёртка .tableWrapper, если есть). */
 function tableDom(editor: Editor): HTMLElement | null {
   const { $from } = editor.state.selection
   for (let d = $from.depth; d > 0; d--) {
@@ -51,10 +50,6 @@ function Action({
 
 const Sep = () => <div aria-hidden className="mx-0.5 h-5 w-px bg-border" />
 
-/*
- * Панель таблицы: висит над таблицей, пока курсор в ячейке.
- * Tab — следующая ячейка, Tab в последней — новая строка (встроено в расширение).
- */
 export function TableMenu({ editor }: { editor: Editor }) {
   const header = useEditorState({ editor, selector: ({ editor: e }) => e.isActive('tableHeader') })
   const c = () => editor.chain().focus()

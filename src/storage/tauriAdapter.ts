@@ -1,12 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
-/**
- * Папка на диске в десктопном приложении (Tauri): файлы читает и пишет Rust (src-tauri/src/vault.rs).
- * Папку выбирают в системном диалоге; Rust запоминает её сам и пускает только в выбранные папки.
- */
-
-/** Rust так сообщает, что файла нет. */
 const MISSING = 'ENOENT'
 const decoder = new TextDecoder()
 
@@ -53,7 +47,6 @@ export class TauriAdapter implements VaultAdapter {
   }
 
   async writeBlob(path: string, blob: Blob) {
-    // байты идут телом запроса, без JSON; в заголовках только ASCII
     await call('vault_write_bytes', new Uint8Array(await blob.arrayBuffer()), {
       headers: { 'x-root': encodeURIComponent(this.root), 'x-path': encodeURIComponent(path) },
     })
@@ -72,11 +65,8 @@ export class TauriAdapter implements VaultAdapter {
   }
 }
 
-// ---------- выбор и запомненная папка ----------
-
-/** Папка, выбранная в прошлый раз; null — не выбирали. */
 export const loadSavedPath = () => call<string | null>('vault_saved')
-/** Системный диалог выбора папки. null — пользователь передумал. */
+
 export const pickFolderPath = () => call<string | null>('vault_pick')
 export const savePath = (root: string) => call<void>('vault_remember', { root })
 export const forgetPath = () => call<void>('vault_forget')

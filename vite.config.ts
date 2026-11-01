@@ -5,17 +5,15 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const local = (dir: string) => `${path.resolve(import.meta.dirname, dir)}/**`
-// Tauri CLI задаёт TAURI_ENV_* для beforeDevCommand / beforeBuildCommand
+
 const tauri = !!process.env.TAURI_ENV_PLATFORM
 
-// https://vite.dev/config/
 export default defineConfig({
-  // ошибки Rust в том же терминале не должны стираться
   clearScreen: !tauri,
   plugins: [
     react(),
     tailwindcss(),
-    // Установка как приложение (своё окно, иконка в Пуске) и работа без интернета
+
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
@@ -38,9 +36,8 @@ export default defineConfig({
         shortcuts: [{ name: 'Поиск', short_name: 'Поиск', url: '/?search=1' }],
       },
       workbox: {
-        // всё приложение, включая шрифты и MathLive, доступно офлайн
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        // просмотрщик DOCX/PPTX (1,5 МБ) — не в установку, а в кэш при первом открытии документа
+
         globIgnores: ['viewers/**'],
         runtimeCaching: [
           {
@@ -56,10 +53,8 @@ export default defineConfig({
     }),
   ],
   server: {
-    // окно Tauri открывает ровно devUrl из tauri.conf.json
     strictPort: tauri,
-    // Node-код (MCP, сервер хранения) и vault внутри проекта браузеру не нужны:
-    // без этого правка конспекта на сервере хранения перезагружала бы страницу
+
     watch: { ignored: [local('server'), local('mcp'), local('vault'), local('src-tauri'), '**/.typos-server/**'] },
   },
   resolve: {

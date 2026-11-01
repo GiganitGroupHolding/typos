@@ -5,11 +5,6 @@ import { parseRemoteLink } from '@/storage/remoteLink'
 import type { VaultAdapter } from '@/storage/VaultAdapter'
 import { NodeFsAdapter } from './nodeAdapter'
 
-/**
- * Хранилище MCP-сервера: папка на этом компьютере (--vault) или сервер хранения по ссылке (--link).
- * Флаги важнее переменных окружения STUDYNOTES_VAULT / STUDYNOTES_LINK.
- * warn — сообщения в stderr: stdout у MCP занят протоколом.
- */
 export async function openVault(
   argv: string[],
   env: NodeJS.ProcessEnv,
@@ -28,13 +23,11 @@ export async function openVault(
     const config = parseRemoteLink(remote)
     try {
       const info = await checkRemote(config)
-      // общий ключ нельзя отозвать у одного ИИ, не отключив остальные устройства
+
       if (info.device === 'default')
         warn('MCP работает с общим ключом default. Заведи ему отдельный на сервере хранения: link mcp — и подключи MCP по новой ссылке')
       return new DavAdapter({ ...config, name: info.name || config.name, vaultId: info.vaultId })
     } catch (e) {
-      // сервер выключен — всё равно запускаемся: инструменты ответят понятной ошибкой, а заработают, когда он вернётся.
-      // Чужое хранилище, неверный ключ, не тот адрес — сразу ошибка
       if (!(e instanceof RemoteError) || e.status !== undefined) throw e
       warn(`Сервер хранения пока недоступен: ${e.message}`)
       return new DavAdapter(config)

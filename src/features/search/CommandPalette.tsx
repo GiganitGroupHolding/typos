@@ -37,11 +37,6 @@ import { useCreateBoard, useCreateNote, useRecentNotes } from '@/vault/hooks'
 import { useVault } from '@/vault/store'
 import { buildDocs, createIndex, normalize, search, snippet, type SearchHit } from './searchIndex'
 
-/*
- * Ctrl+K. Идея — 21st.dev «Command Palette» (ddoemonn: cmdk + motion).
- * Поиск по тексту всех конспектов, карточек и проектов (MiniSearch), со сниппетами.
- */
-
 interface Action {
   id: string
   label: string
@@ -91,7 +86,6 @@ export function CommandPalette() {
   const [query, setQuery] = useState('')
   const deferred = useDeferredValue(query)
 
-  // индекс пересобирается только при изменении данных
   const index = useMemo(() => createIndex(buildDocs(data)), [data])
   const hits = useMemo(() => search(index, deferred), [index, deferred])
 

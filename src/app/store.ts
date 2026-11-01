@@ -4,16 +4,16 @@ import { normalizeZoom } from './zoomValue'
 
 export type ThemePref = 'light' | 'dark' | 'system'
 export type NoteFont = 'inter' | 'golos' | 'serif'
-/** Фон: прозрачные туманности или металлические пузыри. */
+
 export type Backdrop = 'nebula' | 'metal'
 
 export interface FloatingWindow {
   id: string
   kind: 'pin' | 'tool'
   refId: string
-  /** Позиция каскада, фиксируется при открытии (фокус меняет только z-order). */
+
   slot: number
-  /** Слой. Порядок массива не меняем: перестановка iframe в DOM перезагружает тулзу. */
+
   z: number
 }
 
@@ -28,14 +28,14 @@ interface UiState {
   setFixedAccent: (value: string) => void
   setDesktopZoom: (value: number) => void
   setBackdrop: (value: Backdrop) => void
-  /** Только чтение: без панели, PT Serif, бумажный фон. */
+
   readingMode: boolean
   focusMode: boolean
   pinsOpen: boolean
   paletteOpen: boolean
-  /** HTML-тулзы — в рамке телефона (запоминается). */
+
   phonePreview: boolean
-  /** Режим мини-карты в конспекте: мышью рисуются стеклянные блоки и стрелки. */
+
   mapMode: boolean
   windows: FloatingWindow[]
   setTheme: (t: ThemePref) => void
@@ -54,7 +54,6 @@ interface UiState {
   focusWindow: (id: string) => void
 }
 
-// localStorage может быть недоступен (приватный режим) — не падаем.
 const safeStorage = createJSONStorage(() => {
   try {
     const k = '__probe__'
@@ -144,7 +143,7 @@ export const useUi = create<UiState>()(
           desktopZoom: normalizeZoom(saved.desktopZoom ?? 100),
         }
       },
-      // v1: светлая тема по умолчанию — прежнее «как в системе» переводим на светлую один раз
+
       version: 1,
       migrate: (persisted, version) => {
         const s = (persisted ?? {}) as Partial<Pick<UiState, 'theme' | 'noteFont' | 'backdrop'>>

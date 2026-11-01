@@ -22,12 +22,6 @@ import { useLiquidLens } from '@/components/ui/liquid-lens'
 import { cn } from '@/lib/utils'
 import { COLOR_LABELS, NOTE_COLORS, type NoteColor } from './colors'
 
-/*
- * Меню при выделении текста — по мотивам Notion: тип блока, начертание, ссылка,
- * формула, цвет текста и фона, «в закреп». Подменю открываются внутри меню,
- * а не в отдельном портале: так редактор не теряет выделение.
- */
-
 type Panel = 'turn' | 'color' | 'link' | null
 
 const BLOCKS = [
@@ -56,7 +50,7 @@ function currentBlock(e: Editor): BlockId {
 
 function turnInto(e: Editor, id: BlockId) {
   const c = e.chain().focus()
-  // сначала снимаем обёртки (списки, цитату), потом ставим нужный тип
+
   if (id === 'paragraph') return c.clearNodes().setParagraph().run()
   if (id === 'h1' || id === 'h2' || id === 'h3')
     return c
@@ -68,7 +62,7 @@ function turnInto(e: Editor, id: BlockId) {
   if (id === 'task') return c.clearNodes().toggleTaskList().run()
   if (id === 'quote') return c.clearNodes().toggleBlockquote().run()
   if (id === 'code') return c.clearNodes().toggleCodeBlock().run()
-  // весь блок (обычно код с LaTeX из ответа нейросети) → блочная формула
+
   const { $from } = e.state.selection
   const latex = $from.parent.textContent.trim().replace(/^(?:\$\$|\\\[)\s*([\s\S]*?)\s*(?:\$\$|\\\])$/, '$1')
   const depth = $from.depth
@@ -140,7 +134,7 @@ export function BubbleToolbar({
   onPin,
 }: {
   editor: Editor
-  /** Увеличивается по Ctrl+K — открыть поле ссылки. */
+
   linkRequest: number
   onFormula: () => void
   onPin: (text: string) => void
@@ -168,7 +162,6 @@ export function BubbleToolbar({
     }),
   })
 
-  // Ctrl+K в редакторе — сразу поле ссылки
   useEffect(() => {
     if (!linkRequest) return
     setUrl(editor.getAttributes('link').href ?? '')
@@ -204,7 +197,7 @@ export function BubbleToolbar({
       options={{ placement: 'top', offset: 10, flip: true, shift: { padding: 12 }, onHide: () => setPanel(null) }}
       shouldShow={({ editor: e, state, from, to }) => {
         if (!e.isEditable || from === to) return false
-        if (state.selection instanceof NodeSelection) return false // формула или картинка — у них своё окно
+        if (state.selection instanceof NodeSelection) return false
         return true
       }}
       className="z-40"

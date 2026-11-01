@@ -36,13 +36,6 @@ import {
   type BoardNode,
 } from './model'
 
-/*
- * Доска: бесконечное полотно. Колесо — прокрутка, Ctrl + колесо (щипок на тачпаде) — масштаб,
- * пробел, средняя кнопка или «Рука» — двигать полотно. Протянуть по пустому — выделить рамкой,
- * двойной щелчок по пустому — стикер, по карточке — текст. Точка на краю карточки — стрелка
- * (в пустоту — новая связанная карточка). Ctrl Z / Ctrl Shift Z, Ctrl D, Ctrl C / Ctrl V, Delete.
- */
-
 type Pt = { x: number; y: number }
 interface View {
   x: number
@@ -74,7 +67,6 @@ const rect = (n: BoardNode): Rect => ({ x: n.x, y: n.y, w: n.width, h: n.height 
 const bounds = (n: BoardNode) => ({ x: n.x, y: n.y, width: n.width, height: n.height })
 const preset = (c?: string) => !!c && /^[1-6]$/.test(c)
 
-/** Цвет линии: пресет, свой #rrggbb или приглушённый по умолчанию. */
 const lineColor = (c?: string) => (preset(c) ? `var(--board-line-${c})` : c || 'var(--muted-foreground)')
 
 function nodeStyle(n: BoardNode): CSSProperties {
@@ -109,7 +101,6 @@ async function imageSize(file: Blob) {
   }
 }
 
-/** Новые id для вставки копий; стрелки — только между скопированными. */
 function cloneItems(nodes: BoardNode[], edges: BoardEdge[], dx: number, dy: number) {
   const ids = new Map(nodes.map((n) => [n.id, boardItemId()]))
   return {
@@ -151,8 +142,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     setDragState(d)
   }
 
-  // ---------- сохранение ----------
-
   const flush = useCallback(() => {
     clearTimeout(saveTimer.current)
     saveTimer.current = 0
@@ -163,7 +152,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       .then(
         (next) => {
           if (!next || next === sent) return
-          // в файле были правки снаружи — их слили; здесь за это время могли добавить своё
+
           const cur = dataRef.current
           const merged = cur === sent ? next : mergeBoards(sent, cur, next)
           dataRef.current = merged
@@ -189,7 +178,7 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   useEffect(() => {
     useVault.getState().adoptBoard(boardId, dataRef.current)
-    // доску поменяли снаружи (MCP, другое устройство) — показываем, если здесь нет несохранённого
+
     const off = useVault.subscribe((s, prev) => {
       const next = s.boards.find((b) => b.id === boardId)?.data
       if (!next || next === prev.boards.find((b) => b.id === boardId)?.data) return
@@ -211,8 +200,6 @@ export function BoardCanvas({ board }: { board: Board }) {
       if (saveTimer.current) flush()
     }
   }, [boardId, flush])
-
-  // ---------- вид ----------
 
   const fit = useCallback(() => {
     const el = root.current
@@ -254,7 +241,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     zoomAt(mid, factor === 'reset' ? 1 / viewRef.current.zoom : factor)
   }
 
-  // колесо: React вешает его пассивным, а preventDefault нужен, чтобы страница не масштабировалась
   useEffect(() => {
     const el = root.current
     if (!el) return
@@ -272,8 +258,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [zoomAt])
-
-  // ---------- правки ----------
 
   const node = (id: string) => dataRef.current.nodes.find((n) => n.id === id)
 
@@ -348,7 +332,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     commit({ ...m, nodes: m.nodes.map((n) => (ids.has(n.id) ? { ...n, color } : n)) })
   }
 
-  /** Концы стрелки по кругу: к концу → в обе стороны → без стрелок. */
   const cycleArrows = () => {
     const m = dataRef.current
     commit({
@@ -391,8 +374,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     }
     return true
   }
-
-  // ---------- мышь ----------
 
   const nodeAt = (all: BoardNode[], p: Pt, except?: string) => {
     const nodes = [...all].reverse().filter((n) => n.id !== except)
@@ -447,7 +428,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       const next = e.shiftKey ? (sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]) : sel.includes(id) ? sel : [id]
       setSel(next)
       setSelEdge(null)
-      // рамка тянет за собой всё, что лежит в ней целиком
+
       const starts = new Map<string, Pt>()
       for (const sid of next) {
         const s = node(sid)
@@ -535,7 +516,7 @@ export function BoardCanvas({ board }: { board: Board }) {
     if (!d) return
     const p = world(e)
     const m = dataRef.current
-    // щелчок без переноса по одной из выделенных — выделить только её
+
     if (d.kind === 'move' && !d.moved && !d.shift && sel.length > 1) setSel([d.id])
     if (d.kind === 'connect') {
       const target = nodeAt(m.nodes, p, d.from)
@@ -549,7 +530,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       if (!from) return
       const start = sidePoint(rect(from), d.side)
       if (Math.hypot(p.x - start.x, p.y - start.y) * viewRef.current.zoom < 24) return
-      // в пустоту — новая карточка того же вида, как в майнд-карте
+
       const like = from.type === 'text' ? { width: from.width, height: Math.min(from.height, 200), color: from.color } : {}
       const n: BoardNode = { ...NEW.text, ...like, id: boardItemId(), x: 0, y: 0 }
       n.x = Math.round(p.x - n.width / 2)
@@ -568,7 +549,6 @@ export function BoardCanvas({ board }: { board: Board }) {
   }
 
   const onDoubleClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    // полотно захватывает указатель, и браузер отдаёт dblclick ему самому — что под мышью, смотрим по точке
     const target = (document.elementFromPoint(e.clientX, e.clientY) ?? e.target) as HTMLElement
     if (target.closest('[data-editor]')) return
     const nodeEl = target.closest<HTMLElement>('[data-node-id]')
@@ -597,7 +577,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     if (n.type === 'text') {
       const text = value.replace(/\s+$/, '')
       if (!text.trim() && ed.fresh) {
-        // пустая новая карточка не нужна — и в истории её не оставляем
         past.current.pop()
         commit(
           { nodes: m.nodes.filter((x) => x.id !== n.id), edges: m.edges.filter((x) => x.fromNode !== n.id && x.toNode !== n.id) },
@@ -615,8 +594,6 @@ export function BoardCanvas({ board }: { board: Board }) {
       if (n[key] !== v) commit({ ...m, nodes: m.nodes.map((x) => (x.id === n.id ? { ...x, [key]: v } : x)) })
     }
   }
-
-  // ---------- клавиатура и буфер обмена ----------
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (editing || (e.target as HTMLElement).closest('[data-editor]')) return
@@ -678,7 +655,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     }
   }
 
-  // copy/paste без выделенного текста приходят на body, а не на полотно — слушаем окно
   useEffect(() => {
     const active = () => !!root.current?.contains(document.activeElement) && !document.activeElement?.closest('[data-editor]')
     const onCopy = (e: ClipboardEvent) => {
@@ -710,9 +686,7 @@ export function BoardCanvas({ board }: { board: Board }) {
           )
           return addNodes(copy.nodes, copy.edges)
         }
-      } catch {
-        // обычный текст — карточкой
-      }
+      } catch {}
       const size = textSize(text.trim())
       addNodes([
         {
@@ -742,8 +716,6 @@ export function BoardCanvas({ board }: { board: Board }) {
     e.stopPropagation()
     void addImages(files, world(e))
   }
-
-  // ---------- рисование ----------
 
   const ordered = useMemo(
     () => [...data.nodes.filter((n) => n.type === 'group'), ...data.nodes.filter((n) => n.type !== 'group')],
@@ -879,7 +851,6 @@ export function BoardCanvas({ board }: { board: Board }) {
             />
           ))}
 
-        {/* подписи стрелок — над карточками, иначе у близких карточек их не видно */}
         <svg aria-hidden className="pointer-events-none absolute top-0 left-0 size-px overflow-visible">
           {data.edges.map((e) => {
             const a = byId.get(e.fromNode)
@@ -980,7 +951,6 @@ export function BoardCanvas({ board }: { board: Board }) {
   )
 }
 
-// карточки, которые сейчас не правят, получают одну и ту же функцию — memo не сбрасывается
 const noop = () => {}
 const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
 const HANDLE_POS: Record<Side, string> = {
@@ -991,7 +961,6 @@ const HANDLE_POS: Record<Side, string> = {
 }
 const SELECTED: CSSProperties = { outline: 'calc(2px * var(--inv)) solid var(--highlight)', outlineOffset: 'calc(2px * var(--inv))' }
 
-/** Картинка из хранилища: только картинки и только через адаптер (он же проверяет путь). */
 function useVaultImage(path?: string) {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -1041,7 +1010,6 @@ const NodeView = memo(function NodeView({
           {editing ? (
             <InlineEditor value={n.label ?? ''} onFinish={onFinish} className="text-[16px] font-semibold" />
           ) : (
-            // издалека подпись рамки не должна становиться нечитаемой
             <div
               className="truncate rounded-md px-1 font-semibold text-muted-foreground"
               style={{ fontSize: 'calc(16px * max(1, var(--inv) * 0.6))' }}
@@ -1111,7 +1079,6 @@ function FileNode({ path }: { path?: string }) {
 }
 
 function LinkNode({ url }: { url?: string }) {
-  // только http(s): javascript: и прочее из чужого файла в ссылку не превращаем
   const safe = url && /^https?:\/\//i.test(url) ? url : null
   return (
     <div className="flex size-full items-center gap-2 px-3.5 py-3 text-[14px]">
@@ -1133,7 +1100,6 @@ function LinkNode({ url }: { url?: string }) {
   )
 }
 
-/** Правка текста карточки: Esc или Ctrl Enter — готово; высота растёт под текст. */
 function TextEditor({
   value,
   centered,

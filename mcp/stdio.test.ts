@@ -8,7 +8,6 @@ import { expect, it } from 'vitest'
 
 const root = path.resolve(import.meta.dirname, '..')
 
-/** Сервер поднимается так же, как его запускает Claude: node + tsx, общение по stdio. */
 function connect(client: Client, args: string[]) {
   return client.connect(
     new StdioClientTransport({
@@ -71,17 +70,17 @@ it('сервер отвечает по stdio', { timeout: 30_000 }, async () => 
     })
     const created = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Привет', markdown: '$x^2$' } })
     expect(JSON.parse(text(created))).toMatchObject({ action: 'created', warnings: [] })
-    // большой текст — файлом из разрешённой папки, а не аргументом
+
     const md = path.join(files, 'lecture.md')
     writeFileSync(md, '# Лекция из файла\n\nТекст $a^2$\n')
     const fromFile = await client.callTool({ name: 'create_note', arguments: { subject: 'Тест', title: 'Лекция из файла', file: md } })
     expect(JSON.parse(text(fromFile))).toMatchObject({ action: 'created', warnings: [] })
-    // файл вне разрешённой папки, скрытый файл и ссылка наружу — нет
+
     const secret = path.join(vault, '..', `secret-${Date.now()}.md`)
     writeFileSync(secret, '# Секрет\n')
     mkdirSync(path.join(files, '.ssh'))
     writeFileSync(path.join(files, '.ssh', 'id.md'), '# Ключ\n')
-    // Junction проверяет тот же выход наружу без права Windows на файловые симлинки.
+
     const link = process.platform === 'win32' ? path.join(files, 'ярлык', path.basename(secret)) : path.join(files, 'ярлык.md')
     if (process.platform === 'win32') symlinkSync(path.dirname(secret), path.dirname(link), 'junction')
     else symlinkSync(secret, link)

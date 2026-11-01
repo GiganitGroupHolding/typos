@@ -14,7 +14,6 @@ beforeAll(async () => {
     if (req.url === '/to-lan') return res.writeHead(302, { Location: 'http://127.0.0.2:9/secret' }).end()
     if (req.url === '/loop') return res.writeHead(302, { Location: '/loop' }).end()
     if (req.url === '/big') {
-      // без Content-Length: предел должен сработать по мере чтения
       res.writeHead(200, { 'Content-Type': 'image/png' })
       for (let i = 0; i < 64; i++) res.write(Buffer.alloc(32 * 1024))
       return res.end()
@@ -27,7 +26,6 @@ beforeAll(async () => {
 })
 afterAll(() => server.close())
 
-/** В тестах «интернет» — только 127.0.0.1. */
 const onlyTestServer = (ip: string) => ip === '127.0.0.1'
 
 describe('скачивание картинок по ссылке', () => {

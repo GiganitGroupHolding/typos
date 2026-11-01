@@ -1,16 +1,10 @@
-/**
- * Ссылка подключения, которую печатает сервер хранения (server/typos-server.mjs):
- * typos://host:port/путь?n=имя&id=vaultId&k=ключ[&tls=1]
- */
-
 export interface RemoteConfig {
-  /** Адрес сервера без слэша в конце: «http://192.168.1.10:8787». */
   url: string
-  /** Ключ этого устройства. */
+
   token: string
-  /** Имя хранилища для интерфейса. */
+
   name: string
-  /** id хранилища — ссылка от другого сервера не подменит его молча. */
+
   vaultId: string
 }
 
@@ -19,7 +13,6 @@ export function parseRemoteLink(text: string): RemoteConfig {
   if (!/^typos:\/\//i.test(raw)) throw new Error('Это не ссылка TYPOS — она начинается с typos://')
   let u: URL
   try {
-    // свои схемы браузеры разбирают по-разному, поэтому разбираем как http
     u = new URL(raw.replace(/^typos:\/\//i, 'http://'))
   } catch {
     throw new Error('Ссылка повреждена — скопируй её из вывода сервера целиком')
@@ -35,7 +28,6 @@ export function parseRemoteLink(text: string): RemoteConfig {
   }
 }
 
-/** Страница по https не может ходить на http-сервер — браузер блокирует такие запросы. */
 export const blockedAsMixedContent = (config: RemoteConfig, pageProtocol = globalThis.location?.protocol) =>
   pageProtocol === 'https:' && config.url.startsWith('http:')
 

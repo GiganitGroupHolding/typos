@@ -1,4 +1,3 @@
-/** Преобразует выбранный sRGB в оттенок и относительную насыщенность акцента OKLCH. */
 export function accentFromHex(hex: string): { hue: number; chroma: number } {
   const [r, g, b] = [1, 3, 5].map((offset) => {
     const value = parseInt(hex.slice(offset, offset + 2), 16) / 255

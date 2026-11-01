@@ -1,11 +1,9 @@
-# TYPOS на своём сервере: сервер хранения, MCP и сайт за Caddy. Инструкция — docs/self-hosting.md.
-# Настройки — deploy/.env (образец .env.example), секреты MCP — ${TYPOS_DATA}/mcp.env, данные — в ${TYPOS_DATA}.
 name: typos
 
 services:
   storage:
     build: { context: .., dockerfile: Dockerfile.storage }
-    # --trust-proxy верен, только пока порт сервера не опубликован: снаружи к нему ходит лишь Caddy
+
     command:
       - node
       - server/container.mjs
@@ -18,7 +16,6 @@ services:
     restart: unless-stopped
 
   mcp:
-    # запускается только с --profile mcp
     profiles: [mcp]
     build: { context: .., dockerfile: Dockerfile.mcp }
     env_file: ${TYPOS_DATA}/mcp.env
@@ -33,7 +30,7 @@ services:
 
   caddy:
     image: caddy:2
-    # папка deploy целиком, а не один файл: после git pull Caddy видит новый Caddyfile
+
     command: caddy run --config /etc/typos/${CADDYFILE:-Caddyfile} --adapter caddyfile
     ports: ['80:80', '443:443', '443:443/udp', '8443:8443', '9443:9443']
     environment:
@@ -44,7 +41,7 @@ services:
     volumes:
       - ./:/etc/typos:ro
       - ../dist:/srv/app:ro
-      # здесь сертификаты и локальный центр сертификации: не удаляй (docker compose down -v)
+
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped

@@ -1,10 +1,3 @@
-/*
- * Доска предмета — бесконечное полотно: стикеры, карточки, рамки, картинки и стрелки между ними.
- * Файл — `<Предмет>/Доски/<Название>.canvas` в открытом формате JSON Canvas 1.0 (его же открывает Obsidian),
- * плюс поле id сверху: имя файла меняется при переименовании, id — нет.
- * Чистые функции — работают и в приложении, и в MCP-сервере.
- */
-
 export type BoardNodeType = 'text' | 'file' | 'link' | 'group'
 export type BoardSide = 'top' | 'right' | 'bottom' | 'left'
 export type BoardEnd = 'none' | 'arrow'
@@ -16,15 +9,15 @@ export interface BoardNode {
   y: number
   width: number
   height: number
-  /** «1»…«6» — цвета JSON Canvas (красный, оранжевый, жёлтый, зелёный, голубой, фиолетовый) или #rrggbb */
+
   color?: string
-  /** у text — Markdown с формулами $…$ */
+
   text?: string
-  /** у file — путь от корня хранилища */
+
   file?: string
-  /** у link */
+
   url?: string
-  /** у group — подпись рамки */
+
   label?: string
 }
 
@@ -34,7 +27,7 @@ export interface BoardEdge {
   toNode: string
   fromSide?: BoardSide
   toSide?: BoardSide
-  /** по умолчанию у начала стрелки нет, у конца — есть */
+
   fromEnd?: BoardEnd
   toEnd?: BoardEnd
   color?: string
@@ -61,7 +54,7 @@ export const MIN_NODE_H = 30
 
 const TYPES: BoardNodeType[] = ['text', 'file', 'link', 'group']
 const SIDES: BoardSide[] = ['top', 'right', 'bottom', 'left']
-// только пресет или #rrggbb: цвет попадает в style, другое туда пускать незачем
+
 const COLOR = /^([1-6]|#[0-9a-f]{6})$/i
 
 export const isBoardColor = (c: unknown): c is string => typeof c === 'string' && COLOR.test(c)
@@ -74,7 +67,6 @@ const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
 const side = (v: unknown) => (SIDES.includes(v as BoardSide) ? (v as BoardSide) : undefined)
 const end = (v: unknown) => (v === 'none' || v === 'arrow' ? v : undefined)
 
-/** Файл доски → данные. Битое и чужое отбрасывается, а не роняет доску; повторные id — тоже. */
 export function parseBoard(text: string | null): { id?: string; data: BoardData } {
   let raw: Raw
   try {
@@ -125,13 +117,11 @@ export function parseBoard(text: string | null): { id?: string; data: BoardData 
 
 const round = (n: number) => Math.round(n)
 
-/** Данные → файл. Табуляция, как у Obsidian; координаты целые; пустые поля не пишутся. */
 export function serializeBoard(id: string, data: BoardData): string {
   const nodes = data.nodes.map((n) => ({ ...n, x: round(n.x), y: round(n.y), width: round(n.width), height: round(n.height) }))
   return `${JSON.stringify({ id, nodes, edges: data.edges }, null, '\t')}\n`
 }
 
-/** Тексты доски для поиска. */
 export const boardText = (data: BoardData) =>
   [...data.nodes.map((n) => n.text || n.label || n.url || ''), ...data.edges.map((e) => e.label ?? '')].filter(Boolean).join('\n')
 
@@ -142,7 +132,6 @@ export interface Bounds {
   height: number
 }
 
-/** Прямоугольник вокруг узлов; null — узлов нет. */
 export function boardBounds(nodes: Pick<BoardNode, 'x' | 'y' | 'width' | 'height'>[]): Bounds | null {
   if (!nodes.length) return null
   const x = Math.min(...nodes.map((n) => n.x))
@@ -155,7 +144,6 @@ export function boardBounds(nodes: Pick<BoardNode, 'x' | 'y' | 'width' | 'height
   }
 }
 
-/** Узел целиком внутри рамки — едет вместе с ней. */
 export const insideGroup = (g: Bounds, n: Bounds) =>
   n.x >= g.x && n.y >= g.y && n.x + n.width <= g.x + g.width && n.y + n.height <= g.y + g.height
 
@@ -169,7 +157,7 @@ function mergeList<T extends { id: string }>(base: T[], local: T[], disk: T[]): 
   for (const item of local) {
     const before = was.get(item.id)
     const theirs = there.get(item.id)
-    // своё новое — оставляем; удалённое снаружи — только если здесь его не трогали; иначе правка снаружи, если здесь правок нет
+
     if (!before) out.push(item)
     else if (!theirs) {
       if (!same(item, before)) out.push(item)
@@ -179,11 +167,6 @@ function mergeList<T extends { id: string }>(base: T[], local: T[], disk: T[]): 
   return out
 }
 
-/**
- * Доску поменяли снаружи (MCP, другое устройство), пока здесь шли правки: base — от чего шли правки,
- * local — что вышло здесь, disk — что теперь в файле. По каждому узлу и стрелке: правленое здесь важнее,
- * не тронутое здесь берётся из файла, новое с обеих сторон остаётся.
- */
 export function mergeBoards(base: BoardData, local: BoardData, disk: BoardData): BoardData {
   const nodes = mergeList(base.nodes, local.nodes, disk.nodes)
   const ids = new Set(nodes.map((n) => n.id))
@@ -192,5 +175,5 @@ export function mergeBoards(base: BoardData, local: BoardData, disk: BoardData):
 }
 
 let seq = 0
-/** id узла или стрелки: короткий и уникальный в пределах доски. */
+
 export const boardItemId = () => `${Date.now().toString(36)}${(seq++ % 1296).toString(36)}${Math.random().toString(36).slice(2, 6)}`

@@ -15,7 +15,6 @@ export interface HttpConfig extends HttpResourceConfig {
   subject: string
 }
 
-/** Публичный MCP не принимает адреса с ключами, параметрами или незашифрованным HTTP. */
 export function publicMcpUrl(env: NodeJS.ProcessEnv): URL {
   const value = env.MCP_PUBLIC_URL?.trim()
   if (!value) throw new Error('Задай MCP_PUBLIC_URL в настройках MCP-сервиса')
@@ -26,7 +25,6 @@ export function publicMcpUrl(env: NodeJS.ProcessEnv): URL {
   return url
 }
 
-/** Внешний OAuth остаётся доступен для установок с собственным провайдером. */
 export function httpConfig(env: NodeJS.ProcessEnv): HttpConfig {
   const required = (name: string) => {
     const value = env[name]?.trim()
@@ -45,7 +43,6 @@ export function httpConfig(env: NodeJS.ProcessEnv): HttpConfig {
   return { resource, issuer, jwksUrl: https('MCP_AUTH_JWKS_URL'), subject: required('MCP_AUTH_SUBJECT') }
 }
 
-/** Проверяет подпись, срок, получателя, владельца и разрешение на работу с TYPOS. */
 export function createTokenVerifier(config: HttpConfig, key: JWTVerifyGetKey = createRemoteJWKSet(config.jwksUrl)) {
   return async (token: string) => {
     const { payload } = await jwtVerify(token, key, {
@@ -59,7 +56,6 @@ export function createTokenVerifier(config: HttpConfig, key: JWTVerifyGetKey = c
   }
 }
 
-/** Stateless-транспорт не хранит сессии и проверяет авторизацию каждого запроса. */
 export function createHttpMcpServer(
   adapter: VaultAdapter,
   config: HttpResourceConfig,
@@ -71,7 +67,6 @@ export function createHttpMcpServer(
     res.end(JSON.stringify(data))
   }
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
-    // Healthcheck Railway не раскрывает ни заметки, ни настройки авторизации.
     if (req.url === '/healthz' && req.method === 'GET') return json(res, 200, { status: 'ok' })
     if (req.headers.host !== config.resource.host || (req.headers.origin && req.headers.origin !== config.resource.origin))
       return json(res, 403, { error: 'Недопустимый Host или Origin' })
@@ -117,7 +112,6 @@ export function createHttpMcpServer(
   }
   return createServer({ requestTimeout: 60_000, headersTimeout: 15_000 }, (req, res) => {
     void handle(req, res).catch(() => {
-      // Ошибки транспорта не должны раскрывать ссылки подключения и содержимое запросов.
       if (!res.headersSent) json(res, 500, { error: 'Ошибка MCP-сервера' })
       else res.destroy()
     })

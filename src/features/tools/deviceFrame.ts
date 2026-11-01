@@ -1,4 +1,3 @@
-// Создано scripts/device-frame.mjs — координаты экрана в пикселях картинки рамки.
 import type { DeviceFrame } from './PhonePreview'
 
 export const deviceFrame: DeviceFrame | null = {

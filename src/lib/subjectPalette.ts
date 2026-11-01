@@ -1,11 +1,5 @@
 import type { SubjectColor, SubjectIcon } from '@/types'
 
-/*
- * Цвета и иконки предметов — один список для диалога, проверки _subject.json и акцента.
- * hue/chroma — оттенок и насыщенность (OKLCH) для акцента внутри предмета (app/accent.ts);
- * сами цвета плашек — --subject-* в tokens.css.
- */
-
 export const SUBJECT_COLORS: { id: SubjectColor; name: string; hue: number; chroma: number }[] = [
   { id: 'red', name: 'Красный', hue: 27, chroma: 1 },
   { id: 'orange', name: 'Оранжевый', hue: 50, chroma: 1 },

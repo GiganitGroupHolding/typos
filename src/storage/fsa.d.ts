@@ -1,5 +1,3 @@
-// File System Access API: части, которых нет в стандартном lib.dom (Chrome/Edge 86+).
-
 type FsaPermissionMode = 'read' | 'readwrite'
 
 interface FileSystemHandle {

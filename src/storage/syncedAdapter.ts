@@ -6,13 +6,6 @@ import type { RemoteConfig } from './remoteLink'
 import { fromBlob, SyncEngine, touched, useSync, type EngineHooks, type MetaEntry, type MetaStore, type Replica } from './sync'
 import type { Entry, VaultAdapter } from './VaultAdapter'
 
-/**
- * Сервер хранения с локальной копией. Приложение читает и пишет копию в IndexedDB (мгновенно, без сети),
- * а SyncEngine отправляет правки на сервер, как только он доступен. Связи нет — правки копятся и уходят потом.
- * Копия своя у каждого хранилища (по vaultId) и не трогает обычное хранилище браузера.
- */
-
-/** Служебные ключи в базе сведений начинаются с этого символа — путь файла с него начинаться не может. */
 const INTERNAL = '\u0000'
 const READY_KEY = `${INTERNAL}ready`
 
@@ -36,13 +29,11 @@ function idbMeta(store: UseStore): MetaStore {
   }
 }
 
-/** Что приложение хочет знать, пока хранилище открыто. */
 export interface SyncHooks {
-  /** Локальная копия поменялась не из этой вкладки (сервер или другая вкладка) — перечитать. */
   onChanged?: () => void
-  /** Файл правили и здесь, и на сервере: наша версия сохранена копией. */
+
   onConflict?: EngineHooks['onConflict']
-  /** Связь с сервером вернулась после обрыва. */
+
   onReconnected?: () => void
 }
 
@@ -52,9 +43,9 @@ export class SyncedAdapter implements VaultAdapter {
   readonly config: RemoteConfig
   readonly remote: RemoteAdapter
   readonly engine: SyncEngine
-  /** Локальная копия поменялась не из этой вкладки (сервер или другая вкладка) — перечитать. */
+
   onChanged?: () => void
-  /** Хуки движка, которые нужны самому адаптеру при любом запуске. */
+
   private readonly ownHooks: EngineHooks = { onPulled: () => this.changed(true) }
 
   private readonly files: FlatStore
@@ -66,7 +57,6 @@ export class SyncedAdapter implements VaultAdapter {
   private periodic?: ReturnType<typeof setInterval>
   private stopMonitor?: () => void
 
-  /** scope — отдельная копия того же хранилища (в тестах — «второе устройство»). */
   constructor(config: RemoteConfig, scope = '') {
     this.config = config
     this.label = config.name
@@ -80,21 +70,15 @@ export class SyncedAdapter implements VaultAdapter {
     this.engine.hooks = { ...this.ownHooks }
   }
 
-  /** Копия уже хоть раз синхронизирована — можно открывать без сети. */
   async isReady() {
     return (await get<boolean>(READY_KEY, this.metaStore)) === true
   }
 
-  /** Первая синхронизация: без неё копия пуста. Нет связи — бросает. */
   async initialSync() {
     await this.engine.syncNow()
     await set(READY_KEY, true, this.metaStore)
   }
 
-  /**
-   * Фоновая синхронизация и слежение за связью, пока хранилище открыто.
-   * Связь вернулась или сервер сообщил об изменениях — синхронизируем сразу.
-   */
   start(hooks: SyncHooks = {}) {
     this.stop()
     this.onChanged = hooks.onChanged
@@ -113,7 +97,7 @@ export class SyncedAdapter implements VaultAdapter {
       },
       onServerChange: () => this.engine.schedule(150),
     })
-    // страховка на случай пропущенных событий сервера
+
     this.periodic = setInterval(() => this.engine.schedule(0), 60_000)
     this.engine.schedule(0)
     void this.engine.refreshPending()
@@ -136,7 +120,6 @@ export class SyncedAdapter implements VaultAdapter {
     return next
   }
 
-  /** fromServer — пришло с сервера (перечитать и эту вкладку); иначе — своя правка (только другим вкладкам). */
   private changed(fromServer: boolean) {
     this.channel?.postMessage('changed')
     if (fromServer) this.onChanged?.()
@@ -146,7 +129,6 @@ export class SyncedAdapter implements VaultAdapter {
     return (await this.files.keys()).filter((k) => k === path || k.startsWith(`${path}/`))
   }
 
-  /** Локальная правка: записать, пометить к отправке, запланировать синхронизацию. */
   private async edit(job: () => Promise<string[]>) {
     await this.lock(async () => {
       for (const path of await job()) await this.replica.meta.update(path, touched)
@@ -204,5 +186,4 @@ export class SyncedAdapter implements VaultAdapter {
   }
 }
 
-/** Сбросить показатели синхронизации (переключились на другое хранилище). */
 export const resetSyncState = () => useSync.setState({ pending: 0, syncing: false, failed: {}, lastSync: undefined })

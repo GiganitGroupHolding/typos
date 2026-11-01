@@ -4,7 +4,6 @@ import { importFiles } from './importFiles'
 
 const hasFiles = (e: DragEvent) => [...e.dataTransfer.types].includes('Files')
 
-/** Перетащил файлы на предмет: .md — конспекты, остальное — в «Проекты». Возвращает обработчики и флаг подсветки. */
 export function useFileDrop(subjectId?: string) {
   const [over, setOver] = useState(false)
   const navigate = useNavigate()

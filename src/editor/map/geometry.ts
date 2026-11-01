@@ -1,5 +1,3 @@
-/** Геометрия мини-карты: стрелки между блоками и попадания мышью. Чистые функции. */
-
 export interface Rect {
   x: number
   y: number
@@ -11,7 +9,6 @@ export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 const center = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })
 
-/** Середина стороны блока — оттуда тянется стрелка. */
 export function sidePoint(r: Rect, side: Side) {
   const c = center(r)
   if (side === 'top') return { x: c.x, y: r.y }
@@ -22,7 +19,6 @@ export function sidePoint(r: Rect, side: Side) {
 
 const NORMAL: Record<Side, [number, number]> = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }
 
-/** Стороны, которыми блоки смотрят друг на друга: по горизонтали, если они больше разнесены вбок, чем по высоте. */
 export function facingSides(a: Rect, b: Rect): [Side, Side] {
   const ac = center(a)
   const bc = center(b)
@@ -32,7 +28,6 @@ export function facingSides(a: Rect, b: Rect): [Side, Side] {
   return dy > 0 ? ['bottom', 'top'] : ['top', 'bottom']
 }
 
-/** Плавная кривая от стороны к стороне (как в схемах mermaid с curve: basis) и середина для подписи. */
 export function curve(s: { x: number; y: number }, sSide: Side, t: { x: number; y: number }, tSide: Side | null) {
   const len = Math.hypot(t.x - s.x, t.y - s.y)
   const k = Math.max(18, Math.min(120, len * 0.42))
@@ -40,7 +35,7 @@ export function curve(s: { x: number; y: number }, sSide: Side, t: { x: number; 
   const c1 = { x: s.x + sx * k, y: s.y + sy * k }
   const [tx, ty] = tSide ? NORMAL[tSide] : [0, 0]
   const c2 = { x: t.x + tx * k, y: t.y + ty * k }
-  // точка на кривой при t = 0.5
+
   const mid = { x: (s.x + 3 * c1.x + 3 * c2.x + t.x) / 8, y: (s.y + 3 * c1.y + 3 * c2.y + t.y) / 8 }
   const f = (n: number) => Math.round(n * 10) / 10
   return { d: `M${f(s.x)} ${f(s.y)}C${f(c1.x)} ${f(c1.y)} ${f(c2.x)} ${f(c2.y)} ${f(t.x)} ${f(t.y)}`, mid }
@@ -54,7 +49,6 @@ export function edgePath(a: Rect, b: Rect) {
 export const contains = (r: Rect, p: { x: number; y: number }, pad = 0) =>
   p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad
 
-/** Прямоугольник по двум углам. */
 export const rectOf = (x0: number, y0: number, x1: number, y1: number): Rect => ({
   x: Math.min(x0, x1),
   y: Math.min(y0, y1),

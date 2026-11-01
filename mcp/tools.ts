@@ -7,13 +7,6 @@ import type { BoardEdit } from './boards'
 import { LocalFiles } from './localFiles'
 import { StudyVault } from './vault'
 
-/*
- * MCP-сервер TYPOS: Claude пишет конспекты, закреп, тулзы и доски прямо в хранилище.
- * Запуск: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --vault "C:\путь\к\папке"
- *     или: tsx --tsconfig mcp/tsconfig.json mcp/server.ts --link "typos://…" (сервер хранения; ссылку даёт команда link)
- * Приложение с папкой подхватывает изменения, когда окно получает фокус; с сервером хранения — сразу.
- */
-
 const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой), «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки) и «Доски» (полотна как в Miro: стикеры, карточки, рамки и стрелки).
 
 Формат конспекта — Markdown, который понимает редактор приложения:
@@ -34,10 +27,6 @@ const INSTRUCTIONS = `Хранилище учебных конспектов п�
 const IMAGES_LINE =
   '- картинки — ![подпись](https://…): сервер сам скачает их в assets/. Для локального файла или data: — сначала add_image.'
 
-/**
- * Одинаковые инструменты для локального и удалённого транспорта.
- * Файлы с компьютера (аргумент file, add_project_file, путь в add_image) — только локально и только из папок files.
- */
 export function createMcpServer(adapter: VaultAdapter, remote = false, files = new LocalFiles([])) {
   const vault = new StudyVault(adapter, { remote, files })
   const readsFiles = !remote && files.enabled
@@ -58,7 +47,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
   const server = new McpServer({ name: 'studynotes', version: '1.0.0' }, { instructions })
 
   const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
-  /** Ошибки — текстом для модели, а не падением сервера. */
+
   const run =
     <A>(fn: (args: A) => Promise<unknown>) =>
     async (args: A) => {
@@ -69,7 +58,6 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
       }
     }
 
-  /** Большой текст можно передать файлом из разрешённой папки — чтобы не гонять десятки КБ через аргументы вызова. */
   async function textArg(inline: string | undefined, file: string | undefined, what: string): Promise<string> {
     if (remote && file !== undefined) throw new Error('Удалённый MCP не читает файлы сервера — передай текст напрямую')
     if (inline) return inline

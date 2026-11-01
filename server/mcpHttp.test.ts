@@ -196,7 +196,7 @@ it('не раскрывает файловые инструменты и не ч
 it('отклоняет чужие Host и Origin и ограничивает размер тела запроса', async () => {
   const headers = { Authorization: `Bearer ${await token().sign(keys.privateKey)}` }
   expect((await fetch(config.resource, { method: 'POST', headers: { ...headers, Origin: 'https://evil.example.com' } })).status).toBe(403)
-  // fetch нормализует Host — для этой проверки отправляем HTTP-заголовок напрямую.
+
   const hostStatus = await new Promise<number | undefined>((resolve, reject) => {
     const req = request(config.resource, { method: 'POST', headers: { ...headers, Host: 'evil.example.com' } }, (res) => {
       res.resume()

@@ -32,7 +32,7 @@ afterEach(async () => {
 
 const config = () => ({ url: `http://127.0.0.1:${port}`, token, name: 'Тест', vaultId: srv.state.vaultId })
 const direct = () => new DavAdapter(config())
-/** Устройство со своей локальной копией (scope — отдельная база IndexedDB). */
+
 async function device(scope: string) {
   const d = new SyncedAdapter(config(), scope)
   await d.initialSync()
@@ -43,7 +43,6 @@ const restart = async () => {
   srv = await startServer({ dir, port, host: '127.0.0.1' })
 }
 
-/** Предмет с одним конспектом прямо на сервере. */
 async function seed() {
   const subject = await repo.createSubject(direct(), { name: 'Физика', color: 'blue', icon: 'atom' }, 0)
   const note = await repo.createNote(direct(), subject, '# Кинематика\n\nскорость')
@@ -78,7 +77,7 @@ describe('синхронизация с локальной копией', () => 
     await srv.close()
     const note = await repo.createNote(a, subject, '# Офлайн')
     await expect(a.engine.syncNow()).rejects.toThrow(/не отвечает/)
-    // «перезагрузили страницу»: новая копия того же хранилища помнит неотправленное
+
     const reloaded = new SyncedAdapter(config(), 'a')
     expect(await reloaded.engine.countPending()).toBe(1)
     await restart()

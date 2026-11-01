@@ -5,7 +5,6 @@ import path from 'node:path'
 
 export const configPath = () => process.env.TYPOS_MCP_CONFIG || path.join(homedir(), '.typos', 'mcp.json')
 
-/** Проверяет настройки без вывода секретной ссылки в ошибках. */
 export async function validateConfig(value) {
   if (!value || typeof value !== 'object' || typeof value.repo !== 'string' || !path.isAbsolute(value.repo))
     throw new Error('Укажи абсолютный путь к репозиторию TYPOS')
@@ -16,7 +15,7 @@ export async function validateConfig(value) {
   } catch {
     throw new Error('Ссылка TYPOS повреждена — скопируй её целиком')
   }
-  // папки, из которых MCP может читать файлы по пути от ИИ; без них файлы компьютера недоступны
+
   const files = value.files ?? []
   if (!Array.isArray(files) || !files.every((f) => typeof f === 'string' && path.isAbsolute(f)))
     throw new Error('Папки для файлов (files) — список абсолютных путей')
@@ -30,7 +29,6 @@ export async function validateConfig(value) {
   return { repo: value.repo, link: value.link.trim(), ...(files.length ? { files } : {}) }
 }
 
-/** Настройки лежат вне пакета: обновление или установка плагина в кэш не затрагивает ключ. */
 export async function loadConfig() {
   let value
   try {
@@ -41,7 +39,6 @@ export async function loadConfig() {
   return validateConfig(value)
 }
 
-/** Атомарно сохраняет ключ вне репозитория с правами владельца на системах POSIX. */
 export async function saveConfig(value) {
   const config = await validateConfig(value)
   const file = configPath()

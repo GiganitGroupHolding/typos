@@ -11,7 +11,6 @@ import type { SubjectColor, SubjectIcon } from '@/types'
 import { useVault } from '@/vault/store'
 import { SubjectBadge, subjectIcons } from './visuals'
 
-/** Открыть диалог можно откуда угодно: openNewSubject() / openEditSubject(id). */
 const useDialog = create<{ open: boolean; editId?: string; set: (v: boolean, editId?: string) => void }>((set) => ({
   open: false,
   set: (open, editId) => set({ open, editId }),

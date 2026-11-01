@@ -1,35 +1,29 @@
 import { create } from 'zustand'
 import type { RemoteAdapter } from './remoteAdapter'
 
-/**
- * Связь с сервером хранения. local — сервер не подключён (браузер, папка).
- * Правки всё равно идут в локальную копию; связь решает только, когда они уйдут на сервер.
- */
 export type ConnectionStatus = 'local' | 'connecting' | 'online' | 'offline' | 'revoked'
 
 interface ConnectionState {
   status: ConnectionStatus
-  /** Когда следующая попытка переподключиться (offline). */
+
   retryAt?: number
-  /** Попробовать прямо сейчас. */
+
   retry: () => void
 }
 
 export const useConnection = create<ConnectionState>(() => ({ status: 'local', retry: () => {} }))
 
 export interface MonitorOptions {
-  /** Сколько ждать пульса сервера (он шлёт его каждые 10 с). */
   idleMs?: number
-  /** Сколько ждать ответа при подключении: пропавшая сеть иначе держит запрос минутами. */
+
   connectMs?: number
-  /** Паузы между попытками переподключения. */
+
   retryMs?: number[]
   onChange?: (status: ConnectionStatus, prev: ConnectionStatus) => void
-  /** Сервер сообщил, что файлы поменялись (другое устройство, правка в папке). */
+
   onServerChange?: () => void
 }
 
-/** Следит за связью, пока открыт поток событий сервера. Возвращает «остановить». */
 export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions = {}): () => void {
   const idleMs = opts.idleMs ?? 25_000
   const connectMs = opts.connectMs ?? 5000
@@ -47,7 +41,7 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
   const onVisible = () => document.visibilityState === 'visible' && kick()
   window.addEventListener('online', kick)
   document.addEventListener('visibilitychange', onVisible)
-  // запрос упал — поток, скорее всего, тоже мёртв: рвём его и переподключаемся, это и покажет правду
+
   adapter.onProblem = () => current?.abort()
   useConnection.setState({ status: 'connecting', retryAt: undefined, retry: kick })
 
@@ -64,7 +58,7 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
 
   void (async () => {
     let attempt = 0
-    // связь только что была — одна мгновенная перепроверка, чтобы случайный сбой не мигал «нет связи»
+
     let recheck = false
     while (!stopped) {
       const ctrl = (current = new AbortController())
@@ -82,10 +76,9 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
           opts.onServerChange,
         )
         if (end === 'revoked') return set('revoked')
-        // пульс пропал — сеть, скорее всего, пропала тоже; перепроверка ничего не даст
+
         if (end === 'idle') recheck = false
       } catch {
-        // нет сети или сервер не отвечает — ниже переподключение
       } finally {
         clearTimeout(connectTimer)
       }

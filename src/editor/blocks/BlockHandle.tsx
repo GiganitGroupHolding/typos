@@ -6,13 +6,6 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { foldingKey } from './folding'
 import { blockPos, foldedBlocks, moveTarget, sectionRange } from './sections'
 
-/*
- * Ручка блока, как в Notion: при наведении слева — «+» (новая строка ниже) и ⋮⋮ (перетащить, щелчок — выделить блок).
- * Заголовок тянет за собой весь раздел; пункт списка переносится отдельно (в другой список или в текст).
- * Пока тянешь — за курсором едет полупрозрачная копия, синяя линия показывает место; после броска блоки
- * плавно разъезжаются (FLIP: замер до, transform после).
- */
-
 const ITEM_TYPES = new Set(['listItem', 'taskItem'])
 
 type Target = { kind: 'block'; index: number; el: HTMLElement } | { kind: 'item'; el: HTMLElement; pos: number }
@@ -21,9 +14,9 @@ interface Gap {
   y: number
   left: number
   right: number
-  /** блоки верхнего уровня: перед блоком с этим номером */
+
   index?: number
-  /** пункты списков: позиция в документе */
+
   pos?: number
 }
 
@@ -37,13 +30,12 @@ interface DragState {
   gaps: Gap[]
   gap?: Gap
   sources: HTMLElement[]
-  /** полупрозрачность исходника — отдельным стилем: класс на узле редактора ProseMirror принял бы за правку */
+
   dim?: HTMLStyleElement
 }
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Пункт списка по позиции перед ним: [начало, конец], узел и его список. */
 function itemAtPos(doc: PMNode, pos: number) {
   const node = doc.nodeAt(pos)
   if (!node || !ITEM_TYPES.has(node.type.name)) return null
@@ -51,9 +43,7 @@ function itemAtPos(doc: PMNode, pos: number) {
   return { from: pos, to: pos + node.nodeSize, node, list: $p.parent, listFrom: $p.before(), listTo: $p.after() }
 }
 
-/** Пункт списка: [начало, конец] в документе, сам узел и его список. */
 function itemAt(editor: Editor, el: HTMLElement) {
-  // у li позиция не находится (-1) — берём абзац внутри пункта
   const inner = editor.view.posAtDOM(el.querySelector('p') ?? el, 0)
   if (inner < 0) return null
   const $p = editor.state.doc.resolve(inner)
@@ -73,7 +63,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
 
   const wrapper = () => self.current?.parentElement ?? null
 
-  /** Видимые блоки верхнего уровня и пункты списков (прямые дети списков верхнего уровня). */
   const targets = (): Target[] => {
     const out: Target[] = []
     ;[...editor.view.dom.children].forEach((child, index) => {
@@ -97,7 +86,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     return { top: r.top - wr.top + pad + (lh - 24) / 2, left: (t.kind === 'item' ? r.left - wr.left - 22 : 0) - 76 }
   }
 
-  // наведение: ближайший по высоте блок (пункт списка важнее списка)
   useEffect(() => {
     if (disabled) {
       setHover(null)
@@ -131,7 +119,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     }
   }, [editor, disabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Блоки, которые тянутся: заголовок — со своим разделом. */
   const sourcesOf = (t: Target): HTMLElement[] => {
     if (t.kind === 'item') return [t.el]
     const [from, to] = sectionRange(editor.state.doc, t.index)
@@ -187,7 +174,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     d.sources = sourcesOf(d.target)
     d.gaps = gapsFor(d.target)
     const first = d.sources[0].getBoundingClientRect()
-    // копия — в body (у страницы есть transform, fixed внутри неё поехал бы), но с классами колонки — стили те же
+
     const prose = editor.view.dom.closest<HTMLElement>('.note-prose')
     const ghost = document.createElement('div')
     ghost.className = 'note-prose block-ghost'
@@ -223,7 +210,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       start(d, e)
     }
     d.ghost!.style.top = `${e.clientY - d.offsetY}px`
-    // у края окна — прокрутка
+
     const scroller = editor.view.dom.closest<HTMLElement>('[data-scroll-root]') ?? document.scrollingElement
     if (scroller) {
       const edge = 70
@@ -233,7 +220,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const w = wrapper()!.getBoundingClientRect()
     d.gaps = gapsFor(d.target)
     const y = e.clientY - w.top
-    // при равенстве пункт встаёт в список, а не отдельным блоком рядом
+
     const dist = (g: Gap) => Math.abs(g.y - y) - (g.pos !== undefined ? 6 : 0)
     const gap = d.gaps.reduce<Gap | undefined>((best, g) => (!best || dist(g) < dist(best) ? g : best), undefined)
     d.gap = gap
@@ -250,7 +237,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const ghostTop = d.ghost?.getBoundingClientRect().top
     d.ghost?.remove()
     if (!d.active) {
-      // щелчок без перетаскивания — выделить блок
       const pos = d.target.kind === 'block' ? blockPos(editor.state.doc, d.target.index) : d.target.pos
       editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)))
       editor.view.focus()
@@ -260,7 +246,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     move(d.target, d.gap, ghostTop)
   }
 
-  /** Перенос с плавной анимацией соседей. */
   const move = (t: Target, gap: Gap, ghostTop?: number) => {
     const before = new Map<Element, number>()
     const watched = [...editor.view.dom.querySelectorAll(':scope > *, :scope > ul > li, :scope > ol > li')]
@@ -281,7 +266,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     } else {
       const it = itemAtPos(doc, t.pos)
       if (!it) return
-      // последний пункт списка — уходит весь список
+
       const [a, b] = it.list.childCount === 1 ? [it.listFrom, it.listTo] : [it.from, it.to]
       tr = tr.delete(a, b)
       if (gap.pos !== undefined) {
@@ -294,9 +279,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     }
     try {
       tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(insertedAt + 1, tr.doc.content.size))))
-    } catch {
-      // выделение не обязательно
-    }
+    } catch {}
     editor.view.dispatch(tr)
 
     if (reduced()) return
@@ -321,7 +304,6 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     )
   }
 
-  /** «+» — пустая строка ниже (у свёрнутого заголовка — после раздела, у пункта — новый пункт). */
   const onPlus = () => {
     if (!hover) return
     const t = hover.target

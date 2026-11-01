@@ -1,6 +1,3 @@
-// Рамка телефона для мобильного просмотра HTML: node scripts/device-frame.mjs <рамка.png|webp> [--name iphone]
-// Находит экран (прозрачная или сплошная область в центре), вырезает его до прозрачности и пишет
-// public/devices/<name>.webp + src/features/tools/deviceFrame.ts с координатами экрана в пикселях картинки.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import sharp from 'sharp'
 
@@ -11,7 +8,6 @@ if (!input) {
 }
 const name = rest.includes('--name') ? rest[rest.indexOf('--name') + 1] : 'phone'
 
-// маленькую картинку увеличиваем (lanczos), чтобы рамка не мылилась на экранах с плотностью 2x
 const meta = await sharp(input).metadata()
 const up = Math.max(1, Math.ceil(2400 / (meta.height ?? 2400)))
 const { data, info } = await sharp(input)
@@ -20,7 +16,7 @@ const { data, info } = await sharp(input)
   .raw()
   .toBuffer({ resolveWithObject: true })
 const { width: W, height: H } = info
-// без прозрачности (картинки с «шахматкой» или белым фоном) — светлое серое становится прозрачным, тёмная рамка остаётся
+
 if (!meta.hasAlpha) {
   for (let i = 0; i < data.length; i += 4) {
     const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
@@ -35,13 +31,12 @@ const cy = H >> 1
 const seed = at(cx, cy)
 const transparent = data[seed + 3] < 16
 const [r0, g0, b0] = [data[seed], data[seed + 1], data[seed + 2]]
-// пиксель экрана: прозрачный (рамки Apple/Figma) или того же цвета, что центр (картинка с чёрным экраном)
+
 const isScreen = (i) =>
   transparent
     ? data[i + 3] < 128
     : data[i + 3] > 200 && Math.abs(data[i] - r0) + Math.abs(data[i + 1] - g0) + Math.abs(data[i + 2] - b0) < 36
 
-// заливка от центра
 const mask = new Uint8Array(W * H)
 const stack = [cy * W + cx]
 mask[cy * W + cx] = 1
@@ -73,11 +68,11 @@ if (sw < W * 0.5 || sh < H * 0.5 || minX === 0 || minY === 0) {
   console.error(`Экран не нашёлся (${sw}×${sh} из ${W}×${H}). Нужна рамка, где экран — прозрачный или однотонный.`)
   process.exit(1)
 }
-// радиус скругления — по диагонали угла: дуга пересекает её на r·(1 − 1/√2) от угла рамки экрана
+
 let d = 0
 while (d < sw / 2 && !mask[(minY + d) * W + minX + d]) d++
 const radius = Math.round(d / (1 - Math.SQRT1_2))
-// сплошной экран — вырезаем до прозрачности (с мягким краем), чтобы под рамкой было видно страницу
+
 if (!transparent) {
   for (let p = 0; p < W * H; p++) if (mask[p]) data[p * 4 + 3] = 0
 }

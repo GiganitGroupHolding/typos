@@ -1,7 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { Tex } from '@/lib/tex'
 
-// формулы $…$ и **жирный** внутри строки
 const INLINE = /(\$[^$\n]+\$|\*\*[^*\n]+\*\*)/g
 
 function inline(line: string, key: string): ReactNode[] {
@@ -12,10 +11,6 @@ function inline(line: string, key: string): ReactNode[] {
   })
 }
 
-/**
- * Текст карточки доски — маленькое подмножество Markdown: заголовки «#», списки «- », **жирный»,
- * формулы $…$ и $$…$$. Остальное показывается как есть.
- */
 export const BoardText = memo(function BoardText({ text }: { text: string }) {
   const out: ReactNode[] = []
   text.split(/(\$\$[\s\S]+?\$\$)/).forEach((chunk, c) => {
