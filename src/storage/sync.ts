@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { genId, NOTES_DIR, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from '@/vault/format'
+import { mergeText } from '@/vault/mergeText'
 import { getHtmlMeta, setHtmlMeta } from '@/vault/repo'
 import type { FlatStore } from './flatAdapter'
 import { RemoteError, type RemoteAdapter } from './remoteAdapter'
@@ -7,6 +8,7 @@ import { basename, dirname, joinPath } from './VaultAdapter'
 
 export interface MetaEntry {
   etag?: string
+  base?: string
 
   rev: number
 
@@ -28,7 +30,12 @@ export interface Replica {
   lock<T>(job: () => Promise<T>): Promise<T>
 }
 
-export const touched = (cur: MetaEntry | undefined): MetaEntry => ({ etag: cur?.etag, rev: (cur?.rev ?? 0) + 1, synced: cur?.synced ?? 0 })
+export const touched = (cur: MetaEntry | undefined): MetaEntry => ({
+  etag: cur?.etag,
+  base: cur?.base,
+  rev: (cur?.rev ?? 0) + 1,
+  synced: cur?.synced ?? 0,
+})
 
 export interface SyncState {
   pending: number
@@ -50,6 +57,22 @@ export interface EngineHooks {
 
 const TEXT_FILE = /\.(md|json|html?|txt|css|js|svg)$/i
 const toBlob = (v: string | Blob) => (typeof v === 'string' ? new Blob([v]) : v)
+const noteBase = (path: string, value: string | Blob) =>
+  path.endsWith('.md') && basename(dirname(path)) === NOTES_DIR && typeof value === 'string' ? value : undefined
+
+function mergeNote(base: string, mine: string, theirs: string): string | null {
+  const [b, m, t] = [base, mine, theirs].map(parseFrontmatter)
+  if (!b.meta.id || b.meta.id !== m.meta.id || b.meta.id !== t.meta.id) return null
+  const body = mergeText(b.body, m.body, t.body)
+  if (body === null) return null
+  const meta: Record<string, string> = {}
+  for (const key of new Set([...Object.keys(b.meta), ...Object.keys(m.meta), ...Object.keys(t.meta)])) {
+    if (key !== 'updated' && m.meta[key] !== t.meta[key] && m.meta[key] !== b.meta[key] && t.meta[key] !== b.meta[key]) return null
+    const value = key === 'updated' || m.meta[key] === b.meta[key] ? t.meta[key] : m.meta[key]
+    if (value !== undefined) meta[key] = value
+  }
+  return serializeFrontmatter(meta, body)
+}
 
 const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
@@ -208,6 +231,15 @@ export class SyncEngine {
     const dirty = m ? m.rev !== m.synced : hasLocal
     const remoteChanged = remoteEtag !== m?.etag
     if (!dirty && !remoteChanged) {
+      if (m && hasLocal && m.base === undefined && path.endsWith('.md') && basename(dirname(path)) === NOTES_DIR) {
+        await this.replica.lock(async () => {
+          const cur = await this.replica.meta.get(path)
+          if (!cur || cur.etag !== m.etag || cur.rev !== cur.synced) return
+          const value = await this.replica.files.get(path)
+          const base = value === undefined ? undefined : noteBase(path, value)
+          if (base !== undefined) await this.replica.meta.set(path, { ...cur, base })
+        })
+      }
       if (m && !hasLocal && remoteEtag === undefined) await this.replica.meta.del(path)
       return
     }
@@ -227,7 +259,7 @@ export class SyncEngine {
     if (value === undefined) return void (ctx.more = true)
     const res = await this.remote.put(path, toBlob(value), m?.etag)
     if (res === 'conflict') return this.retryOrResolve(path, m, ctx)
-    await this.replica.meta.update(path, (cur) => ({ etag: res.etag, rev: cur?.rev ?? rev, synced: rev }))
+    await this.replica.meta.update(path, (cur) => ({ etag: res.etag, base: noteBase(path, value), rev: cur?.rev ?? rev, synced: rev }))
   }
 
   private async retryOrResolve(path: string, m: MetaEntry | undefined, ctx: Pass) {
@@ -255,7 +287,7 @@ export class SyncEngine {
 
       if (cur ? cur.rev !== cur.synced : (await this.replica.files.get(path)) !== undefined) return void (ctx.more = true)
       await this.replica.files.set(path, value)
-      await this.replica.meta.set(path, { etag: got.etag, rev: cur?.rev ?? 0, synced: cur?.rev ?? 0 })
+      await this.replica.meta.set(path, { etag: got.etag, base: noteBase(path, value), rev: cur?.rev ?? 0, synced: cur?.rev ?? 0 })
       ctx.pulled = true
     })
   }
@@ -268,7 +300,7 @@ export class SyncEngine {
     if (!got) {
       const res = await this.remote.put(path, toBlob(mine!))
       if (res === 'conflict') return void (ctx.more = true)
-      await this.replica.meta.update(path, (cur) => ({ etag: res.etag, rev: cur?.rev ?? rev, synced: rev }))
+      await this.replica.meta.update(path, (cur) => ({ etag: res.etag, base: noteBase(path, mine!), rev: cur?.rev ?? rev, synced: rev }))
       return
     }
 
@@ -279,6 +311,21 @@ export class SyncEngine {
       basename(path) === SUBJECT_META
     )
       return this.adopt(path, got, rev, ctx)
+    if (m?.base !== undefined && typeof mine === 'string') {
+      const theirs = await fromBlob(path, got.blob)
+      const merged = typeof theirs === 'string' ? mergeNote(m.base, mine, theirs) : null
+      if (merged !== null) {
+        await this.replica.lock(async () => {
+          const cur = await this.replica.meta.get(path)
+          if ((cur?.rev ?? 0) !== rev) return void (ctx.more = true)
+          await this.replica.files.set(path, merged)
+          await this.replica.meta.set(path, { etag: got.etag, base: noteBase(path, theirs), rev: rev + 1, synced: rev })
+          ctx.pulled = true
+        })
+        ctx.more = true
+        return
+      }
+    }
     const copy = conflictCopy(path, mine, ctx.taken)
     ctx.taken.add(copy.path)
     await this.adopt(path, got, rev, ctx, async () => {
@@ -296,7 +343,7 @@ export class SyncEngine {
       if ((cur?.rev ?? 0) !== rev) return void (ctx.more = true)
       await before?.()
       await this.replica.files.set(path, value)
-      await this.replica.meta.set(path, { etag: got.etag, rev, synced: rev })
+      await this.replica.meta.set(path, { etag: got.etag, base: noteBase(path, value), rev, synced: rev })
       ctx.pulled = true
     })
   }

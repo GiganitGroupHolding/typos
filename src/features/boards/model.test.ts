@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { boardText, mergeBoards, parseBoard, serializeBoard, type BoardData, type BoardNode } from './model'
+import { boardLinkUrl, boardText, mergeBoards, parseBoard, serializeBoard, type BoardData, type BoardNode } from './model'
 
 const card = (id: string, text: string, x = 0): BoardNode => ({ id, type: 'text', x, y: 0, width: 200, height: 80, text })
 
 describe('файл доски', () => {
+  it('сохраняет форму рамки, подпись ссылки, геометрию и связь при повторном чтении', () => {
+    const nodes = [
+      { id: 'g', type: 'group', x: 0, y: 0, width: 400, height: 300, shape: 'hexagon' },
+      { id: 'old', type: 'group', x: 500, y: 0, width: 400, height: 300 },
+      { id: 'l', type: 'link', x: 20, y: 50, width: 160, height: 96, url: 'https://example.com/', label: 'Читать' },
+    ]
+    const edges = [{ id: 'e', fromNode: 'g', toNode: 'l' }]
+    const { data } = parseBoard(JSON.stringify({ nodes, edges }))
+    const reopened = parseBoard(serializeBoard('b', data)).data
+    expect(reopened.nodes).toMatchObject(nodes)
+    expect(reopened.nodes[1].shape).toBeUndefined()
+    expect(reopened.edges).toMatchObject(edges)
+  })
+
+  it('открывает только действительные ссылки HTTP и HTTPS', () => {
+    expect(boardLinkUrl(' HTTPS://Example.com ')).toBe('https://example.com/')
+    expect(boardLinkUrl('http://localhost:5174/')).toBe('http://localhost:5174/')
+    for (const url of ['javascript:alert(1)', 'file:///C:/Windows', 'data:text/html,test', '//example.com', 'https://']) {
+      expect(boardLinkUrl(url)).toBeUndefined()
+    }
+  })
+
   it('читает доску из Obsidian (JSON Canvas) и пишет её обратно с id', () => {
     const obsidian = JSON.stringify({
       nodes: [

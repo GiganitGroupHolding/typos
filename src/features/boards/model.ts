@@ -1,6 +1,7 @@
 export type BoardNodeType = 'text' | 'file' | 'link' | 'group'
 export type BoardSide = 'top' | 'right' | 'bottom' | 'left'
 export type BoardEnd = 'none' | 'arrow'
+export type BoardFrameShape = 'rectangle' | 'circle' | 'hexagon'
 
 export interface BoardNode {
   id: string
@@ -19,6 +20,7 @@ export interface BoardNode {
   url?: string
 
   label?: string
+  shape?: BoardFrameShape
 }
 
 export interface BoardEdge {
@@ -66,6 +68,13 @@ const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) 
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
 const side = (v: unknown) => (SIDES.includes(v as BoardSide) ? (v as BoardSide) : undefined)
 const end = (v: unknown) => (v === 'none' || v === 'arrow' ? v : undefined)
+const shape = (v: unknown) => (v === 'rectangle' || v === 'circle' || v === 'hexagon' ? v : undefined)
+
+export function boardLinkUrl(value: string): string | undefined {
+  if (!/^https?:\/\//i.test(value.trim())) return
+  const url = URL.parse(value.trim())
+  if (url?.protocol === 'http:' || url?.protocol === 'https:') return url.href
+}
 
 export function parseBoard(text: string | null): { id?: string; data: BoardData } {
   let raw: Raw
@@ -90,9 +99,10 @@ export function parseBoard(text: string | null): { id?: string; data: BoardData 
       height: Math.max(MIN_NODE_H, num(n.height, 60)),
       color: isBoardColor(n.color) ? n.color : undefined,
       text: type === 'text' ? (str(n.text) ?? '') : undefined,
-      file: type === 'file' ? str(n.file) : undefined,
+      file: type === 'file' || type === 'link' ? str(n.file) : undefined,
       url: type === 'link' ? str(n.url) : undefined,
-      label: type === 'group' ? str(n.label) : undefined,
+      label: type === 'group' || type === 'link' ? str(n.label) : undefined,
+      shape: type === 'group' ? shape(n.shape) : undefined,
     })
   }
   const edgeIds = new Set<string>()

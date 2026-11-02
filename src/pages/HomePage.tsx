@@ -51,8 +51,7 @@ export function HomePage() {
 
       {!subjects.length && (
         <div className="mt-8 rounded-3xl border border-dashed px-6 py-14 text-center">
-          <p className="text-[17px] font-semibold">Предметов пока нет</p>
-          <p className="mt-1 text-[14px] text-muted-foreground">Создай первый — на диске появится папка с его названием.</p>
+          <p className="text-[17px] font-semibold">Нет предметов</p>
           <LiquidButton size="xl" className="mt-6 rounded-full font-semibold" onClick={openNewSubject}>
             <FolderPlus /> Новый предмет
           </LiquidButton>

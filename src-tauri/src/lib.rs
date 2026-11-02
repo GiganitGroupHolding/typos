@@ -1,3 +1,4 @@
+mod links;
 mod paths;
 mod vault;
 
@@ -7,6 +8,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .manage(vault::Granted::default())
     .invoke_handler(tauri::generate_handler![
+      links::open_web_link,
       vault::vault_saved,
       vault::vault_pick,
       vault::vault_remember,

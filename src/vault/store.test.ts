@@ -20,6 +20,21 @@ const writeOutside = async (body: string) => {
   await a.writeText(n.path, serializeFrontmatter({ id: n.id, created: n.created, updated: n.updated }, body))
 }
 
+it('объединяет правку пользователя с независимой правкой MCP', async () => {
+  const n = firstNote()
+  const base = '# План\n\nПервый раздел\n\nВторой раздел'
+  await writeOutside(base)
+  await useVault.getState().refresh()
+  useVault.getState().adoptNote(n.id, base)
+  await writeOutside(base.replace('Первый раздел', 'Правка агента'))
+  const saved = await useVault.getState().saveNote(n.id, base.replace('Второй раздел', 'Правка пользователя'))
+  expect(saved).toBe('# План\n\nПравка агента\n\nПравка пользователя')
+  expect(await repo.readNoteBody(a, firstNote().path)).toBe(saved)
+  expect(useVault.getState().noteBase(n.id)).toBe(saved)
+  await useVault.getState().saveNote(n.id, `${saved}\n\nПродолжение`)
+  expect(await repo.readNoteBody(a, firstNote().path)).toBe(`${saved}\n\nПродолжение`)
+})
+
 describe('сохранение конспекта и правки снаружи', () => {
   it('обычные сохранения подряд не считаются конфликтом', async () => {
     const n = firstNote()

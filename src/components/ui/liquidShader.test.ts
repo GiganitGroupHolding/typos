@@ -68,6 +68,15 @@ afterEach(async () => {
 
 const uniforms = () => ((renderer.draw.mock.calls[0][0].children[0] as Mesh).material as ShaderMaterial).uniforms
 
+it.each(['nebula', 'metal'] as const)('объявляет размер массивов в шейдере фона «%s»', async (variant) => {
+  await act(async () => root.render(createElement(InteractiveNebulaShader, { variant })))
+  renderer.loop?.(0)
+  const material = (renderer.draw.mock.calls[0][0].children[0] as Mesh).material as ShaderMaterial
+  const define = material.fragmentShader.match(/^\s*#define\s+MAX\s+(\d+)\s*$/m)
+  expect(define).not.toBeNull()
+  expect(Number(define![1])).toBe(material.uniforms.uSpots.value.length)
+})
+
 it('рисует движение на каждом кадре экрана без ограничения в 30 кадров', async () => {
   await act(async () => root.render(createElement(InteractiveNebulaShader)))
   for (let frame = 0; frame < 12; frame++) renderer.loop?.((frame * 1000) / 120)

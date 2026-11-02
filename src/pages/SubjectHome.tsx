@@ -87,7 +87,7 @@ export function SubjectHome() {
               ))}
             </ul>
           ) : (
-            <Empty text="Первый конспект появится здесь" />
+            <Empty text="Нет конспектов" />
           )}
         </Tile>
 
@@ -126,7 +126,7 @@ export function SubjectHome() {
               </div>
             </>
           ) : (
-            <Empty text="Закрепи формулы, которые нужны всегда" />
+            <Empty text="Нет карточек" />
           )}
         </Tile>
 
@@ -139,10 +139,10 @@ export function SubjectHome() {
           {tools.length ? (
             <div className="flex flex-col items-start gap-3">
               <ToolDock tools={tools} />
-              <p className="text-[13px] text-muted-foreground">Перетащи сюда файл: PDF, презентацию, документ, картинку или HTML.</p>
+              <p className="text-[13px] text-muted-foreground">PDF, презентации, документы, изображения, HTML</p>
             </div>
           ) : (
-            <Empty text={drop.over ? 'Отпусти — добавлю' : 'Перетащи сюда PDF, презентацию, документ, картинку или HTML-тулзу'} />
+            <Empty text={drop.over ? 'Импорт файлов' : 'Нет проектов'} />
           )}
         </Tile>
 
@@ -172,7 +172,7 @@ export function SubjectHome() {
               ))}
             </ul>
           ) : (
-            <Empty text="Доска — полотно для схем, стикеров и картинок: разложить тему и связать понятия стрелками" />
+            <Empty text="Нет досок" />
           )}
         </Tile>
       </motion.div>

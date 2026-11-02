@@ -73,6 +73,12 @@
     @apply text-foreground;
     background: var(--app-bg);
   }
+  html[data-desktop] {
+    user-select: none;
+  }
+  html[data-desktop] :where(input, textarea, [contenteditable='true'], [contenteditable='plaintext-only']) {
+    user-select: text;
+  }
   ::selection {
     background: var(--selection);
   }

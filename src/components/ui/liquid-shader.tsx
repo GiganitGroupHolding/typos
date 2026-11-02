@@ -23,7 +23,7 @@ const vertexShader = `
 `
 
 const fragmentShader = `
-  #define MAX${MAX}
+  #define MAX ${MAX}
   uniform vec2 iResolution;
   uniform vec4 uSpots[MAX];
   uniform vec4 uLook[MAX];
@@ -129,7 +129,7 @@ const fragmentShader = `
 `
 
 const metalShader = `
-  #define MAX${MAX}
+  #define MAX ${MAX}
   uniform vec2 iResolution;
   uniform float iTime;
   uniform vec4 uSpots[MAX];

@@ -289,7 +289,7 @@ export function ListColumn() {
 
       {drop.over && (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-primary px-3 py-2 text-center text-[13px] font-medium text-primary-foreground shadow-float">
-          Отпусти — добавлю
+          Импорт файлов
         </div>
       )}
     </aside>
@@ -301,26 +301,22 @@ function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
   const createBoard = useCreateBoard()
   const content = {
     notes: {
-      title: 'Конспектов пока нет',
-      hint: 'Нажми «Новый конспект» или Alt N',
+      title: 'Нет конспектов',
       action: 'Новый конспект',
       run: () => createNote(subjectId),
     },
     pins: {
-      title: 'Закреп пуст',
-      hint: 'Сюда кладут формулы и определения, которые нужны всегда под рукой',
+      title: 'Нет карточек',
       action: 'Карточка',
       run: () => openPinEditor({ subjectId }),
     },
     tools: {
-      title: 'Проектов нет',
-      hint: 'Перетащи сюда файл: PDF, презентацию, документ, картинку или HTML-тулзу',
+      title: 'Нет проектов',
       action: 'Добавить файл',
       run: () => openToolDialog({ subjectId }),
     },
     boards: {
-      title: 'Досок нет',
-      hint: 'Доска — полотно для схем, стикеров и картинок: разложить тему, связать понятия стрелками',
+      title: 'Нет досок',
       action: 'Новая доска',
       run: () => void createBoard(subjectId),
     },
@@ -328,7 +324,6 @@ function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
   return (
     <li className="px-4 py-10 text-center">
       <p className="text-sm font-medium">{content.title}</p>
-      <p className="mt-1 text-[13px] text-muted-foreground">{content.hint}</p>
       <Button size="sm" variant="outline" className="mt-3" onClick={content.run}>
         <Plus /> {content.action}
       </Button>

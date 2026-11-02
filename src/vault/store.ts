@@ -17,6 +17,7 @@ import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } fro
 import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
 import type { Board, Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
 import { extractExcerpt, extractTitle, sameBody } from './format'
+import { mergeText } from './mergeText'
 import { imagesByName, isMarkdownFile } from '@/lib/files'
 import * as repo from './repo'
 import { emptyMap, mapText, type NoteMap } from '@/editor/map/types'
@@ -53,7 +54,7 @@ interface VaultState extends repo.VaultData {
 
   importNotes: (subjectId: string, files: File[]) => Promise<Note[]>
 
-  saveNote: (id: string, body: string, opts?: { force?: boolean }) => Promise<void>
+  saveNote: (id: string, body: string, opts?: { force?: boolean }) => Promise<string | undefined>
 
   adoptNote: (id: string, body: string) => void
 
@@ -352,12 +353,20 @@ export const useVault = create<VaultState>()((set, get) => {
           if (disk !== null && sameBody(disk, body)) {
             bases.set(id, body)
             if (note.body !== body) replaceNote({ ...note, body, title: extractTitle(body), excerpt: extractExcerpt(body) })
-            return
+            return body
           }
-          if (disk === null || !sameBody(disk, bases.get(id) ?? note.body)) throw new NoteConflictError(disk)
+          const base = bases.get(id) ?? note.body
+          if (disk === null) throw new NoteConflictError(disk)
+          if (!sameBody(disk, base)) {
+            const merged = mergeText(base, body, disk)
+            if (merged === null) throw new NoteConflictError(disk)
+            body = merged
+          }
         }
+        const saved = await repo.saveNote(a, note, body)
         bases.set(id, body)
-        replaceNote(await repo.saveNote(a, note, body))
+        replaceNote(saved)
+        return body
       })
     },
 

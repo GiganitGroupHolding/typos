@@ -1,4 +1,6 @@
-import { ExternalLink, FileText, Link2 } from 'lucide-react'
+import { invoke, isTauri } from '@tauri-apps/api/core'
+import { FileText, Link2 } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 import {
   memo,
   useCallback,
@@ -14,18 +16,22 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { toast } from 'sonner'
-import { clamp, contains, curve, edgePath, facingSides, rectOf, sidePoint, type Rect, type Side } from '@/editor/map/geometry'
+import { clamp, contains, curve, facingSides, rectOf, sidePoint, type Rect, type Side } from '@/editor/map/geometry'
+import { spring } from '@/lib/motion'
 import { errorText } from '@/lib/undo'
 import { cn } from '@/lib/utils'
 import { basename } from '@/storage/VaultAdapter'
 import type { Board } from '@/types'
 import { useVault, vaultFileUrl } from '@/vault/store'
+import { BoardLinkDialog } from './BoardLinkDialog'
 import { BoardText } from './BoardText'
 import { BoardToolbar, SelectionBar, type BoardTool } from './BoardToolbar'
+import { fitFrame, framePath, frameRadius } from './frameGeometry'
 import { textSize } from './layout'
 import {
   boardBounds,
   boardItemId,
+  boardLinkUrl,
   insideGroup,
   mergeBoards,
   MIN_NODE_H,
@@ -33,6 +39,7 @@ import {
   serializeBoard,
   type BoardData,
   type BoardEdge,
+  type BoardFrameShape,
   type BoardNode,
 } from './model'
 
@@ -69,14 +76,15 @@ const preset = (c?: string) => !!c && /^[1-6]$/.test(c)
 
 const lineColor = (c?: string) => (preset(c) ? `var(--board-line-${c})` : c || 'var(--muted-foreground)')
 
-function nodeStyle(n: BoardNode): CSSProperties {
-  if (n.type === 'group') {
-    const line = n.color ? lineColor(n.color) : 'var(--foreground)'
-    return {
-      background: `color-mix(in oklab, ${line} ${n.color ? 9 : 3}%, transparent)`,
-      borderColor: `color-mix(in oklab, ${line} ${n.color ? 55 : 22}%, transparent)`,
-    }
+function framePaint(color?: string) {
+  const line = color ? lineColor(color) : 'var(--foreground)'
+  return {
+    background: `color-mix(in oklab, ${line} ${color ? 9 : 3}%, transparent)`,
+    borderColor: `color-mix(in oklab, ${line} ${color ? 55 : 22}%, transparent)`,
   }
+}
+
+function nodeStyle(n: BoardNode): CSSProperties {
   if (!n.color) return {}
   return preset(n.color)
     ? { background: `var(--board-${n.color})`, borderColor: 'transparent' }
@@ -84,11 +92,28 @@ function nodeStyle(n: BoardNode): CSSProperties {
 }
 
 function edgeGeometry(e: BoardEdge, a: BoardNode, b: BoardNode) {
-  if (!e.fromSide && !e.toSide) return edgePath(rect(a), rect(b))
   const [fa, fb] = facingSides(rect(a), rect(b))
   const from = e.fromSide ?? fa
   const to = e.toSide ?? fb
-  return curve(sidePoint(rect(a), from), from, sidePoint(rect(b), to), to)
+  return curve(nodeAnchor(a, from), from, nodeAnchor(b, to), to)
+}
+
+function nodeAnchor(n: BoardNode, side: Side): Pt {
+  const r = rect(n)
+  if (n.type !== 'group') return sidePoint(r, side)
+  const x = side === 'left' ? -1 : side === 'right' ? 1 : 0
+  const y = side === 'top' ? -1 : side === 'bottom' ? 1 : 0
+  const radius = frameRadius(n.shape, r.w, r.h, x, y)
+  return { x: r.x + r.w / 2 + x * radius, y: r.y + r.h / 2 + y * radius }
+}
+
+function resizeAnchor(n: BoardNode): Pt {
+  if (n.type !== 'group') return { x: n.width, y: n.height }
+  const length = Math.hypot(n.width, n.height)
+  const x = n.width / length
+  const y = n.height / length
+  const r = frameRadius(n.shape, n.width, n.height, x, y)
+  return { x: n.width / 2 + r * x, y: n.height / 2 + r * y }
 }
 
 async function imageSize(file: Blob) {
@@ -114,7 +139,8 @@ function cloneItems(nodes: BoardNode[], edges: BoardEdge[], dx: number, dy: numb
 export function BoardCanvas({ board }: { board: Board }) {
   const root = useRef<HTMLDivElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const [data, setDataState] = useState(board.data)
+  const imageLink = useRef<string | undefined>(undefined)
+  const [{ data, created }, setDataState] = useState<{ data: BoardData; created?: Set<string> }>({ data: board.data })
   const dataRef = useRef(board.data)
   const past = useRef<BoardData[]>([])
   const future = useRef<BoardData[]>([])
@@ -125,6 +151,9 @@ export function BoardCanvas({ board }: { board: Board }) {
   const [sel, setSel] = useState<string[]>([])
   const [selEdge, setSelEdge] = useState<string | null>(null)
   const [editing, setEditing] = useState<Editing>(null)
+  const [linkDialog, setLinkDialog] = useState<{ id: string } | { at: Pt } | null>(null)
+  const linkClicks = useRef<{ id: string; count: number } | null>(null)
+  const reduceMotion = useReducedMotion()
   const [drag, setDragState] = useState<Drag | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const [spaceHeld, setSpaceHeld] = useState(false)
@@ -156,20 +185,20 @@ export function BoardCanvas({ board }: { board: Board }) {
           const cur = dataRef.current
           const merged = cur === sent ? next : mergeBoards(sent, cur, next)
           dataRef.current = merged
-          setDataState(merged)
+          setDataState({ data: merged })
         },
         (e) => toast.error('Доска не сохранилась', { id: 'board-save', description: errorText(e) }),
       )
   }, [boardId])
 
   const commit = useCallback(
-    (next: BoardData, record = true) => {
+    (next: BoardData, record = true, created?: Set<string>) => {
       if (record) {
         past.current = [...past.current.slice(-99), dataRef.current]
         future.current = []
       }
       dataRef.current = next
-      setDataState(next)
+      setDataState({ data: next, created })
       clearTimeout(saveTimer.current)
       saveTimer.current = window.setTimeout(flush, SAVE_DELAY)
     },
@@ -188,7 +217,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       dataRef.current = next
       past.current = []
       future.current = []
-      setDataState(next)
+      setDataState({ data: next })
       const ids = new Set(next.nodes.map((n) => n.id))
       setSel((cur) => cur.filter((id) => ids.has(id)))
     })
@@ -263,9 +292,30 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const addNodes = (nodes: BoardNode[], edges: BoardEdge[] = []) => {
     const m = dataRef.current
-    commit({ nodes: [...m.nodes, ...nodes], edges: [...m.edges, ...edges] })
+    commit({ nodes: [...m.nodes, ...nodes], edges: [...m.edges, ...edges] }, true, new Set(nodes.map((n) => n.id)))
     setSel(nodes.map((n) => n.id))
     setSelEdge(null)
+  }
+
+  const updateNode = (id: string, patch: Partial<Pick<BoardNode, 'shape' | 'url' | 'label' | 'file'>>) => {
+    const m = dataRef.current
+    commit({ ...m, nodes: m.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) })
+  }
+
+  const closeLinkDialog = () => {
+    setLinkDialog(null)
+    requestAnimationFrame(() => root.current?.focus({ preventScroll: true }))
+  }
+
+  const saveLink = (url: string, label: string) => {
+    if (!linkDialog) return
+    if ('id' in linkDialog) updateNode(linkDialog.id, { url, label })
+    else {
+      const { x, y } = linkDialog.at
+      addNodes([{ id: boardItemId(), type: 'link', url, label, width: 160, height: 96, x: Math.round(x - 80), y: Math.round(y - 48) }])
+      setTool('select')
+    }
+    closeLinkDialog()
   }
 
   const create = (kind: 'sticky' | 'text' | 'frame', at: Pt, size?: { width: number; height: number }) => {
@@ -375,9 +425,34 @@ export function BoardCanvas({ board }: { board: Board }) {
     return true
   }
 
+  const saveLinkImage = async (file: File) => {
+    const ext = file.name.match(IMAGE)?.[1].toLowerCase()
+    if (!ext && !file.type.startsWith('image/')) throw new Error('Выбери файл изображения.')
+    const type = ext === 'jpg' ? 'jpeg' : ext === 'svg' ? 'svg+xml' : ext
+    return useVault.getState().saveBoardImage(boardId, type ? file.slice(0, file.size, `image/${type}`) : file)
+  }
+
+  const setLinkImage = async (id: string, file: File) => {
+    try {
+      const path = await saveLinkImage(file)
+      if (node(id)?.type === 'link') updateNode(id, { file: path })
+    } catch (e) {
+      toast.error('Не удалось добавить картинку', { description: errorText(e) })
+    }
+  }
+
   const nodeAt = (all: BoardNode[], p: Pt, except?: string) => {
     const nodes = [...all].reverse().filter((n) => n.id !== except)
-    return nodes.find((n) => n.type !== 'group' && contains(rect(n), p, 6)) ?? nodes.find((n) => n.type === 'group' && contains(rect(n), p))
+    return (
+      nodes.find((n) => n.type !== 'group' && contains(rect(n), p, 6)) ??
+      nodes.find((n) => {
+        if (n.type !== 'group' || !contains(rect(n), p)) return false
+        const x = p.x - n.x - n.width / 2
+        const y = p.y - n.y - n.height / 2
+        const d = Math.hypot(x, y)
+        return !d || d <= frameRadius(n.shape, n.width, n.height, x / d, y / d)
+      })
+    )
   }
 
   const startPan = (e: ReactPointerEvent) => {
@@ -387,7 +462,7 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    if (target.closest('[data-editor]')) return
+    if (linkDialog || target.closest('[data-editor]')) return
     root.current?.focus({ preventScroll: true })
     root.current?.setPointerCapture(e.pointerId)
     if (e.pointerType === 'touch') {
@@ -400,6 +475,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       }
     }
     const nodeEl = target.closest<HTMLElement>('[data-node-id]')
+    if (nodeEl?.dataset.nodeId !== linkClicks.current?.id || !target.closest('[data-link-surface]')) linkClicks.current = null
     const edgeEl = target.closest<Element>('[data-edge-id]')
     const onEmpty = !nodeEl && !edgeEl
     if (
@@ -494,9 +570,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       commit(
         {
           ...m,
-          nodes: m.nodes.map((n) =>
-            d.starts.has(n.id) ? { ...n, x: Math.round(d.starts.get(n.id)!.x + dx), y: Math.round(d.starts.get(n.id)!.y + dy) } : n,
-          ),
+          nodes: m.nodes.map((n) => (d.starts.has(n.id) ? { ...n, x: d.starts.get(n.id)!.x + dx, y: d.starts.get(n.id)!.y + dy } : n)),
         },
         false,
       )
@@ -513,8 +587,14 @@ export function BoardCanvas({ board }: { board: Board }) {
     if (touches.current.size < 2) pinch.current = null
     const d = dragRef.current
     setDrag(null)
-    if (!d) return
     const p = world(e)
+    const click = d?.kind === 'move' && !d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) * viewRef.current.zoom < 3
+    const hit = click && document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-link-surface]')?.closest('[data-node-id]')
+    if (click && hit && hit.getAttribute('data-node-id') === d.id) {
+      const prev = linkClicks.current
+      linkClicks.current = { id: d.id, count: prev?.id === d.id ? prev.count + 1 : 1 }
+    } else linkClicks.current = null
+    if (!d) return
     const m = dataRef.current
 
     if (d.kind === 'move' && !d.moved && !d.shift && sel.length > 1) setSel([d.id])
@@ -528,7 +608,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       }
       const from = node(d.from)
       if (!from) return
-      const start = sidePoint(rect(from), d.side)
+      const start = nodeAnchor(from, d.side)
       if (Math.hypot(p.x - start.x, p.y - start.y) * viewRef.current.zoom < 24) return
 
       const like = from.type === 'text' ? { width: from.width, height: Math.min(from.height, 200), color: from.color } : {}
@@ -555,7 +635,22 @@ export function BoardCanvas({ board }: { board: Board }) {
     const edgeEl = target.closest<Element>('[data-edge-id]')
     if (nodeEl) {
       const n = node(nodeEl.dataset.nodeId!)
-      if (n && n.type !== 'file') setEditing({ kind: 'node', id: n.id })
+      if (n?.type === 'link') {
+        const clicks = linkClicks.current
+        linkClicks.current = null
+        if (target.closest('[data-link-surface]') && clicks?.id === n.id && clicks.count >= 2) {
+          const href = boardLinkUrl(n.url ?? '')
+          if (href && isTauri()) {
+            void invoke('open_web_link', { url: href }).catch((e: unknown) => toast.error(errorText(e)))
+          } else if (href) {
+            const link = document.createElement('a')
+            link.href = href
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.click()
+          }
+        }
+      } else if (n && n.type !== 'file') setEditing({ kind: 'node', id: n.id })
     } else if (edgeEl) setEditing({ kind: 'edge', id: edgeEl.getAttribute('data-edge-id')! })
     else if (tool === 'select') create('sticky', world(e))
   }
@@ -588,15 +683,14 @@ export function BoardCanvas({ board }: { board: Board }) {
       const h = Math.max(n.height, Math.ceil(height ?? 0))
       if (text !== n.text || h !== n.height)
         commit({ ...m, nodes: m.nodes.map((x) => (x.id === n.id ? { ...x, text, height: h } : x)) }, !ed.fresh)
-    } else {
-      const key = n.type === 'group' ? 'label' : 'url'
+    } else if (n.type === 'group') {
       const v = value.trim() || undefined
-      if (n[key] !== v) commit({ ...m, nodes: m.nodes.map((x) => (x.id === n.id ? { ...x, [key]: v } : x)) })
+      if (n.label !== v) updateNode(n.id, { label: v })
     }
   }
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (editing || (e.target as HTMLElement).closest('[data-editor]')) return
+    if (editing || linkDialog || (e.target as HTMLElement).closest('[data-editor]')) return
     const ctrl = e.ctrlKey || e.metaKey
     const stop = () => {
       e.preventDefault()
@@ -631,6 +725,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       stop()
       const n = sel.length === 1 ? node(sel[0]) : undefined
       if (selEdge) setEditing({ kind: 'edge', id: selEdge })
+      else if (n?.type === 'link') setLinkDialog({ id: n.id })
       else if (n && n.type !== 'file') setEditing({ kind: 'node', id: n.id })
     } else if (e.shiftKey && e.code === 'Digit1') {
       stop()
@@ -669,7 +764,10 @@ export function BoardCanvas({ board }: { board: Board }) {
       e.preventDefault()
       const at = pointer.current ?? center()
       const files = [...e.clipboardData.files]
-      if (files.length) return void addImages(files, at)
+      if (files.length) {
+        const target = sel.length === 1 ? node(sel[0]) : undefined
+        return target?.type === 'link' ? void setLinkImage(target.id, files[0]) : void addImages(files, at)
+      }
       const text = e.clipboardData.getData('text/plain')
       if (!text.trim()) return
       try {
@@ -711,6 +809,12 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const onDrop = (e: ReactDragEvent<HTMLDivElement>) => {
     const files = [...e.dataTransfer.files]
+    const link = (e.target as Element).closest('[data-link-surface]')?.closest<HTMLElement>('[data-node-id]')
+    if (link?.dataset.nodeId && files[0]) {
+      e.preventDefault()
+      e.stopPropagation()
+      return void setLinkImage(link.dataset.nodeId, files[0])
+    }
     if (!files.some((f) => f.type.startsWith('image/'))) return
     e.preventDefault()
     e.stopPropagation()
@@ -728,6 +832,15 @@ export function BoardCanvas({ board }: { board: Board }) {
   const grid = 24 * view.zoom * (view.zoom < 0.4 ? 4 : 1)
   const d = drag
   const single = sel.length === 1 ? sel[0] : null
+  const selectedNode = single ? byId.get(single) : undefined
+  const setFrameShape = (shape: BoardFrameShape) => {
+    if (selectedNode?.type !== 'group' || (selectedNode.shape ?? 'rectangle') === shape) return
+    const current = dataRef.current
+    const frame = bounds(selectedNode)
+    const content = boardBounds(current.nodes.filter((n) => n.id !== selectedNode.id && insideGroup(frame, bounds(n))))
+    const fitted = fitFrame(frame, shape, content)
+    commit({ ...current, nodes: current.nodes.map((n) => (n.id === selectedNode.id ? { ...n, ...fitted, shape } : n)) })
+  }
   const editedEdge = editing?.kind === 'edge' ? data.edges.find((x) => x.id === editing.id) : undefined
   const selectedEdge = selEdge ? data.edges.find((x) => x.id === selEdge) : undefined
   const selColors = new Set(sel.map((id) => byId.get(id)?.color))
@@ -746,6 +859,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       onPointerCancel={(e) => {
         touches.current.delete(e.pointerId)
         pinch.current = null
+        linkClicks.current = null
         setDrag(null)
       }}
       onDoubleClick={onDoubleClick}
@@ -774,6 +888,9 @@ export function BoardCanvas({ board }: { board: Board }) {
             <NodeView
               key={n.id}
               node={n}
+              morph={!reduceMotion && d?.kind !== 'resize'}
+              enter={!reduceMotion && !!created?.has(n.id)}
+              lifted={!reduceMotion && d?.kind === 'move' && d.starts.has(n.id)}
               selected={sel.includes(n.id)}
               single={single === n.id}
               tools={tool === 'select'}
@@ -832,7 +949,8 @@ export function BoardCanvas({ board }: { board: Board }) {
               const from = byId.get(d.from)
               if (!from) return null
               const target = nodeAt(data.nodes, d, d.from)
-              const g = target ? edgePath(rect(from), rect(target)) : curve(sidePoint(rect(from), d.side), d.side, d, null)
+              const side = target ? facingSides(rect(from), rect(target))[1] : null
+              const g = curve(nodeAnchor(from, d.side), d.side, target && side ? nodeAnchor(target, side) : d, side)
               return <path d={g.d} fill="none" stroke="var(--highlight)" strokeWidth={2} strokeDasharray="6 5" markerEnd={marker('sel')} />
             })()}
         </svg>
@@ -843,6 +961,8 @@ export function BoardCanvas({ board }: { board: Board }) {
             <NodeView
               key={n.id}
               node={n}
+              enter={!reduceMotion && !!created?.has(n.id)}
+              lifted={!reduceMotion && d?.kind === 'move' && d.starts.has(n.id)}
               selected={sel.includes(n.id)}
               single={single === n.id}
               tools={tool === 'select'}
@@ -896,16 +1016,25 @@ export function BoardCanvas({ board }: { board: Board }) {
               />
             )
           })()}
+        {view.zoom <= 0.35 &&
+          ordered
+            .filter((n) => n.type === 'group')
+            .map((n) => (
+              <svg
+                key={n.id}
+                aria-hidden
+                className="pointer-events-none absolute overflow-visible"
+                style={{ left: n.x, top: n.y, width: n.width, height: n.height }}
+              >
+                <path d={framePath(n.shape, n.width, n.height)} fill="rgb(0 0 0 / 65%)" />
+              </svg>
+            ))}
       </div>
 
       {!data.nodes.length && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6 text-center">
           <div className="max-w-sm text-[14px] text-muted-foreground">
             <p className="text-[17px] font-semibold text-foreground">Пустая доска</p>
-            <p className="mt-2">
-              Двойной щелчок — стикер. Внизу — карточки, рамки и картинки; картинку можно вставить Ctrl V или перетащить.
-            </p>
-            <p className="mt-2">Колесо — прокрутка, Ctrl и колесо — масштаб, пробел — двигать доску.</p>
           </div>
         </div>
       )}
@@ -918,6 +1047,9 @@ export function BoardCanvas({ board }: { board: Board }) {
           onArrows={selectedEdge ? cycleArrows : undefined}
           onFront={selectedEdge ? undefined : toFront}
           onDuplicate={selectedEdge ? undefined : duplicate}
+          frameShape={selectedNode?.type === 'group' ? (selectedNode.shape ?? 'rectangle') : undefined}
+          onFrameShape={setFrameShape}
+          onEditLink={selectedNode?.type === 'link' ? () => setLinkDialog({ id: selectedNode.id }) : undefined}
           onDelete={removeSelection}
         />
       )}
@@ -928,13 +1060,22 @@ export function BoardCanvas({ board }: { board: Board }) {
           setTool(t)
           root.current?.focus({ preventScroll: true })
         }}
-        onImage={() => fileInput.current?.click()}
+        onImage={() => {
+          imageLink.current = selectedNode?.type === 'link' ? selectedNode.id : undefined
+          if (!fileInput.current) return
+          fileInput.current.multiple = !imageLink.current
+          fileInput.current.click()
+        }}
+        onLink={() => setLinkDialog({ at: center() })}
         zoom={view.zoom}
         onZoom={zoomBy}
         onFit={fit}
         onUndo={undo}
         onRedo={redo}
       />
+      {linkDialog && (
+        <BoardLinkDialog node={'id' in linkDialog ? byId.get(linkDialog.id) : undefined} onClose={closeLinkDialog} onSave={saveLink} />
+      )}
       <input
         ref={fileInput}
         type="file"
@@ -944,7 +1085,10 @@ export function BoardCanvas({ board }: { board: Board }) {
         onChange={(e) => {
           const files = [...(e.target.files ?? [])]
           e.target.value = ''
-          void addImages(files, center())
+          const id = imageLink.current
+          imageLink.current = undefined
+          if (id && files[0]) void setLinkImage(id, files[0])
+          else void addImages(files, center())
         }}
       />
     </div>
@@ -960,6 +1104,9 @@ const HANDLE_POS: Record<Side, string> = {
   left: 'left-0 top-1/2',
 }
 const SELECTED: CSSProperties = { outline: 'calc(2px * var(--inv)) solid var(--highlight)', outlineOffset: 'calc(2px * var(--inv))' }
+const POP = { ...spring, damping: 21 }
+const MORPH = { duration: 0.24, ease: 'easeInOut' } as const
+const INSTANT = { duration: 0 }
 
 function useVaultImage(path?: string) {
   const [url, setUrl] = useState<string | null>(null)
@@ -979,6 +1126,9 @@ function useVaultImage(path?: string) {
 
 const NodeView = memo(function NodeView({
   node: n,
+  morph,
+  enter,
+  lifted,
   selected,
   single,
   tools,
@@ -986,6 +1136,9 @@ const NodeView = memo(function NodeView({
   onFinish,
 }: {
   node: BoardNode
+  morph?: boolean
+  enter: boolean
+  lifted: boolean
   selected: boolean
   single: boolean
   tools: boolean
@@ -993,74 +1146,101 @@ const NodeView = memo(function NodeView({
   onFinish: (value: string, height?: number) => void
 }) {
   const group = n.type === 'group'
+  const circle = group && n.shape === 'circle'
+  const diameter = Math.min(n.width, n.height)
+  const link = n.type === 'link'
   const sticky = n.type === 'text' && !!n.color
+  const resize = resizeAnchor(n)
   return (
     <div
       data-node-id={n.id}
-      style={{ left: n.x, top: n.y, width: n.width, height: n.height, ...nodeStyle(n), ...(selected ? SELECTED : {}) }}
-      className={cn(
-        'group/node absolute',
-        group
-          ? 'pointer-events-none rounded-[18px] border-2'
-          : cn('rounded-[12px] border shadow-card', !n.color && 'border-border bg-card', n.type === 'file' && 'overflow-hidden bg-muted'),
-      )}
+      style={{ left: n.x, top: n.y, width: n.width, height: n.height, ...(selected && !group ? SELECTED : {}) }}
+      className={cn('group/node absolute rounded-xl', (group || link) && 'pointer-events-none')}
     >
-      {group ? (
-        <div className="pointer-events-auto absolute bottom-full left-0 mb-[calc(6px*var(--inv))] max-w-full cursor-default">
-          {editing ? (
-            <InlineEditor value={n.label ?? ''} onFinish={onFinish} className="text-[16px] font-semibold" />
-          ) : (
+      <motion.div
+        initial={enter ? { scale: 0.88 } : false}
+        animate={{ scale: lifted ? 1.018 : 1, y: lifted ? -2 : 0 }}
+        transition={lifted ? spring : POP}
+        className={cn(
+          'relative size-full',
+          !group &&
+            !link &&
+            cn('rounded-xl border shadow-card', !n.color && 'border-border bg-card', n.type === 'file' && 'overflow-hidden bg-muted'),
+        )}
+        style={group || link ? undefined : nodeStyle(n)}
+      >
+        {group ? (
+          <>
+            <FrameSurface node={n} selected={selected} morph={morph} />
             <div
-              className="truncate rounded-md px-1 font-semibold text-muted-foreground"
-              style={{ fontSize: 'calc(16px * max(1, var(--inv) * 0.6))' }}
+              className={cn(
+                'pointer-events-auto absolute max-w-full cursor-default',
+                'mb-[calc(6px*var(--inv))]',
+                circle ? 'left-1/2 -translate-x-1/2 text-center' : 'bottom-full left-0',
+              )}
+              style={circle ? { bottom: (n.height + diameter) / 2, width: diameter } : undefined}
             >
-              {n.label || 'Рамка'}
+              {editing ? (
+                <InlineEditor value={n.label ?? ''} onFinish={onFinish} className="text-[16px] font-semibold" />
+              ) : (
+                <div
+                  className="truncate rounded-md px-1 font-semibold text-muted-foreground"
+                  style={{ fontSize: circle ? 'calc(12px * max(1, var(--inv) * 0.65))' : 'calc(16px * max(1, var(--inv) * 0.6))' }}
+                >
+                  {n.label || 'Рамка'}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ) : n.type === 'file' ? (
-        <FileNode path={n.file} />
-      ) : n.type === 'link' ? (
-        editing ? (
-          <TextEditor value={n.url ?? ''} onFinish={onFinish} />
+          </>
+        ) : n.type === 'file' ? (
+          <FileNode path={n.file} />
+        ) : link ? (
+          <LinkNode node={n} />
+        ) : editing ? (
+          <TextEditor value={n.text ?? ''} centered={sticky} onFinish={onFinish} select={editing.fresh} />
         ) : (
-          <LinkNode url={n.url} />
-        )
-      ) : editing ? (
-        <TextEditor value={n.text ?? ''} centered={sticky} onFinish={onFinish} select={editing.fresh} />
-      ) : (
-        <div
-          className={cn(
-            'size-full overflow-hidden px-3.5 py-3 text-[15px] leading-[1.45] break-words',
-            sticky && 'flex flex-col justify-center text-center',
-          )}
-        >
-          <BoardText text={n.text ?? ''} />
-        </div>
-      )}
+          <div
+            className={cn(
+              'size-full overflow-hidden px-3.5 py-3 text-[15px] leading-[1.45] break-words',
+              sticky && 'flex flex-col justify-center text-center',
+            )}
+          >
+            <BoardText text={n.text ?? ''} />
+          </div>
+        )}
+      </motion.div>
 
       {tools && !editing && (
         <div className={cn('pointer-events-none absolute inset-0 opacity-0 group-hover/node:opacity-100', selected && 'opacity-100')}>
-          {SIDES.map((side) => (
-            <span
-              key={side}
-              data-handle={side}
-              role="button"
-              aria-label="Протянуть стрелку"
-              className={cn(
-                'pointer-events-auto absolute size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-[calc(2px*var(--inv))] border-background bg-highlight shadow-card',
-                HANDLE_POS[side],
-              )}
-            />
-          ))}
+          {SIDES.map((side) => {
+            const anchor = group ? nodeAnchor(n, side) : undefined
+            return (
+              <motion.span
+                key={side}
+                initial={false}
+                animate={anchor ? { left: anchor.x - n.x, top: anchor.y - n.y } : undefined}
+                transition={morph ? MORPH : INSTANT}
+                data-handle={side}
+                role="button"
+                aria-label="Протянуть стрелку"
+                className={cn(
+                  'pointer-events-auto absolute size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-[calc(2px*var(--inv))] border-background bg-highlight shadow-card',
+                  !group && HANDLE_POS[side],
+                )}
+              />
+            )
+          })}
         </div>
       )}
       {single && !editing && (
-        <span
+        <motion.span
+          initial={false}
+          animate={{ left: resize.x, top: resize.y }}
+          transition={morph ? MORPH : INSTANT}
           data-resize=""
           role="button"
           aria-label="Изменить размер"
-          className="pointer-events-auto absolute top-full left-full size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize rounded-[calc(3px*var(--inv))] border-[calc(2px*var(--inv))] border-background bg-highlight"
+          className="pointer-events-auto absolute size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize rounded-[calc(3px*var(--inv))] border-[calc(2px*var(--inv))] border-background bg-highlight"
         />
       )}
     </div>
@@ -1078,25 +1258,66 @@ function FileNode({ path }: { path?: string }) {
   )
 }
 
-function LinkNode({ url }: { url?: string }) {
-  const safe = url && /^https?:\/\//i.test(url) ? url : null
+function FrameSurface({ node, selected, morph }: { node: BoardNode; selected: boolean; morph?: boolean }) {
+  const paint = framePaint(node.color)
+  const d = useMemo(() => framePath(node.shape, node.width, node.height), [node.shape, node.width, node.height])
   return (
-    <div className="flex size-full items-center gap-2 px-3.5 py-3 text-[14px]">
-      <Link2 className="size-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1 truncate">{url || 'Ссылка'}</span>
-      {safe && (
-        <a
-          href={safe}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Открыть ссылку"
-          onPointerDown={(e) => e.stopPropagation()}
-          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ExternalLink className="size-3.5" />
-        </a>
-      )}
+    <svg aria-hidden className="absolute inset-0 size-full overflow-visible">
+      <motion.path
+        initial={false}
+        animate={{ d }}
+        transition={morph ? MORPH : INSTANT}
+        fill={paint.background}
+        stroke={selected ? 'var(--highlight)' : paint.borderColor}
+        strokeLinejoin="round"
+        style={{ strokeWidth: selected ? 'calc(2px * var(--inv))' : 2, pointerEvents: 'visiblePainted' }}
+      />
+    </svg>
+  )
+}
+
+function LinkNode({ node }: { node: BoardNode }) {
+  const label = node.label || node.url || 'Ссылка'
+  const image = useVaultImage(node.file)
+  return (
+    <div className="flex size-full flex-col items-center justify-center gap-1.5">
+      <div
+        data-link-surface=""
+        title={node.url}
+        className="liquid liquid-lava pointer-events-auto flex aspect-square min-h-0 max-h-14 shrink items-center justify-center overflow-hidden rounded-full shadow-float"
+        style={{ height: '60%', color: node.color ? lineColor(node.color) : undefined }}
+      >
+        {image ? (
+          <img src={image} alt="" draggable={false} className="pointer-events-none size-full rounded-full object-cover" />
+        ) : (
+          <LinkFavicon url={node.url} />
+        )}
+      </div>
+      <div
+        data-link-surface=""
+        title={label}
+        className="liquid liquid-lava pointer-events-auto max-w-full shrink-0 truncate rounded-full px-3 py-1 text-center text-[14px] font-medium shadow-float"
+      >
+        {label}
+      </div>
     </div>
+  )
+}
+
+function LinkFavicon({ url }: { url?: string }) {
+  const parsed = URL.parse(url ?? '')
+  const icon = parsed?.protocol === 'https:' ? new URL('/favicon.ico', parsed.origin).href : undefined
+  const [failed, setFailed] = useState<string>()
+  if (!icon || failed === icon) return <Link2 aria-hidden className="size-1/2" />
+  return (
+    <img
+      src={icon}
+      alt=""
+      referrerPolicy="no-referrer"
+      draggable={false}
+      onError={() => setFailed(icon)}
+      className="pointer-events-none size-1/2 object-contain"
+    />
   )
 }
 

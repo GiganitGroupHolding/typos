@@ -49,6 +49,30 @@ async function seed() {
   return { subject, note }
 }
 
+it('объединяет независимые правки MCP и редактора без конфликтной копии', async () => {
+  const { subject } = await seed()
+  const base = '# План\n\nПервый раздел\n\nВторой раздел'
+  const note = await repo.createNote(direct(), subject, base)
+  const a = await device('merge')
+  const conflicts: string[] = []
+  a.engine.hooks.onConflict = (_path, copy) => conflicts.push(copy)
+  await repo.saveNote(a, note, base.replace('Второй раздел', 'Правка пользователя'))
+  await repo.saveNote(direct(), note, base.replace('Первый раздел', 'Правка агента'))
+  await a.engine.syncNow()
+  const expected = '# План\n\nПравка агента\n\nПравка пользователя'
+  expect(await repo.readNoteBody(a, note.path)).toBe(expected)
+  expect(parseFrontmatter((await onServer(note.path))!).body).toBe(expected)
+  expect(conflicts).toEqual([])
+  expect(await a.engine.countPending()).toBe(0)
+
+  const fresh = (await repo.loadVault(a)).notes.find((n) => n.id === note.id)!
+  await repo.saveNote(a, fresh, expected.replace('Правка пользователя', 'Ещё правка'))
+  await repo.saveNote(direct(), fresh, expected.replace('Правка агента', 'Ещё от агента'))
+  await a.engine.syncNow()
+  expect(await repo.readNoteBody(a, note.path)).toBe('# План\n\nЕщё от агента\n\nЕщё правка')
+  expect(conflicts).toEqual([])
+})
+
 describe('синхронизация с локальной копией', () => {
   it('первая синхронизация забирает всё, дальше копия открывается без сети', async () => {
     await seed()

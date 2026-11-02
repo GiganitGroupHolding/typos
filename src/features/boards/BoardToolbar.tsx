@@ -2,14 +2,18 @@ import {
   ArrowLeftRight,
   ArrowRight,
   BringToFront,
+  Circle,
   Copy,
   Frame,
   Hand,
+  Hexagon,
   ImagePlus,
+  Link2,
   Minus,
   MousePointer2,
   Redo2,
   Scan,
+  Square,
   StickyNote,
   Trash2,
   Type,
@@ -21,7 +25,7 @@ import {
 import type { ReactNode } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { BOARD_COLOR_LABELS, BOARD_COLORS, type BoardEdge } from './model'
+import { BOARD_COLOR_LABELS, BOARD_COLORS, type BoardEdge, type BoardFrameShape } from './model'
 
 export type BoardTool = 'select' | 'hand' | 'sticky' | 'text' | 'frame'
 
@@ -81,10 +85,17 @@ function IconButton({
 
 const Divider = () => <span aria-hidden className="mx-1 h-5 w-px bg-border" />
 
+const FRAME_SHAPES = [
+  { id: 'rectangle', label: 'Прямоугольник', icon: Square },
+  { id: 'circle', label: 'Круг', icon: Circle },
+  { id: 'hexagon', label: 'Шестиугольник', icon: Hexagon },
+] as const
+
 export function BoardToolbar({
   tool,
   onTool,
   onImage,
+  onLink,
   zoom,
   onZoom,
   onFit,
@@ -94,6 +105,7 @@ export function BoardToolbar({
   tool: BoardTool
   onTool: (t: BoardTool) => void
   onImage: () => void
+  onLink: () => void
   zoom: number
   onZoom: (factor: number | 'reset') => void
   onFit: () => void
@@ -108,8 +120,11 @@ export function BoardToolbar({
             <t.icon />
           </IconButton>
         ))}
-        <IconButton label="Картинка" hint="или вставь Ctrl V" onClick={onImage}>
+        <IconButton label="Картинка" onClick={onImage}>
           <ImagePlus />
+        </IconButton>
+        <IconButton label="Добавить ссылку" onClick={onLink}>
+          <Link2 />
         </IconButton>
         <Divider />
         <IconButton label="Отменить" hint="Ctrl Z" onClick={onUndo}>
@@ -154,6 +169,9 @@ export function SelectionBar({
   onArrows,
   onFront,
   onDuplicate,
+  frameShape,
+  onFrameShape,
+  onEditLink,
   onDelete,
 }: {
   color?: string
@@ -163,6 +181,9 @@ export function SelectionBar({
   onArrows?: () => void
   onFront?: () => void
   onDuplicate?: () => void
+  frameShape?: BoardFrameShape
+  onFrameShape: (shape: BoardFrameShape) => void
+  onEditLink?: () => void
   onDelete: () => void
 }) {
   const ends = edge ? `${edge.fromEnd === 'arrow' ? 'both' : edge.toEnd === 'none' ? 'none' : 'end'}` : null
@@ -203,6 +224,17 @@ export function SelectionBar({
           </Tooltip>
         ))}
         <Divider />
+        {frameShape &&
+          FRAME_SHAPES.map((s) => (
+            <IconButton key={s.id} label={s.label} active={frameShape === s.id} onClick={() => onFrameShape(s.id)}>
+              <s.icon />
+            </IconButton>
+          ))}
+        {onEditLink && (
+          <IconButton label="Редактировать ссылку" hint="Enter" onClick={onEditLink}>
+            <Link2 />
+          </IconButton>
+        )}
         {onArrows && (
           <IconButton label="Концы стрелки" onClick={onArrows}>
             {ends === 'both' ? <ArrowLeftRight /> : ends === 'none' ? <Minus /> : <ArrowRight />}

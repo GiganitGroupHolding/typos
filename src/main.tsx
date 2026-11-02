@@ -1,3 +1,4 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { MotionGlobalConfig } from 'motion/react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -18,6 +19,11 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('noanim')) {
 
 initAccent()
 setupPwa()
+
+if (isTauri()) {
+  document.documentElement.dataset.desktop = ''
+  document.addEventListener('contextmenu', (event) => event.preventDefault())
+}
 
 if (typeof document.startViewTransition === 'function') {
   const start = document.startViewTransition.bind(document)

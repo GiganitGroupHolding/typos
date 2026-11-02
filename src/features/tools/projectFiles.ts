@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { downloadBlob } from '@/lib/download'
 import { errorText } from '@/lib/undo'
 import { basename } from '@/storage/VaultAdapter'
 import type { Tool } from '@/types'
@@ -36,12 +37,7 @@ export async function readProjectBlob(path: string, ext: string): Promise<Blob> 
 
 export async function downloadProjectFile(tool: Tool) {
   try {
-    const url = URL.createObjectURL(await readProjectBlob(tool.path, tool.ext))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = basename(tool.path)
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    downloadBlob(await readProjectBlob(tool.path, tool.ext), basename(tool.path))
   } catch (err) {
     toast.error('Не удалось скачать', { description: errorText(err) })
   }

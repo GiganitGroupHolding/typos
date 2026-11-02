@@ -1,7 +1,7 @@
 import { Placeholder } from '@tiptap/extensions'
 import { TextSelection } from '@tiptap/pm/state'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { BookOpen, Check, Loader2, MoreHorizontal, PenLine, Trash2, Type } from 'lucide-react'
+import { BookOpen, Check, Download, Loader2, MoreHorizontal, PenLine, Trash2, Type } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -21,12 +21,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { openPinEditor } from '@/features/pins/PinEditorDialog'
+import { downloadBlob } from '@/lib/download'
 import { relativeTime } from '@/lib/format'
 import { toastUndo } from '@/lib/undo'
 import { cn } from '@/lib/utils'
-import { dirname, joinPath } from '@/storage/VaultAdapter'
+import { basename, dirname, joinPath } from '@/storage/VaultAdapter'
 import type { Note } from '@/types'
 import { sameBody } from '@/vault/format'
+import { mergeText } from '@/vault/mergeText'
 import { NoteConflictError, useVault, vaultFileUrl } from '@/vault/store'
 import { BlockHandle } from './blocks/BlockHandle'
 import { Folding } from './blocks/folding'
@@ -65,6 +67,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   const formulaRef = useRef<() => void>(() => {})
 
   const conflict = useRef(false)
+  const saving = useRef(0)
 
   const unsaved = useRef('')
 
@@ -122,25 +125,53 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     })
   }, [id, loadFromDisk, navigate, note.subjectId])
 
-  const save = useCallback(async () => {
-    const ed = editorRef.current
-    if (!ed || ed.isDestroyed) return
-    const md = ed.getMarkdown()
+  const save = useCallback(
+    async function saveCurrent() {
+      const ed = editorRef.current
+      if (!ed || ed.isDestroyed) return
+      const md = ed.getMarkdown()
 
-    if (conflict.current) return void (unsaved.current = md)
-    setSaveState('saving')
-    try {
-      await useVault.getState().saveNote(id, md)
-      setSaveState((s) => (s === 'saving' ? 'saved' : s))
-    } catch (e) {
-      if (e instanceof NoteConflictError) {
-        unsaved.current = md
-        return showConflict()
+      if (conflict.current) return void (unsaved.current = md)
+      if (saving.current > 0) {
+        if (timer.current !== null) clearTimeout(timer.current)
+        timer.current = window.setTimeout(() => {
+          timer.current = null
+          void saveCurrent()
+        }, SAVE_DELAY)
+        return
       }
-      setSaveState('error')
-      toast.error('Не удалось сохранить', { description: e instanceof Error ? e.message : String(e) })
-    }
-  }, [id, showConflict])
+      saving.current++
+      setSaveState('saving')
+      try {
+        const saved = await useVault.getState().saveNote(id, md)
+        if (saved !== undefined && saved !== md && !ed.isDestroyed) {
+          const current = ed.getMarkdown()
+          const merged = mergeText(md, current, saved)
+          if (merged === null) return showConflict()
+          loadFromDisk(merged)
+          useVault.getState().adoptNote(id, saved)
+          if (merged !== saved) {
+            setSaveState('dirty')
+            timer.current = window.setTimeout(() => {
+              timer.current = null
+              void saveCurrent()
+            }, SAVE_DELAY)
+          }
+        }
+        setSaveState((s) => (s === 'saving' ? 'saved' : s))
+      } catch (e) {
+        if (e instanceof NoteConflictError) {
+          unsaved.current = md
+          return showConflict()
+        }
+        setSaveState('error')
+        toast.error('Не удалось сохранить', { description: e instanceof Error ? e.message : String(e) })
+      } finally {
+        saving.current--
+      }
+    },
+    [id, showConflict, loadFromDisk],
+  )
 
   const flush = useCallback(() => {
     if (timer.current === null) return
@@ -269,7 +300,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   useEffect(() => useVault.getState().adoptNote(id, openedBody.current), [id])
 
   useEffect(() => {
-    if (!editor || conflict.current || timer.current !== null) return
+    if (!editor || conflict.current || saving.current > 0 || timer.current !== null) return
     const base = useVault.getState().noteBase(id)
     if (base === undefined || sameBody(base, note.body)) return
     loadFromDisk(note.body)
@@ -433,6 +464,15 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <DropdownMenuItem
+                onSelect={() => {
+                  const ed = editorRef.current
+                  const markdown = ed && !ed.isDestroyed ? ed.getMarkdown() : note.body
+                  downloadBlob(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }), basename(note.path))
+                }}
+              >
+                <Download /> Скачать Markdown
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={remove}>
                 <Trash2 /> Удалить конспект

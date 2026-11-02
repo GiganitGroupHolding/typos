@@ -52,6 +52,62 @@ async function openNote() {
   return (host.querySelector('.tiptap') as HTMLElement & { editor: Editor }).editor
 }
 
+it('показывает объединённый текст после независимых правок MCP и пользователя', async () => {
+  const note = useVault.getState().notes[0]
+  const base = '# План\n\nПервый раздел\n\nВторой раздел'
+  const write = (body: string) =>
+    adapter.writeText(note.path, serializeFrontmatter({ id: note.id, created: note.created, updated: note.updated }, body))
+  await write(base)
+  await useVault.getState().refresh()
+  const editor = await openNote()
+  await write(base.replace('Первый раздел', 'Правка агента'))
+  await act(async () => {
+    editor.commands.insertContentAt(editor.state.doc.content.size - 1, ' — правка пользователя')
+  })
+  await act(async () => vi.advanceTimersByTimeAsync(600))
+  expect(editor.getMarkdown()).toContain('Правка агента')
+  expect(editor.getMarkdown()).toContain('Второй раздел — правка пользователя')
+  const saved = useVault.getState().notes.find((n) => n.id === note.id)!
+  expect(await repo.readNoteBody(adapter, saved.path)).toBe(editor.getMarkdown())
+})
+
+it('не теряет ввод во время медленного сохранения со слиянием', async () => {
+  const note = useVault.getState().notes[0]
+  const base = '# План\n\nПервый раздел\n\nВторой раздел'
+  const write = (body: string) =>
+    adapter.writeText(note.path, serializeFrontmatter({ id: note.id, created: note.created, updated: note.updated }, body))
+  await write(base)
+  await useVault.getState().refresh()
+  const editor = await openNote()
+  await write(base.replace('Первый раздел', 'Правка агента'))
+  let release = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const read = adapter.readText.bind(adapter)
+  vi.spyOn(adapter, 'readText').mockImplementationOnce(async (path) => {
+    const text = await read(path)
+    await gate
+    return text
+  })
+  await act(async () => {
+    editor.commands.insertContentAt(editor.state.doc.content.size - 1, ' — моя правка')
+  })
+  await act(async () => vi.advanceTimersByTimeAsync(500))
+  await act(async () => {
+    editor.commands.insertContentAt(editor.state.doc.content.size - 1, ' и продолжение')
+  })
+  await act(async () => vi.advanceTimersByTimeAsync(500))
+  await act(async () => {
+    release()
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(editor.getMarkdown()).toContain('Правка агента')
+  expect(editor.getMarkdown()).toContain('Второй раздел — моя правка и продолжение')
+  const saved = useVault.getState().notes.find((n) => n.id === note.id)!
+  expect(await repo.readNoteBody(adapter, saved.path)).toBe(editor.getMarkdown())
+})
+
 it('открытие, выделение и режим чтения не меняют файл или дату конспекта', async () => {
   const note = useVault.getState().notes[0]
   const original = await adapter.readText(note.path)
