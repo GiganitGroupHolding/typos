@@ -8,6 +8,7 @@ import { useLiquidLens } from "@/components/ui/LiquidLens"
 import { BoardPreview } from "@/features/boards/BoardPreview"
 import { pickAndImportNotes } from "@/features/import/importFiles"
 import { useFileDrop } from "@/features/import/useFileDrop"
+import { ExportMarkdownButton } from "@/features/notes/ExportMarkdownButton"
 import { PinBody } from "@/features/pins/PinCard"
 import { openPinEditor } from "@/features/pins/PinEditorDialog"
 import { SubjectActions } from "@/features/subjects/SubjectActions"
@@ -68,11 +69,11 @@ export function SubjectHome() {
           {notes.length ? (
             <ul className="-mx-2">
               {notes.map((n) => (
-                <li key={n.id}>
+                <li key={n.id} className="flex items-center gap-1">
                   <Link
                     to={`/s/${subject.id}/n/${n.id}`}
                     viewTransition
-                    className="group flex items-start gap-3 rounded-xl px-2 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    className="group flex min-w-0 flex-1 items-start gap-3 rounded-xl px-2 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[15px] font-semibold">{n.title || "Без названия"}</div>
@@ -80,6 +81,7 @@ export function SubjectHome() {
                     </div>
                     <span className="shrink-0 pt-0.5 text-[12px] text-muted-foreground tabular-nums">{relativeTime(n.updated)}</span>
                   </Link>
+                  <ExportMarkdownButton note={n} />
                 </li>
               ))}
             </ul>

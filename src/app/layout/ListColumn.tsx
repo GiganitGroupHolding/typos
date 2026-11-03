@@ -17,6 +17,7 @@ import { BoardActions } from "@/features/boards/BoardActions"
 import { boardText } from "@/features/boards/model"
 import { pickAndImportNotes } from "@/features/import/importFiles"
 import { useFileDrop } from "@/features/import/useFileDrop"
+import { ExportMarkdownButton } from "@/features/notes/ExportMarkdownButton"
 import { PinActions } from "@/features/pins/PinActions"
 import { openPinEditor } from "@/features/pins/PinEditorDialog"
 import { tabOfPath } from "@/features/subjects/tabs"
@@ -182,12 +183,12 @@ export function ListColumn() {
       >
         {tab === "notes" &&
           notes.map((n) => (
-            <motion.li key={n.id} variants={listItem}>
+            <motion.li key={n.id} variants={listItem} className="flex items-center gap-1">
               <Link
                 to={`/s/${subject.id}/n/${n.id}`}
                 viewTransition
                 data-active={noteId === n.id || undefined}
-                className="block rounded-lg px-3 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
+                className="min-w-0 flex-1 rounded-lg px-3 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
               >
                 <div className={cn("truncate text-[14px] font-semibold", !n.title && "text-muted-foreground")}>
                   {n.title || "Без названия"}
@@ -197,6 +198,7 @@ export function ListColumn() {
                   <span className="truncate">{n.excerpt || "Нет текста"}</span>
                 </div>
               </Link>
+              <ExportMarkdownButton note={n} />
             </motion.li>
           ))}
 

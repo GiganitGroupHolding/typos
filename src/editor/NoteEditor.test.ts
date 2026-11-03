@@ -52,6 +52,26 @@ async function openNote() {
   return (host.querySelector(".tiptap") as HTMLElement & { editor: Editor }).editor
 }
 
+it("открывает список шрифтов вне области прокрутки меню и применяет выбранный шрифт", async () => {
+  await openNote()
+  const initial = useUi.getState().noteFont
+  try {
+    const trigger = host.querySelector('[aria-label="Действия с конспектом"]')!
+    await act(async () => trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })))
+    const menu = document.querySelector('[data-slot="dropdown-menu-content"]')!
+    const fonts = menu.querySelector('[data-slot="dropdown-menu-sub-trigger"]')!
+    await act(async () => fonts.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })))
+    const submenu = document.querySelector('[data-slot="dropdown-menu-sub-content"]')!
+    expect(menu.contains(submenu)).toBe(false)
+    const target = initial === "serif" ? "Inter" : "PT Serif"
+    const item = [...submenu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find((el) => el.textContent === target)!
+    await act(async () => item.click())
+    expect(useUi.getState().noteFont).toBe(target === "Inter" ? "inter" : "serif")
+  } finally {
+    await act(async () => useUi.getState().setNoteFont(initial))
+  }
+})
+
 it("показывает объединённый текст после независимых правок MCP и пользователя", async () => {
   const note = useVault.getState().notes[0]
   const base = "# План\n\nПервый раздел\n\nВторой раздел"

@@ -42,6 +42,13 @@ export function fitFrame(frame: Bounds, shape: BoardFrameShape, content: Bounds 
   return { x: cx - width / 2, y: cy - height / 2, width, height }
 }
 
+export function frameContainsPoint(frame: Bounds, shape: BoardFrameShape | undefined, px: number, py: number): boolean {
+  const x = px - frame.x - frame.width / 2
+  const y = py - frame.y - frame.height / 2
+  const distance = Math.hypot(x, y)
+  return distance === 0 || distance <= frameRadius(shape, frame.width, frame.height, x / distance, y / distance)
+}
+
 export function framePath(shape: BoardFrameShape | undefined, w: number, h: number) {
   const a = w / 2
   const b = h / 2

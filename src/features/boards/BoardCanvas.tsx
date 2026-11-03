@@ -26,7 +26,7 @@ import { useVault, vaultFileUrl } from "@/vault/store"
 import { BoardLinkDialog } from "./BoardLinkDialog"
 import { BoardText } from "./BoardText"
 import { BoardToolbar, SelectionBar, type BoardTool } from "./BoardToolbar"
-import { fitFrame, framePath, frameRadius } from "./frameGeometry"
+import { fitFrame, frameContainsPoint, framePath, frameRadius } from "./frameGeometry"
 import { textSize } from "./layout"
 import {
   boardBounds,
@@ -72,6 +72,8 @@ const NEW: Record<"sticky" | "text" | "frame", Omit<BoardNode, "id" | "x" | "y">
 
 const rect = (n: BoardNode): Rect => ({ x: n.x, y: n.y, w: n.width, h: n.height })
 const bounds = (n: BoardNode) => ({ x: n.x, y: n.y, width: n.width, height: n.height })
+const inFrame = (frame: BoardNode, node: BoardNode) =>
+  frame.id !== node.id && frameContainsPoint(bounds(frame), frame.shape, node.x + node.width / 2, node.y + node.height / 2)
 const preset = (c?: string) => !!c && /^[1-6]$/.test(c)
 
 const lineColor = (c?: string) => (preset(c) ? `var(--board-line-${c})` : c || "var(--muted-foreground)")
@@ -510,8 +512,7 @@ export function BoardCanvas({ board }: { board: Board }) {
         const s = node(sid)
         if (!s) continue
         starts.set(sid, { x: s.x, y: s.y })
-        if (s.type === "group")
-          for (const c of dataRef.current.nodes) if (c.id !== sid && insideGroup(bounds(s), bounds(c))) starts.set(c.id, { x: c.x, y: c.y })
+        if (s.type === "group") for (const c of dataRef.current.nodes) if (inFrame(s, c)) starts.set(c.id, { x: c.x, y: c.y })
       }
       return setDrag({ kind: "move", id, sx: p.x, sy: p.y, starts, moved: false, shift: e.shiftKey })
     }
@@ -837,7 +838,7 @@ export function BoardCanvas({ board }: { board: Board }) {
     if (selectedNode?.type !== "group" || (selectedNode.shape ?? "rectangle") === shape) return
     const current = dataRef.current
     const frame = bounds(selectedNode)
-    const content = boardBounds(current.nodes.filter((n) => n.id !== selectedNode.id && insideGroup(frame, bounds(n))))
+    const content = boardBounds(current.nodes.filter((n) => inFrame(selectedNode, n)))
     const fitted = fitFrame(frame, shape, content)
     commit({ ...current, nodes: current.nodes.map((n) => (n.id === selectedNode.id ? { ...n, ...fitted, shape } : n)) })
   }
@@ -889,6 +890,7 @@ export function BoardCanvas({ board }: { board: Board }) {
               key={n.id}
               node={n}
               morph={!reduceMotion && d?.kind !== "resize"}
+              overview={view.zoom <= 0.35}
               enter={!reduceMotion && !!created?.has(n.id)}
               lifted={!reduceMotion && d?.kind === "move" && d.starts.has(n.id)}
               selected={sel.includes(n.id)}
@@ -1019,16 +1021,7 @@ export function BoardCanvas({ board }: { board: Board }) {
         {view.zoom <= 0.35 &&
           ordered
             .filter((n) => n.type === "group")
-            .map((n) => (
-              <svg
-                key={n.id}
-                aria-hidden
-                className="pointer-events-none absolute overflow-visible"
-                style={{ left: n.x, top: n.y, width: n.width, height: n.height }}
-              >
-                <path d={framePath(n.shape, n.width, n.height)} fill="rgb(0 0 0 / 65%)" />
-              </svg>
-            ))}
+            .map((n) => <FrameOverview key={n.id} node={n} morph={!reduceMotion && d?.kind !== "resize"} />)}
       </div>
 
       {!data.nodes.length && (
@@ -1127,6 +1120,7 @@ function useVaultImage(path?: string) {
 const NodeView = memo(function NodeView({
   node: n,
   morph,
+  overview,
   enter,
   lifted,
   selected,
@@ -1137,6 +1131,7 @@ const NodeView = memo(function NodeView({
 }: {
   node: BoardNode
   morph?: boolean
+  overview?: boolean
   enter: boolean
   lifted: boolean
   selected: boolean
@@ -1146,8 +1141,9 @@ const NodeView = memo(function NodeView({
   onFinish: (value: string, height?: number) => void
 }) {
   const group = n.type === "group"
-  const circle = group && n.shape === "circle"
-  const diameter = Math.min(n.width, n.height)
+  const centeredTitle = group && (n.shape === "circle" || n.shape === "hexagon")
+  const titleBottom = centeredTitle ? n.y + n.height - nodeAnchor(n, "top").y : n.height
+  const titleWidth = centeredTitle ? nodeAnchor(n, "right").x - nodeAnchor(n, "left").x : n.width
   const link = n.type === "link"
   const sticky = n.type === "text" && !!n.color
   const resize = resizeAnchor(n)
@@ -1172,25 +1168,27 @@ const NodeView = memo(function NodeView({
         {group ? (
           <>
             <FrameSurface node={n} selected={selected} morph={morph} />
-            <div
-              className={cn(
-                "pointer-events-auto absolute max-w-full cursor-default",
-                "mb-[calc(6px*var(--inv))]",
-                circle ? "left-1/2 -translate-x-1/2 text-center" : "bottom-full left-0",
-              )}
-              style={circle ? { bottom: (n.height + diameter) / 2, width: diameter } : undefined}
-            >
-              {editing ? (
-                <InlineEditor value={n.label ?? ""} onFinish={onFinish} className="text-[16px] font-semibold" />
-              ) : (
-                <div
-                  className="truncate rounded-md px-1 font-semibold text-muted-foreground"
-                  style={{ fontSize: circle ? "calc(12px * max(1, var(--inv) * 0.65))" : "calc(16px * max(1, var(--inv) * 0.6))" }}
-                >
-                  {n.label || "Рамка"}
-                </div>
-              )}
-            </div>
+            {(!overview || editing) && (
+              <div
+                className={cn(
+                  "pointer-events-auto absolute max-w-full cursor-default",
+                  "mb-[calc(6px*var(--inv))]",
+                  centeredTitle ? "left-1/2 -translate-x-1/2 text-center" : "left-0",
+                )}
+                style={{ bottom: titleBottom, maxWidth: titleWidth, width: centeredTitle ? titleWidth : undefined }}
+              >
+                {editing ? (
+                  <InlineEditor value={n.label ?? ""} onFinish={onFinish} className="text-[16px] font-semibold" />
+                ) : (
+                  <div
+                    className="truncate rounded-md px-1 font-semibold text-muted-foreground"
+                    style={{ fontSize: centeredTitle ? "calc(12px * max(1, var(--inv) * 0.65))" : "calc(16px * max(1, var(--inv) * 0.6))" }}
+                  >
+                    {n.label || "Рамка"}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         ) : n.type === "file" ? (
           <FileNode path={n.file} />
@@ -1254,6 +1252,36 @@ function FileNode({ path }: { path?: string }) {
     <div className="flex size-full items-center justify-center gap-2 p-3 text-[14px] text-muted-foreground">
       <FileText className="size-4 shrink-0" />
       <span className="truncate">{path ? basename(path) : "Файл"}</span>
+    </div>
+  )
+}
+
+function FrameOverview({ node: n, morph }: { node: BoardNode; morph: boolean }) {
+  const width = nodeAnchor(n, "right").x - nodeAnchor(n, "left").x
+  const height = nodeAnchor(n, "bottom").y - nodeAnchor(n, "top").y
+  return (
+    <div
+      data-frame-overview={n.id}
+      className="pointer-events-none absolute grid place-items-center"
+      style={{ left: n.x, top: n.y, width: n.width, height: n.height }}
+    >
+      <svg aria-hidden className="absolute inset-0 size-full overflow-visible">
+        <motion.path
+          initial={false}
+          animate={{ d: framePath(n.shape, n.width, n.height) }}
+          transition={morph ? MORPH : INSTANT}
+          fill={n.color ? lineColor(n.color) : "var(--muted-foreground)"}
+        />
+      </svg>
+      <span
+        className="relative truncate px-1 font-semibold text-white [text-shadow:0_1px_3px_#000]"
+        style={{
+          maxWidth: width * 0.75,
+          fontSize: `min(${Math.min(width, height) / 4}px, calc(14px * var(--inv)))`,
+        }}
+      >
+        {n.label || "Рамка"}
+      </span>
     </div>
   )
 }

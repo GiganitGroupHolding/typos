@@ -1,7 +1,7 @@
 import { Placeholder } from "@tiptap/extensions"
 import { TextSelection } from "@tiptap/pm/state"
 import { EditorContent, useEditor, type Editor } from "@tiptap/react"
-import { BookOpen, Check, Download, Loader2, MoreHorizontal, PenLine, Trash2, Type } from "lucide-react"
+import { BookOpen, Check, Loader2, MoreHorizontal, PenLine, Trash2, Type } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
@@ -23,13 +23,13 @@ import {
 import { BlockHandle } from "@/editor/blocks/BlockHandle"
 import { Folding } from "@/editor/blocks/folding"
 import { NoteCanvas } from "@/editor/map/NoteCanvas"
+import { ExportMarkdownButton } from "@/features/notes/ExportMarkdownButton"
 import { openPinEditor } from "@/features/pins/PinEditorDialog"
-import { downloadBlob } from "@/lib/download"
 import { errorText } from "@/lib/errors"
 import { relativeTime } from "@/lib/format"
 import { toastUndo } from "@/lib/undo"
 import { cn } from "@/lib/utils"
-import { basename, dirname, joinPath } from "@/storage/VaultAdapter"
+import { dirname, joinPath } from "@/storage/VaultAdapter"
 import type { Note } from "@/types"
 import { sameBody } from "@/vault/format"
 import { mergeText } from "@/vault/mergeText"
@@ -440,6 +440,13 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
           ) : (
             <SaveIndicator state={saveState} />
           )}
+          <ExportMarkdownButton
+            note={note}
+            getMarkdown={() => {
+              const ed = editorRef.current
+              return ed && !ed.isDestroyed ? ed.getMarkdown() : note.body
+            }}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label="Действия с конспектом">
@@ -462,15 +469,6 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuItem
-                onSelect={() => {
-                  const ed = editorRef.current
-                  const markdown = ed && !ed.isDestroyed ? ed.getMarkdown() : note.body
-                  downloadBlob(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), basename(note.path))
-                }}
-              >
-                <Download /> Скачать Markdown
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={remove}>
                 <Trash2 /> Удалить конспект

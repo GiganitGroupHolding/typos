@@ -34,10 +34,16 @@ afterEach(async () => {
   Reflect.deleteProperty(document, "elementFromPoint")
 })
 
-async function openBoard(shape?: BoardFrameShape) {
-  const frame: BoardNode = { id: "frame", type: "group", x: 100, y: 200, width: 600, height: 140, shape, label: "Раздел" }
+async function openBoard(shape?: BoardFrameShape, extra: BoardNode[] = []) {
+  const frame: BoardNode = { id: "frame", type: "group", x: 100, y: 200, width: 600, height: 140, shape, color: "6", label: "Раздел" }
   const card: BoardNode = { id: "card", type: "text", x: 110, y: 210, width: 580, height: 120, text: "Содержимое" }
-  const board: Board = { id: "board", subjectId: "subject", path: "board.md", name: "Доска", data: { nodes: [frame, card], edges: [] } }
+  const board: Board = {
+    id: "board",
+    subjectId: "subject",
+    path: "board.md",
+    name: "Доска",
+    data: { nodes: [frame, card, ...extra], edges: [] },
+  }
   await act(async () => root.render(createElement(TooltipProvider, null, createElement(BoardCanvas, { board }))))
   return { frame, card }
 }
@@ -57,24 +63,45 @@ it("помещает маленький заголовок над окружно
   expect(label.firstElementChild!.getAttribute("style")).toContain("12px")
 })
 
+it("размещает заголовок по центру над верхней гранью шестиугольника", async () => {
+  const { frame } = await openBoard("hexagon")
+  const label = host.querySelector('[data-node-id="frame"] .text-center') as HTMLElement
+  const top = frameRadius("hexagon", frame.width, frame.height, 0, -1)
+  expect(parseFloat(label.style.bottom)).toBeCloseTo(frame.height / 2 + top)
+  expect(label.textContent).toBe("Раздел")
+})
+
 it.each<BoardFrameShape | undefined>([undefined, "rectangle", "circle", "hexagon"])(
   "при отдалении накрывает содержимое рамки %s затемнением и убирает его при приближении",
   async (shape) => {
     await openBoard(shape)
-    const overlays = () => host.querySelectorAll('path[fill="rgb(0 0 0 / 65%)"]')
+    const overlays = () => host.querySelectorAll("[data-frame-overview]")
     expect(overlays()).toHaveLength(0)
     for (let i = 0; i < 6; i++) await click("Уменьшить масштаб")
     expect(overlays()).toHaveLength(1)
     const card = host.querySelector('[data-node-id="card"]')!
     expect(card.compareDocumentPosition(overlays()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(overlays()[0].parentElement!.classList.contains("pointer-events-none")).toBe(true)
+    expect(overlays()[0].classList.contains("pointer-events-none")).toBe(true)
+    expect(overlays()[0].querySelector("path")?.getAttribute("fill")).toBe("var(--board-line-6)")
+    expect(overlays()[0].textContent).toBe("Раздел")
+    expect(host.querySelector('[data-node-id="frame"] .truncate')).toBeNull()
     for (let i = 0; i < 6; i++) await click("Увеличить масштаб")
     expect(overlays()).toHaveLength(0)
   },
 )
 
 it("сохраняет размеры новой формы со всем содержимым и отменяет смену формы целиком", async () => {
-  const { frame, card } = await openBoard()
+  const link: BoardNode = {
+    id: "link",
+    type: "link",
+    x: 45,
+    y: 205,
+    width: 160,
+    height: 96,
+    url: "https://github.com",
+    label: "Репозиторий",
+  }
+  const { frame, card } = await openBoard(undefined, [link])
   const canvas = host.firstElementChild as HTMLElement
   canvas.setPointerCapture = vi.fn()
   await act(async () => {
@@ -87,15 +114,17 @@ it("сохраняет размеры новой формы со всем сод
   const fitted = saved.nodes.find((n) => n.id === frame.id)!
   expect(fitted.shape).toBe("circle")
   expect(saved.nodes.find((n) => n.id === card.id)).toEqual(card)
-  for (const x of [card.x, card.x + card.width]) {
-    for (const y of [card.y, card.y + card.height]) {
-      const dx = x - fitted.x - fitted.width / 2
-      const dy = y - fitted.y - fitted.height / 2
-      const distance = Math.hypot(dx, dy)
-      expect(frameRadius(fitted.shape, fitted.width, fitted.height, dx / distance, dy / distance)).toBeGreaterThan(distance)
+  expect(saved.nodes.find((n) => n.id === link.id)).toEqual(link)
+  for (const item of [card, link])
+    for (const x of [item.x, item.x + item.width]) {
+      for (const y of [item.y, item.y + item.height]) {
+        const dx = x - fitted.x - fitted.width / 2
+        const dy = y - fitted.y - fitted.height / 2
+        const distance = Math.hypot(dx, dy)
+        expect(frameRadius(fitted.shape, fitted.width, fitted.height, dx / distance, dy / distance)).toBeGreaterThan(distance)
+      }
     }
-  }
   await click("Отменить")
   await act(async () => vi.advanceTimersByTimeAsync(600))
-  expect(vi.mocked(useVault.getState().saveBoard).mock.calls.at(-1)![1].nodes).toEqual([frame, card])
+  expect(vi.mocked(useVault.getState().saveBoard).mock.calls.at(-1)![1].nodes).toEqual([frame, card, link])
 })
