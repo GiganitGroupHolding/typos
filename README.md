@@ -4,7 +4,8 @@
 
 # TYPOS
 
-Offline study notes for Windows and the browser. Notes are Markdown files, organized by subject. The interface is in Russian.
+We couldn't find cool, simple and good looking Apple-like notes for windows.
+So we made TYPOS - offline study notes for Windows and the browser. Notes are Markdown files, organized by subject. Create folders, render your files(HTML, pics, pptx, pdf) and pin important things. 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/note-dark.webp">
@@ -18,6 +19,7 @@ Offline study notes for Windows and the browser. Notes are Markdown files, organ
 - Boards with text, formulas, images and arrows. Saved as JSON Canvas files.
 - PDFs, presentations, documents and sandboxed HTML tools.
 - Search across subjects.
+- MCP connection to work with AI agents.
 - Offline editing and optional sync through a storage server.
 - Trash with 30-day recovery.
 
