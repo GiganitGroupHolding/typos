@@ -50,7 +50,7 @@ export function PinActions({ pin, siblings, className }: { pin: Pin; siblings: P
           <Pencil /> Изменить
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openWindow("pin", pin.id)}>
-          <Maximize2 /> В окне поверх
+          <Maximize2 /> В отдельном окне
         </DropdownMenuItem>
         <DropdownMenuItem disabled={index <= 0} onSelect={() => move(-1)}>
           <ArrowUp /> Выше

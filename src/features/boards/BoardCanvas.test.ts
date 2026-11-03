@@ -63,12 +63,12 @@ it.each<BoardFrameShape | undefined>([undefined, "rectangle", "circle", "hexagon
     await openBoard(shape)
     const overlays = () => host.querySelectorAll('path[fill="rgb(0 0 0 / 65%)"]')
     expect(overlays()).toHaveLength(0)
-    for (let i = 0; i < 6; i++) await click("Мельче")
+    for (let i = 0; i < 6; i++) await click("Уменьшить масштаб")
     expect(overlays()).toHaveLength(1)
     const card = host.querySelector('[data-node-id="card"]')!
     expect(card.compareDocumentPosition(overlays()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(overlays()[0].parentElement!.classList.contains("pointer-events-none")).toBe(true)
-    for (let i = 0; i < 6; i++) await click("Крупнее")
+    for (let i = 0; i < 6; i++) await click("Увеличить масштаб")
     expect(overlays()).toHaveLength(0)
   },
 )

@@ -1,6 +1,7 @@
-import { Keyboard, Pin, Trash2 } from "lucide-react"
+import { Pin, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/Button"
+import { Kbd } from "@/components/ui/Kbd"
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/Popover"
 import { Tex } from "@/lib/Tex"
 import { cn } from "@/lib/utils"
@@ -142,13 +143,8 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
               }}
             >
               <div ref={fieldHost} className="min-h-12 rounded-lg border bg-background px-2 py-1.5" />
-              {mlState === "loading" && <p className="mt-2 text-[12px] text-muted-foreground">Загружаю визуальный редактор…</p>}
-              {mlState === "error" && <p className="mt-2 text-[12px] text-destructive">Не удалось загрузить MathLive. Пиши в LaTeX.</p>}
-              {mlState === "ready" && (
-                <p className="mt-2 flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                  <Keyboard className="size-3.5" /> Дроби: «/», степень: «^», индекс: «_», корень: «sqrt»
-                </p>
-              )}
+              {mlState === "loading" && <p className="mt-2 text-[12px] text-muted-foreground">Загрузка…</p>}
+              {mlState === "error" && <p className="mt-2 text-[12px] text-destructive">Редактор недоступен. Используй LaTeX.</p>}
             </div>
           ) : (
             <textarea
@@ -175,7 +171,9 @@ export function MathPopover({ edit, onSave, onDelete, onCancel, onPin }: Props) 
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
-          <span className="flex-1 text-[11px] text-muted-foreground">{block ? "Ctrl Enter" : "Enter"} — готово · Esc — отмена</span>
+          <span className="flex-1 text-[11px] text-muted-foreground">
+            <Kbd>{block ? "Ctrl Enter" : "Enter"}</Kbd>
+          </span>
           {onPin && (
             <Button
               size="sm"

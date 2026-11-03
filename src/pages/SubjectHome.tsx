@@ -44,10 +44,7 @@ export function SubjectHome() {
         <SubjectBadge subject={subject} size="lg" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[32px] leading-tight font-bold tracking-tight">{subject.name}</h1>
-          <p className="text-[15px] text-muted-foreground">
-            {plural(notes.length, ["конспект", "конспекта", "конспектов"])} ·{" "}
-            {notes[0] ? `изменён ${relativeTime(notes[0].updated)}` : "пока пусто"}
-          </p>
+          <p className="text-[15px] text-muted-foreground">{plural(notes.length, ["конспект", "конспекта", "конспектов"])}</p>
         </div>
         <SubjectActions subject={subject} />
       </header>
@@ -139,7 +136,6 @@ export function SubjectHome() {
           {tools.length ? (
             <div className="flex flex-col items-start gap-3">
               <ToolDock tools={tools} />
-              <p className="text-[13px] text-muted-foreground">PDF, презентации, документы, изображения, HTML</p>
             </div>
           ) : (
             <Empty text={drop.over ? "Импорт файлов" : "Нет проектов"} />

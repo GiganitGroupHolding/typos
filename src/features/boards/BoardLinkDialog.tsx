@@ -38,7 +38,7 @@ export function BoardLinkDialog({
             URL
             <Input name="url" placeholder="https://…" inputMode="url" defaultValue={node?.url} aria-invalid={error} />
           </label>
-          {error && <p role="alert">Введите действительный адрес, начинающийся с http:// или https://.</p>}
+          {error && <p role="alert">Введи адрес, который начинается с http:// или https://.</p>}
           <label className="grid gap-1">
             Подпись
             <Input name="label" defaultValue={node?.label} />

@@ -15,7 +15,7 @@ export async function openVault(
     return i >= 0 ? argv[i + 1] : undefined
   }
   const [vault, link] = [flag("--vault"), flag("--link")]
-  if (vault && link) throw new Error("Укажи что-то одно: --vault (папка) или --link (сервер хранения)")
+  if (vault && link) throw new Error("Укажи только --vault или --link")
   const folder = vault ?? (link ? undefined : env.STUDYNOTES_VAULT)
   const remote = link ?? (vault ? undefined : env.STUDYNOTES_LINK)
 
@@ -24,8 +24,7 @@ export async function openVault(
     try {
       const info = await checkRemote(config)
 
-      if (info.device === "default")
-        warn("MCP работает с общим ключом default. Заведи ему отдельный на сервере хранения: link mcp — и подключи MCP по новой ссылке")
+      if (info.device === "default") warn("MCP использует общий ключ default. Отдельный ключ: link mcp.")
       return new DavAdapter({ ...config, name: info.name || config.name, vaultId: info.vaultId })
     } catch (e) {
       if (!(e instanceof RemoteError) || e.status !== undefined) throw e
@@ -33,7 +32,7 @@ export async function openVault(
       return new DavAdapter(config)
     }
   }
-  if (!folder) throw new Error('Укажи хранилище: --vault "C:\\…\\conspects" (папка) или --link "typos://…" (сервер хранения)')
+  if (!folder) throw new Error('Укажи хранилище: --vault "C:\\…\\conspects" или --link "typos://…"')
   if (!existsSync(folder) || !statSync(folder).isDirectory()) throw new Error(`Нет такой папки: ${folder}`)
   return new NodeFsAdapter(folder)
 }

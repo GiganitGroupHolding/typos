@@ -42,9 +42,8 @@ export class RemoteAdapter {
     const { url } = this.config
     const host = new URL(url).host
     if (blockedAsMixedContent(this.config)) return MIXED_CONTENT_HINT
-    if (url.startsWith("https:"))
-      return `Сервер ${host} не отвечает. Если у него самоподписанный сертификат — открой ${url} в браузере один раз и прими его.`
-    return `Сервер ${host} не отвечает. Проверь, что он запущен и это устройство в той же сети.`
+    if (url.startsWith("https:")) return `Сервер ${host} не отвечает. Проверь сертификат в браузере: ${url}.`
+    return `Сервер ${host} не отвечает. Проверь подключение.`
   }
 
   protected async request(url: string, init: RequestInit & { headers?: Record<string, string> } = {}, ok: number[] = []) {
@@ -57,7 +56,7 @@ export class RemoteAdapter {
     }
     if (res.status === 401) {
       this.onProblem?.("unauthorized")
-      throw new RemoteError("Сервер не принял ключ — устройство отключили или выдали ему новый. Получи ссылку командой link.", 401)
+      throw new RemoteError("Ключ недействителен. Получи новую ссылку командой link.", 401)
     }
     if (!res.ok && !ok.includes(res.status)) {
       const text = await res.text().catch(() => "")
@@ -70,7 +69,7 @@ export class RemoteAdapter {
     const res = await this.request(`${this.config.url}/.typos/info`, {}, [404])
     const info = res.status === 404 ? null : ((await res.json().catch(() => null)) as RemoteInfo | null)
 
-    if (!info?.protocol?.startsWith("typos-storage/")) throw new RemoteError("По этому адресу не сервер хранения TYPOS", res.status)
+    if (!info?.protocol?.startsWith("typos-storage/")) throw new RemoteError("По этому адресу нет сервера хранения TYPOS", res.status)
     return info
   }
 
@@ -149,8 +148,7 @@ export class RemoteAdapter {
 
 export async function checkRemote(config: RemoteConfig): Promise<RemoteInfo> {
   const info = await new RemoteAdapter(config).info()
-  if (config.vaultId && info.vaultId !== config.vaultId)
-    throw new Error("Ссылка от другого хранилища: сервер по этому адресу уже не тот. Возьми свежую ссылку командой link.")
+  if (config.vaultId && info.vaultId !== config.vaultId) throw new Error("Ссылка от другого хранилища. Получи новую командой link.")
   return info
 }
 

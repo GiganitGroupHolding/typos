@@ -25,7 +25,7 @@ $typosLink = Read-Host 'TYPOS connection link' -AsSecureString
 Remove-Variable typosLink
 ```
 
-The link is entered without echoing and is not included in command history.
+The prompt hides the link as you type and keeps it out of command history.
 On macOS or Linux, use Bash:
 
 ```bash
@@ -44,8 +44,8 @@ can be revoked without disconnecting your other devices.
 
 ### Files on this computer
 
-By default the plugin can't read files on your computer: `file` arguments and
-`add_project_file` are hidden. To let it read lectures, PDFs or images from
+By default, the plugin cannot read files on your computer. The `file` arguments
+and `add_project_file` tool are hidden. To let it read lectures, PDFs or images from
 specific folders, list them after the repository path when you run setup:
 
 ```bash
@@ -89,9 +89,9 @@ appearing in new chats.
 
 ## Verify and update
 
-Ask TYPOS to list your subjects. Use a disposable note to test writing. If the
-storage server is unavailable, tools report a connection error; installing the
-plugin does not make the server available offline.
+Ask TYPOS to list your subjects. Create a temporary note to test writing. If the
+storage server is unavailable, tools report a connection error; the server must
+be reachable for the plugin to work.
 
 After updating the TYPOS checkout, run `npm ci` and restart Codex. Changes to the
 plugin package also require updating the installed copy through the plugin

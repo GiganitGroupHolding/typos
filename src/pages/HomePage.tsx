@@ -6,10 +6,9 @@ import { LiquidButton } from "@/components/ui/LiquidButton"
 import { LensBox, useLiquidLens } from "@/components/ui/LiquidLens"
 import { openNewSubject } from "@/features/subjects/NewSubjectDialog"
 import { SubjectBadge, subjectStyle } from "@/features/subjects/visuals"
-import { greeting, plural, relativeTime } from "@/lib/format"
+import { plural, relativeTime } from "@/lib/format"
 import { listItem, listParent, pageEnter } from "@/lib/motion"
 import { cn } from "@/lib/utils"
-import { storageLabel } from "@/storage/VaultAdapter"
 import type { Subject } from "@/types"
 import { useRecentNotes, useSubjects } from "@/vault/hooks"
 import { useVault } from "@/vault/store"
@@ -38,17 +37,12 @@ export function HomePage() {
   const subjects = useSubjects()
   const recent = useRecentNotes(5)
   const notes = useVault((s) => s.notes)
-  const pins = useVault((s) => s.pins)
-  const tools = useVault((s) => s.tools)
   const count = (xs: { subjectId: string }[], id: string) => xs.filter((x) => x.subjectId === id).length
   const subjectOf = (id: string) => subjects.find((s) => s.id === id)
-  const storage = useVault((s) => s.adapter)
   return (
     <motion.div {...pageEnter} className="mx-auto w-full max-w-5xl px-6 py-10 md:px-10">
-      <h1 className="text-[32px] leading-tight font-bold tracking-tight">{greeting()}</h1>
-      <p className="mt-1 text-[15px] text-muted-foreground">
-        {plural(subjects.length, ["предмет", "предмета", "предметов"])} · {storageLabel(storage) ?? "хранятся в браузере"}
-      </p>
+      <h1 className="text-[32px] leading-tight font-bold tracking-tight">Предметы</h1>
+      <p className="mt-1 text-[15px] text-muted-foreground">{plural(subjects.length, ["предмет", "предмета", "предметов"])}</p>
 
       {!subjects.length && (
         <div className="mt-8 rounded-3xl border border-dashed px-6 py-14 text-center">
@@ -71,8 +65,7 @@ export function HomePage() {
               <SubjectBadge subject={s} size="lg" />
               <div className="mt-4 text-[17px] font-semibold tracking-tight">{s.name}</div>
               <div className="mt-1 text-[13px] text-muted-foreground">
-                {plural(count(notes, s.id), ["конспект", "конспекта", "конспектов"])} · {count(pins, s.id)} в закрепе ·{" "}
-                {plural(count(tools, s.id), ["проект", "проекта", "проектов"])}
+                {plural(count(notes, s.id), ["конспект", "конспекта", "конспектов"])}
               </div>
               <div
                 aria-hidden

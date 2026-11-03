@@ -96,12 +96,14 @@ function ToolbarButton(props: HTMLMotionProps<"button">) {
 function Btn({
   icon: Icon,
   label,
+  shortcut,
   active,
   onClick,
   className,
 }: {
   icon: LucideIcon
   label: string
+  shortcut?: string
   active?: boolean
   onClick: () => void
   className?: string
@@ -109,7 +111,7 @@ function Btn({
   return (
     <ToolbarButton
       type="button"
-      title={label}
+      title={shortcut ? `${label}\n${shortcut}` : label}
       aria-label={label}
       aria-pressed={active}
       onMouseDown={keep}
@@ -235,25 +237,38 @@ export function BubbleToolbar({
             {s.block !== "code" && (
               <>
                 <Sep />
-                <Btn icon={Bold} label="Жирный · Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
-                <Btn icon={Italic} label="Курсив · Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
-                <Btn icon={Underline} label="Подчёркнутый · Ctrl U" active={s.underline} onClick={() => c().toggleUnderline().run()} />
-                <Btn icon={Strikethrough} label="Зачёркнутый · Ctrl Shift S" active={s.strike} onClick={() => c().toggleStrike().run()} />
-                <Btn icon={Code} label="Код · Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
+                <Btn icon={Bold} label="Жирный" shortcut="Ctrl B" active={s.bold} onClick={() => c().toggleBold().run()} />
+                <Btn icon={Italic} label="Курсив" shortcut="Ctrl I" active={s.italic} onClick={() => c().toggleItalic().run()} />
+                <Btn
+                  icon={Underline}
+                  label="Подчёркнутый"
+                  shortcut="Ctrl U"
+                  active={s.underline}
+                  onClick={() => c().toggleUnderline().run()}
+                />
+                <Btn
+                  icon={Strikethrough}
+                  label="Зачёркнутый"
+                  shortcut="Ctrl Shift S"
+                  active={s.strike}
+                  onClick={() => c().toggleStrike().run()}
+                />
+                <Btn icon={Code} label="Код" shortcut="Ctrl E" active={s.code} onClick={() => c().toggleCode().run()} />
                 <Sep />
                 <Btn
                   icon={Link2}
-                  label="Ссылка · Ctrl K"
+                  label="Ссылка"
+                  shortcut="Ctrl K"
                   active={s.link || panel === "link"}
                   onClick={() => {
                     setUrl(s.href)
                     toggle("link")
                   }}
                 />
-                <Btn icon={Radical} label="В формулу · Ctrl Shift E" onClick={onFormula} />
+                <Btn icon={Radical} label="В формулу" shortcut="Ctrl Shift E" onClick={onFormula} />
                 <ToolbarButton
                   type="button"
-                  title="Цвет · Ctrl Shift H — последний"
+                  title="Цвет текста и фона"
                   aria-label="Цвет текста и фона"
                   aria-expanded={panel === "color"}
                   onMouseDown={keep}
@@ -346,7 +361,6 @@ export function BubbleToolbar({
                     <mark className="rounded px-1" style={{ background: "var(--hl-default)", color: "inherit" }}>
                       Маркер
                     </mark>{" "}
-                    <span className="text-muted-foreground">· ==текст==</span>
                   </button>
                 </div>
               )}

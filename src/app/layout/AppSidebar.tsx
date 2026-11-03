@@ -121,12 +121,9 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <Link to="/welcome">
                 {storage?.kind === "remote" ? <Server /> : <FolderOpen />}
-                <span className="truncate">{upperFirst(storageLabel(storage) ?? "в браузере · подключить папку")}</span>
+                <span className="truncate">{upperFirst(storageLabel(storage) ?? "Хранилище браузера")}</span>
                 {storage?.kind === "remote" && pending > 0 && (
-                  <span
-                    className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums"
-                    title="Правки, которые ещё не ушли на сервер"
-                  >
+                  <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums" title="Ожидают отправки">
                     ↑{pending}
                   </span>
                 )}

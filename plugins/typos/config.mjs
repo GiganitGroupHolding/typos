@@ -13,18 +13,18 @@ export async function validateConfig(value) {
     const link = new URL(value.link.replace(/^typos:\/\//i, "http://"))
     if (!link.host || !link.searchParams.get("k")) throw new Error()
   } catch {
-    throw new Error("Ссылка TYPOS повреждена — скопируй её целиком")
+    throw new Error("Ссылка TYPOS повреждена. Скопируй её целиком.")
   }
 
   const files = value.files ?? []
   if (!Array.isArray(files) || !files.every((f) => typeof f === "string" && path.isAbsolute(f)))
-    throw new Error("Папки для файлов (files) — список абсолютных путей")
+    throw new Error("В files укажи список абсолютных путей к папкам")
   try {
     await access(path.join(value.repo, "mcp/server.ts"))
     await access(path.join(value.repo, "mcp/tsconfig.json"))
     await access(path.join(value.repo, "node_modules/tsx/dist/cli.mjs"))
   } catch {
-    throw new Error("Не найдены MCP или зависимости — проверь папку TYPOS и выполни в ней npm ci")
+    throw new Error("Не найдены MCP или зависимости. Выполни npm ci в папке TYPOS.")
   }
   return { repo: value.repo, link: value.link.trim(), ...(files.length ? { files } : {}) }
 }

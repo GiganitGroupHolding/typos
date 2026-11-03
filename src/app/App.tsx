@@ -61,7 +61,7 @@ function VaultGate({ children }: { children: ReactNode }) {
       <div role="alert" className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-[17px] font-semibold">Не удалось открыть конспекты</p>
         <p className="max-w-md text-sm text-muted-foreground">{error}</p>
-        <Button onClick={() => void init()}>Попробовать снова</Button>
+        <Button onClick={() => void init()}>Повторить</Button>
         {remote && (
           <Button variant="ghost" onClick={() => void switchToBrowser()}>
             Открыть хранилище браузера
@@ -83,9 +83,7 @@ function PermissionScreen() {
       <div className="w-full max-w-sm rounded-3xl border bg-card p-8 text-center shadow-float">
         <FolderOpen className="mx-auto size-10 text-highlight" />
         <h1 className="mt-4 text-[20px] font-bold tracking-tight">Открыть папку «{folder}»?</h1>
-        <p className="mt-2 text-[14px] text-muted-foreground">
-          Браузер спрашивает разрешение при каждом запуске. Выбери «Разрешить при каждом посещении» — и вопрос исчезнет.
-        </p>
+        <p className="mt-2 text-[14px] text-muted-foreground">Разреши браузеру доступ к папке.</p>
         <div className="mt-6 flex flex-col gap-2">
           <Button size="lg" autoFocus onClick={() => void grantAccess()}>
             Разрешить доступ

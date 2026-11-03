@@ -77,11 +77,11 @@ describe("ссылка подключения", () => {
 
   it("подписывает адреса: localhost всегда первым", () => {
     const all = connectionTargets({ port: 8787, host: "0.0.0.0", tls: false })
-    expect(all[0]).toEqual({ label: expect.stringMatching(/этом же компьютере/), base: "http://localhost:8787" })
+    expect(all[0]).toEqual({ label: expect.stringMatching(/Этот компьютер/), base: "http://localhost:8787" })
     expect(connectionTargets({ port: 8787, host: "127.0.0.1", tls: true })).toEqual([
       { label: expect.stringMatching(/localhost/), base: "https://localhost:8787" },
     ])
-    expect(connectionTargets({ port: 8787, host: "192.168.1.10", tls: false })[0].label).toMatch(/локальной сети/)
+    expect(connectionTargets({ port: 8787, host: "192.168.1.10", tls: false })[0].label).toMatch(/Локальная сеть/)
     expect(connectionTargets({ port: 8787, host: "0.0.0.0", tls: false, publicUrl: "https://notes.example.com" })).toHaveLength(1)
   })
 

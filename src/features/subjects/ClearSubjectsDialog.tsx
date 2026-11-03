@@ -28,7 +28,7 @@ export function ClearSubjectsDialog() {
       navigate("/")
       toastUndo("Все предметы в корзине", undo)
     } catch (e) {
-      toast.error("Не получилось", { description: errorText(e) })
+      toast.error("Не удалось удалить предметы", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -40,14 +40,13 @@ export function ClearSubjectsDialog() {
         <DialogHeader>
           <DialogTitle>Удалить все предметы?</DialogTitle>
           <DialogDescription>
-            {plural(subjects.length, ["предмет", "предмета", "предметов"])} со всеми конспектами, закрепом и проектами уйдут в корзину. Их
-            можно вернуть в течение 30 дней.
+            {plural(subjects.length, ["предмет", "предмета", "предметов"])} со всем содержимым попадут в корзину на 30 дней.
           </DialogDescription>
         </DialogHeader>
         <ul className="max-h-40 space-y-1 overflow-y-auto text-[14px]">
           {subjects.map((s) => (
             <li key={s.id} className="truncate text-muted-foreground">
-              · {s.name}
+              {s.name}
             </li>
           ))}
         </ul>

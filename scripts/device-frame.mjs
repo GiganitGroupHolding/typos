@@ -65,7 +65,7 @@ while (stack.length) {
 const sw = maxX - minX + 1
 const sh = maxY - minY + 1
 if (sw < W * 0.5 || sh < H * 0.5 || minX === 0 || minY === 0) {
-  console.error(`Экран не нашёлся (${sw}×${sh} из ${W}×${H}). Нужна рамка, где экран — прозрачный или однотонный.`)
+  console.error(`Не удалось найти экран (${sw}×${sh} из ${W}×${H}). Используй рамку с прозрачным или однотонным экраном.`)
   process.exit(1)
 }
 

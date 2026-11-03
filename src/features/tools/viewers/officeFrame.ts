@@ -50,7 +50,7 @@ async function render() {
       const w = Math.min(Math.max(width - 32, 320), 1600)
       const previewer = init(root, { width: w, mode: "list" })
       const pptx = (await previewer.preview(await tidyPptx(current.data.slice(0)))) as { slides?: unknown[] }
-      if (!pptx.slides?.length) throw new Error("В презентации не нашлось слайдов, которые получается показать.")
+      if (!pptx.slides?.length) throw new Error("Не удалось показать ни один слайд презентации.")
       post({ type: "ready", pages: pptx.slides.length })
     }
 

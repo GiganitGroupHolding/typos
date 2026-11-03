@@ -23,7 +23,7 @@ export function useDesktopZoom() {
             applied = requested
           } catch (error) {
             if (stopped) return
-            toast.error("Не удалось изменить масштаб. Попробуй ещё раз.", {
+            toast.error("Не удалось изменить масштаб", {
               description: errorText(error),
             })
             if (useUi.getState().desktopZoom === requested) useUi.getState().setDesktopZoom(applied)

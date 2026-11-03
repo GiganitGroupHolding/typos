@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import type { ReactNode } from "react"
+import { Kbd } from "@/components/ui/Kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
 import { cn } from "@/lib/utils"
 import { BOARD_COLOR_LABELS, BOARD_COLORS, type BoardEdge, type BoardFrameShape } from "./model"
@@ -31,7 +32,7 @@ export type BoardTool = "select" | "hand" | "sticky" | "text" | "frame"
 
 const TOOLS: { id: BoardTool; label: string; key: string; icon: LucideIcon }[] = [
   { id: "select", label: "Выбор", key: "V", icon: MousePointer2 },
-  { id: "hand", label: "Рука — двигать доску", key: "H или пробел", icon: Hand },
+  { id: "hand", label: "Перемещение", key: "H / Пробел", icon: Hand },
   { id: "sticky", label: "Стикер", key: "S", icon: StickyNote },
   { id: "text", label: "Карточка с текстом", key: "T", icon: Type },
   { id: "frame", label: "Рамка", key: "F", icon: Frame },
@@ -78,7 +79,10 @@ function IconButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{hint ? `${label} · ${hint}` : label}</TooltipContent>
+      <TooltipContent className="flex items-center gap-2">
+        {label}
+        {hint && <Kbd>{hint}</Kbd>}
+      </TooltipContent>
     </Tooltip>
   )
 }
@@ -134,7 +138,7 @@ export function BoardToolbar({
           <Redo2 />
         </IconButton>
         <Divider />
-        <IconButton label="Мельче" hint="Ctrl и колесо" onClick={() => onZoom(1 / 1.25)}>
+        <IconButton label="Уменьшить масштаб" hint="Ctrl и колесо" onClick={() => onZoom(1 / 1.25)}>
           <ZoomOut />
         </IconButton>
         <Tooltip>
@@ -147,9 +151,11 @@ export function BoardToolbar({
               {Math.round(zoom * 100)}%
             </button>
           </TooltipTrigger>
-          <TooltipContent>Масштаб 100% · Shift 0</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">
+            Масштаб 100% <Kbd>Shift 0</Kbd>
+          </TooltipContent>
         </Tooltip>
-        <IconButton label="Крупнее" hint="Ctrl и колесо" onClick={() => onZoom(1.25)}>
+        <IconButton label="Увеличить масштаб" hint="Ctrl и колесо" onClick={() => onZoom(1.25)}>
           <ZoomIn />
         </IconButton>
         <IconButton label="Показать всё" hint="Shift 1" onClick={onFit}>

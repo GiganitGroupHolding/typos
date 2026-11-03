@@ -152,7 +152,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           if (mine !== version) return
           const err = document.createElement("div")
           err.className = "diagram-error"
-          err.textContent = `Схема не рисуется: ${String((e as Error)?.message ?? e).split("\n")[0]}`
+          err.textContent = `Не удалось построить схему: ${String((e as Error)?.message ?? e).split("\n")[0]}`
           view.replaceChildren(err)
           failed = true
         }

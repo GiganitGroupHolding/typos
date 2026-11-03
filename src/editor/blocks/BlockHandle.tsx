@@ -346,8 +346,8 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
           </button>
           <button
             type="button"
-            aria-label="Перетащить блок (щелчок — выделить)"
-            title="Перетащить · щелчок — выделить"
+            aria-label="Перетащить блок"
+            title="Перетащить блок"
             onPointerDown={onGripDown}
             onPointerMove={onGripMove}
             onPointerUp={finish}

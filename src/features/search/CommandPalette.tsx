@@ -134,7 +134,7 @@ export function CommandPalette() {
     { id: "theme", label: "Сменить тему", keywords: "тёмная светлая", icon: Moon, run: () => ui().cycleTheme() },
     { id: "trash", label: "Корзина", keywords: "удалённые восстановить", icon: Trash2, run: () => navigate("/trash") },
     { id: "clear", label: "Удалить все предметы…", keywords: "очистить начать заново", icon: Eraser, run: openClearSubjects },
-    { id: "storage", label: "Папка с учёбой", keywords: "хранилище диск", icon: FolderOpen, run: () => navigate("/welcome") },
+    { id: "storage", label: "Хранилище", keywords: "хранилище диск", icon: FolderOpen, run: () => navigate("/welcome") },
   ]
   const q = normalize(deferred.trim())
   const shownActions = q ? actions.filter((a) => normalize(`${a.label} ${a.keywords}`).includes(q)) : actions
@@ -159,17 +159,11 @@ export function CommandPalette() {
   }
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={setOpen}
-      title="Поиск и команды"
-      description="Поиск по тексту всех конспектов, закрепа, проектов и досок"
-      className="sm:max-w-xl"
-    >
+    <CommandDialog open={open} onOpenChange={setOpen} title="Поиск и команды" description="Поиск по хранилищу" className="sm:max-w-xl">
       <Command shouldFilter={false} className="rounded-none!">
-        <CommandInput value={query} onValueChange={setQuery} placeholder="Найти в конспектах, формулах, проектах…" />
+        <CommandInput value={query} onValueChange={setQuery} placeholder="Поиск" />
         <CommandList className="thin-scrollbar max-h-[min(60vh,460px)]">
-          <CommandEmpty>Ничего не нашлось{q.length > 0 && q.length < 3 ? " — попробуй слово подлиннее" : ""}</CommandEmpty>
+          <CommandEmpty>Ничего не найдено</CommandEmpty>
 
           {!q && recent.length > 0 && (
             <CommandGroup heading="Недавние">

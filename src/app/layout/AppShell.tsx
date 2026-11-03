@@ -50,8 +50,8 @@ function useServerSync() {
     adapter.start({
       onChanged: () => void useVault.getState().refresh(),
       onConflict: (path, copy) =>
-        toast.warning("Файл правили в двух местах", {
-          description: `«${basename(path)}» изменили и здесь, и на другом устройстве, пока не было связи. Обе версии сохранены, вторая — «${basename(copy)}».`,
+        toast.warning("Файл изменён на двух устройствах", {
+          description: `Обе версии «${basename(path)}» сохранены. Копия: «${basename(copy)}».`,
           duration: 15_000,
         }),
       onReconnected: () => toast.success("Связь с сервером восстановлена", { id: "connection" }),

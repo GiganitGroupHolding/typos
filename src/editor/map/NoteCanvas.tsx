@@ -821,10 +821,7 @@ function MapHint() {
       )}
     >
       {lens.extras}
-      <span>
-        <b className="font-semibold text-foreground">Карта</b> · протяни по пустому месту — блок · точка на краю — стрелка · двойной щелчок
-        — текст · Delete · Ctrl+Z · Esc — выйти
-      </span>
+      <span>Потяни по фону, чтобы добавить блок. Esc для выхода.</span>
     </div>
   )
 }

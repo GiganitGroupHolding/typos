@@ -17,6 +17,7 @@ import {
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "motion/react"
 import { useRef } from "react"
 import { useUi } from "@/app/store"
+import { Kbd } from "@/components/ui/Kbd"
 import { useLiquidLens } from "@/components/ui/LiquidLens"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
 import { cn } from "@/lib/utils"
@@ -62,9 +63,9 @@ function DockButton({ item, mouseY }: { item: Item; mouseY: MotionValue<number> 
           <Icon className="size-[18px]" strokeWidth={1.9} />
         </motion.button>
       </TooltipTrigger>
-      <TooltipContent side="left" sideOffset={12}>
+      <TooltipContent side="left" sideOffset={12} className="flex items-center gap-2">
         {item.label}
-        {item.key ? ` · ${item.key}` : ""}
+        {item.key && <Kbd>{item.key}</Kbd>}
       </TooltipContent>
     </Tooltip>
   )
@@ -133,7 +134,7 @@ export function SideToolbar({
     [
       {
         icon: Workflow,
-        label: mapMode ? "Выйти из карты" : "Мини-карта: блоки и стрелки",
+        label: mapMode ? "Выйти из карты" : "Карта",
         key: mapMode ? "Esc" : undefined,
         active: mapMode,
         run: () => {

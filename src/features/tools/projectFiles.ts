@@ -31,7 +31,7 @@ const MIME: Record<string, string> = {
 
 export async function readProjectBlob(path: string, ext: string): Promise<Blob> {
   const blob = await useVault.getState().adapter?.readBlob(path)
-  if (!blob) throw new Error("Файла нет на месте: возможно, его переместили или удалили в проводнике")
+  if (!blob) throw new Error("Файл не найден.")
   return blob.slice(0, blob.size, MIME[ext] ?? (blob.type || "application/octet-stream"))
 }
 

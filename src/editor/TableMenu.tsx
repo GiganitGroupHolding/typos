@@ -84,7 +84,7 @@ export function TableMenu({ editor }: { editor: Editor }) {
         <Sep />
         <button
           type="button"
-          title="Первая строка — шапка"
+          title="Строка заголовков"
           aria-label="Шапка таблицы"
           aria-pressed={header}
           onMouseDown={keep}

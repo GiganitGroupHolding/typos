@@ -1,5 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core"
-import { ArrowLeft, FolderDown, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from "lucide-react"
+import { ArrowLeft, FolderDown, FolderOpen, Loader2, MonitorSmartphone, Server, TriangleAlert } from "lucide-react"
 import { motion } from "motion/react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router"
@@ -62,11 +62,11 @@ export function WelcomePage() {
       const res = await connectFolder(migrate && !!browserNotes)
       if (!res) return
       toast.success("Папка подключена", {
-        description: res.copied ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.` : "Конспекты теперь сохраняются на диск.",
+        description: res.copied ? `Скопировано файлов: ${res.copied}` : undefined,
       })
       navigate("/")
     } catch (e) {
-      toast.error("Не получилось подключить папку", { description: errorText(e) })
+      toast.error("Не удалось подключить папку", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -89,9 +89,7 @@ export function WelcomePage() {
     try {
       const res = await connectRemote(config, migrate && ((inBrowser && !!browserNotes) || (inFolder && !!folderNotes)))
       toast.success("Сервер подключён", {
-        description: res.copied
-          ? `Перенесено файлов: ${res.copied}. ${inFolder ? "В папке всё осталось как было." : "В браузере осталась копия."}`
-          : "Конспекты теперь сохраняются на сервер.",
+        description: res.copied ? `Скопировано файлов: ${res.copied}` : undefined,
       })
       setLink("")
       navigate("/")
@@ -108,9 +106,11 @@ export function WelcomePage() {
     try {
       const res = await copyToFolder()
       if (!res) return
-      toast.success(`Скопировано в папку «${res.folder}»`, { description: `Файлов: ${res.copied}. Работа по-прежнему идёт с сервером.` })
+      toast.success(`Скопировано в папку «${res.folder}»`, {
+        description: `Скопировано файлов: ${res.copied}`,
+      })
     } catch (e) {
-      toast.error("Не получилось скопировать в папку", { description: errorText(e) })
+      toast.error("Не удалось скопировать в папку", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -120,12 +120,10 @@ export function WelcomePage() {
     setBusy(true)
     try {
       await switchToBrowser()
-      toast(inRemote ? "Сервер отключён" : "Папка отключена", {
-        description: `${inRemote ? "Файлы на сервере" : "Файлы в папке"} остались на месте. Открыто хранилище браузера.`,
-      })
+      toast(inRemote ? "Сервер отключён" : "Папка отключена")
       navigate("/")
     } catch (e) {
-      toast.error("Не получилось отключить", { description: errorText(e) })
+      toast.error("Не удалось отключить", { description: errorText(e) })
     } finally {
       setBusy(false)
       setConfirmDisconnect(false)
@@ -156,11 +154,8 @@ export function WelcomePage() {
             К
           </motion.span>
           <motion.h1 variants={listItem} className="mt-5 text-[24px] font-bold tracking-tight">
-            Где будет жить учёба?
+            Хранилище
           </motion.h1>
-          <motion.p variants={listItem} className="mt-2 text-[15px] text-muted-foreground">
-            Выбери папку на диске или подключи свой сервер. Каждый предмет станет подпапкой, конспекты — обычными файлами Markdown.
-          </motion.p>
         </div>
 
         <motion.div variants={listItem} className="mt-5 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[14px]">
@@ -193,19 +188,10 @@ export function WelcomePage() {
               onClick={() => setConfirmCopy(true)}
               className="w-full justify-start"
             >
-              <FolderDown /> Скопировать всё с сервера в папку…
+              <FolderDown /> Скопировать в папку
             </Button>
           </motion.div>
         )}
-
-        <motion.ul variants={listItem} className="mt-3 space-y-2 text-[14px]">
-          <li className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
-            <HardDrive className="size-4 shrink-0 text-highlight" /> Данные твои: копия папки = бэкап
-          </li>
-          <li className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
-            <WifiOff className="size-4 shrink-0 text-highlight" /> Работает без интернета и VPN
-          </li>
-        </motion.ul>
 
         {!supported && (
           <motion.p
@@ -213,8 +199,8 @@ export function WelcomePage() {
             role="alert"
             className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/30 px-3 py-2.5 text-[13px] text-destructive"
           >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" /> Здесь нельзя работать с папкой на диске: нужен Edge или Chrome и адрес
-            localhost или https. Можно подключить сервер хранения.
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" /> Для доступа к папке открой приложение в Chrome или Edge по HTTPS или
+            localhost.
           </motion.p>
         )}
 
@@ -230,10 +216,9 @@ export function WelcomePage() {
               className="mt-1 size-4 accent-(--highlight)"
             />
             <span>
-              Перенести то, что уже есть в браузере
+              Скопировать данные из браузера
               <span className="block text-[13px] text-muted-foreground">
-                {plural(browserNotes, ["конспект", "конспекта", "конспектов"])} с закрепом и проектами. Файлы с такими же именами на новом
-                месте не перезапишутся.
+                {plural(browserNotes, ["конспект", "конспекта", "конспектов"])}. Существующие файлы не заменятся.
               </span>
             </span>
           </motion.label>
@@ -251,10 +236,9 @@ export function WelcomePage() {
               className="mt-1 size-4 accent-(--highlight)"
             />
             <span>
-              При подключении сервера перенести папку «{adapter?.label}»
+              Скопировать папку «{adapter?.label}» на сервер
               <span className="block text-[13px] text-muted-foreground">
-                {plural(folderNotes, ["конспект", "конспекта", "конспектов"])} с закрепом, проектами и картами. Файлы с такими же именами на
-                сервере не перезапишутся, в папке всё останется как было.
+                {plural(folderNotes, ["конспект", "конспекта", "конспектов"])}. Существующие файлы на сервере не заменятся.
               </span>
             </span>
           </motion.label>
@@ -267,7 +251,7 @@ export function WelcomePage() {
           </LiquidButton>
           {inBrowser && (
             <Button size="lg" variant="ghost" onClick={() => navigate("/")}>
-              Пока остаться в браузере
+              Продолжить в браузере
             </Button>
           )}
         </motion.div>
@@ -281,12 +265,9 @@ export function WelcomePage() {
           }}
         >
           <label htmlFor="storage-link" className="flex items-center gap-2 text-[14px] font-semibold">
-            <Server className="size-4 text-highlight" /> {inRemote ? "Другой сервер хранения" : "Сервер хранения"}
+            <Server className="size-4 text-highlight" /> {inRemote ? "Другой сервер" : "Сервер"}
           </label>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Запусти на сервере <code className="font-mono text-[12px]">node typos-server.mjs --dir ./vault</code> и вставь ссылку typos://,
-            которую он напечатает.
-          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">Вставь ссылку подключения typos://.</p>
           <div className="mt-3 flex gap-2">
             <Input
               id="storage-link"
@@ -317,11 +298,10 @@ export function WelcomePage() {
       <Dialog open={confirmCopy} onOpenChange={(o) => !o && setConfirmCopy(false)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Скопировать сервер в папку?</DialogTitle>
+            <DialogTitle>Скопировать в папку?</DialogTitle>
             <DialogDescription>
-              Все конспекты, закреп, проекты и карты с сервера «{adapter?.label}» запишутся в папку, которую ты выберешь. Файлы с такими же
-              именами в ней <b className="font-semibold text-foreground">заменятся</b> версиями с сервера, остальные останутся как были.
-              Приложение продолжит работать с сервером.
+              Файлы с сервера «{adapter?.label}» скопируются в выбранную папку. Файлы с совпадающими именами
+              <b className="font-semibold text-foreground"> заменятся</b>. Подключение к серверу сохранится.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -340,17 +320,14 @@ export function WelcomePage() {
           <DialogHeader>
             <DialogTitle>{inRemote ? `Отключиться от сервера «${adapter?.label}»?` : `Отключить папку «${adapter?.label}»?`}</DialogTitle>
             <DialogDescription>
-              {inRemote
-                ? "Конспекты останутся на сервере — подключиться снова можно той же ссылкой."
-                : "Файлы останутся в папке — подключить её снова можно в любой момент."}{" "}
+              {inRemote ? "Файлы останутся на сервере." : "Файлы останутся в папке."}{" "}
               {inRemote && pending > 0 && (
                 <b className="font-semibold text-foreground">
-                  {plural(pending, ["правка ещё не отправлена", "правки ещё не отправлены", "правок ещё не отправлено"])} — они останутся на
-                  этом устройстве и уйдут на сервер, когда подключишься снова.{" "}
+                  {plural(pending, ["правка не отправлена", "правки не отправлены", "правок не отправлено"])}. Изменения останутся на
+                  устройстве до повторного подключения.{" "}
                 </b>
               )}
-              Приложение откроет хранилище браузера: там то, что было до подключения
-              {browserNotes ? ` (${plural(browserNotes, ["конспект", "конспекта", "конспектов"])}).` : ", сейчас оно пустое."}
+              Откроется хранилище браузера.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

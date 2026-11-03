@@ -10,15 +10,15 @@ export interface RemoteConfig {
 
 export function parseRemoteLink(text: string): RemoteConfig {
   const raw = text.trim()
-  if (!/^typos:\/\//i.test(raw)) throw new Error("Это не ссылка TYPOS — она начинается с typos://")
+  if (!/^typos:\/\//i.test(raw)) throw new Error("Ссылка TYPOS должна начинаться с typos://")
   let u: URL
   try {
     u = new URL(raw.replace(/^typos:\/\//i, "http://"))
   } catch {
-    throw new Error("Ссылка повреждена — скопируй её из вывода сервера целиком")
+    throw new Error("Ссылка повреждена. Скопируй её целиком.")
   }
   const token = u.searchParams.get("k")
-  if (!u.host || !token) throw new Error("В ссылке нет адреса или ключа — скопируй её из вывода сервера целиком")
+  if (!u.host || !token) throw new Error("В ссылке нет адреса или ключа. Скопируй её целиком.")
   const scheme = u.searchParams.get("tls") === "1" ? "https" : "http"
   return {
     url: `${scheme}://${u.host}${u.pathname.replace(/\/+$/, "")}`,
@@ -31,5 +31,4 @@ export function parseRemoteLink(text: string): RemoteConfig {
 export const blockedAsMixedContent = (config: RemoteConfig, pageProtocol = globalThis.location?.protocol) =>
   pageProtocol === "https:" && config.url.startsWith("http:")
 
-export const MIXED_CONTENT_HINT =
-  "Приложение открыто по https, а сервер — по http: браузер такое блокирует. Запусти сервер с --cert/--key или открой приложение по http."
+export const MIXED_CONTENT_HINT = "Серверу нужен HTTPS. Используй --cert/--key или открой приложение по HTTP."

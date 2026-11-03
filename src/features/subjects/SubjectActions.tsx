@@ -34,7 +34,7 @@ export function SubjectActions({ subject }: { subject: Subject }) {
           <GraduationCap /> Повторение закрепа
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openEditSubject(subject.id)}>
-          <Pencil /> Название, цвет, иконка
+          <Pencil /> Изменить
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={remove}>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { create } from "zustand"
 import { Button } from "@/components/ui/Button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
 import { Input } from "@/components/ui/Input"
 import { errorText } from "@/lib/errors"
 import { SUBJECT_COLORS, SUBJECT_ICONS } from "@/lib/subjectPalette"
@@ -63,13 +63,10 @@ export function NewSubjectDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent aria-describedby={undefined} className="sm:max-w-md">
         <form onSubmit={submit} className="contents">
           <DialogHeader>
-            <DialogTitle>{editing ? "Предмет" : "Новый предмет"}</DialogTitle>
-            <DialogDescription>
-              {editing ? "Новое название станет и именем папки на диске." : "На диске появится папка с этим названием."}
-            </DialogDescription>
+            <DialogTitle>{editing ? "Изменить предмет" : "Новый предмет"}</DialogTitle>
           </DialogHeader>
 
           <div className="flex items-center gap-3">

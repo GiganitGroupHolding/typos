@@ -38,7 +38,7 @@ export function TrashPage() {
   const restore = async (item: TrashItem) => {
     try {
       await restoreTrash(item)
-      toast.success(`«${item.name}» восстановлен`, { description: item.originalPath })
+      toast.success(`Восстановлено: «${item.name}»`, { description: item.originalPath })
       load()
     } catch (e) {
       toast.error("Не удалось восстановить", { description: errorText(e) })
@@ -64,7 +64,7 @@ export function TrashPage() {
       <header className="flex items-end gap-4">
         <div className="flex-1">
           <h1 className="text-[32px] leading-tight font-bold tracking-tight">Корзина</h1>
-          <p className="mt-1 text-[15px] text-muted-foreground">Удалённое хранится 30 дней, потом исчезает само.</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">Файлы удаляются навсегда через 30 дней.</p>
         </div>
         {!!items?.length && (
           <Button variant="outline" onClick={() => setConfirm(items)}>
@@ -93,8 +93,10 @@ export function TrashPage() {
                 <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{item.name}</div>
-                  <div className="truncate text-[13px] text-muted-foreground">
-                    {label} · {item.originalPath.split("/")[0]} · удалено {relativeTime(item.deletedAt)}
+                  <div className="flex flex-wrap gap-x-3 text-[13px] text-muted-foreground">
+                    <span>{label}</span>
+                    <span>{item.originalPath.split("/")[0]}</span>
+                    <span>Удалено {relativeTime(item.deletedAt)}</span>
                   </div>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => restore(item)}>
@@ -115,8 +117,8 @@ export function TrashPage() {
             <DialogTitle>Удалить навсегда?</DialogTitle>
             <DialogDescription>
               {confirm?.length === 1
-                ? `«${confirm[0].name}» исчезнет с диска.`
-                : `Все ${plural(confirm?.length ?? 0, ["объект", "объекта", "объектов"])} исчезнут с диска.`}{" "}
+                ? `«${confirm[0].name}» будет удалено из хранилища.`
+                : `Из хранилища будут удалены ${plural(confirm?.length ?? 0, ["объект", "объекта", "объектов"])}.`}{" "}
               Это нельзя отменить.
             </DialogDescription>
           </DialogHeader>

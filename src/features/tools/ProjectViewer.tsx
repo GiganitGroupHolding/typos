@@ -65,9 +65,7 @@ function FileView({ tool }: { tool: Tool }) {
     case "pptx":
       return <OfficeView blob={file.blob} kind={tool.kind} title={tool.name} />
     default:
-      return (
-        <FileCard tool={tool} size={file.blob.size} note="Такой файл браузер не показывает. Скачай оригинал и открой в своей программе." />
-      )
+      return <FileCard tool={tool} size={file.blob.size} note="Просмотр недоступен. Скачай файл." />
   }
 }
 
@@ -87,16 +85,16 @@ function FileCard({ tool, size, note, children }: { tool: Tool; size?: number; n
       <Icon className="size-12 text-highlight" strokeWidth={1.5} />
       <div>
         <div className="text-[17px] font-semibold">{tool.name}</div>
-        <div className="text-[13px] text-muted-foreground">
-          {kindLabels[tool.kind]}
-          {tool.ext && ` · .${tool.ext}`}
-          {size !== undefined && ` · ${fileSize(size)}`}
+        <div className="flex justify-center gap-2 text-[13px] text-muted-foreground">
+          <span>{kindLabels[tool.kind]}</span>
+          {tool.ext && <span>.{tool.ext}</span>}
+          {size !== undefined && <span>{fileSize(size)}</span>}
         </div>
       </div>
       {children}
       {note && <p className="max-w-sm text-[13px] text-muted-foreground">{note}</p>}
       <Button variant="outline" size="sm" onClick={() => void downloadProjectFile(tool)}>
-        <Download /> Скачать оригинал
+        <Download /> Скачать
       </Button>
     </div>
   )
@@ -108,7 +106,7 @@ function ImageView({ url, name }: { url: string; name: string }) {
     <div className={cn("size-full overflow-auto", !actual && "flex items-center justify-center p-4")}>
       <button
         type="button"
-        aria-label={actual ? "Вписать в окно" : "В натуральную величину"}
+        aria-label={actual ? "Вписать в окно" : "В исходном размере"}
         onClick={() => setActual((v) => !v)}
         className={cn(
           "block outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -139,7 +137,7 @@ function TextView({ blob }: { blob: Blob }) {
   return (
     <pre className="size-full overflow-auto p-5 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
       {text}
-      {blob.size > TEXT_LIMIT && "\n\n… Дальше не показано: файл больше 2 МБ. Целиком — «Скачать»."}
+      {blob.size > TEXT_LIMIT && "\n\nПоказаны первые 2 МБ. Полный файл доступен для скачивания."}
     </pre>
   )
 }
@@ -189,10 +187,7 @@ function OfficeView({ blob, kind, title }: { blob: Blob; kind: "docx" | "pptx"; 
       else if (e.data?.type === "error") setStatus({ error: String(e.data.message) })
     }
     const onLoad = () => {
-      timer = window.setTimeout(
-        () => !booted && setStatus({ error: "Не загрузился просмотрщик документов (public/viewers/office.js)." }),
-        1500,
-      )
+      timer = window.setTimeout(() => !booted && setStatus({ error: "Просмотрщик недоступен." }), 1500)
     }
     const frame = ref.current
     addEventListener("message", onMessage)
@@ -216,14 +211,14 @@ function OfficeView({ blob, kind, title }: { blob: Blob; kind: "docx" | "pptx"; 
       />
       {status === "loading" && (
         <div className="absolute inset-0">
-          <Spinner text={kind === "pptx" ? "Открываю презентацию…" : "Открываю документ…"} />
+          <Spinner text="Загрузка…" />
         </div>
       )}
       {typeof status === "object" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center text-[13px] text-muted-foreground">
-          <p className="font-medium text-foreground">Не получилось показать файл</p>
+          <p className="font-medium text-foreground">Не удалось показать файл</p>
           <p className="max-w-sm">{status.error}</p>
-          <p>Оригинал можно скачать кнопкой сверху.</p>
+          <p>Скачай оригинал.</p>
         </div>
       )}
     </div>

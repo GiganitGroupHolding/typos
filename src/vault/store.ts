@@ -105,7 +105,7 @@ const idle = () => Promise.allSettled([...queues.values()])
 export class NoteConflictError extends Error {
   readonly disk: string | null
   constructor(disk: string | null) {
-    super("Конспект изменили снаружи")
+    super("Конспект изменён вне приложения")
     this.disk = disk
   }
 }
@@ -221,7 +221,7 @@ export const useVault = create<VaultState>()((set, get) => {
       } else {
         const handle = await pickFolder()
         if (!handle) return null
-        if (!(await requestPermission(handle))) throw new Error("Браузер не дал доступ к папке")
+        if (!(await requestPermission(handle))) throw new Error("Нет доступа к папке. Разреши доступ в браузере.")
         folder = new FsaAdapter(handle)
         remember = () => saveHandle(handle)
       }
@@ -264,7 +264,7 @@ export const useVault = create<VaultState>()((set, get) => {
       } else {
         const handle = await pickFolder()
         if (!handle) return null
-        if (!(await requestPermission(handle))) throw new Error("Браузер не дал доступ к папке")
+        if (!(await requestPermission(handle))) throw new Error("Нет доступа к папке. Разреши доступ в браузере.")
         folder = new FsaAdapter(handle)
       }
 

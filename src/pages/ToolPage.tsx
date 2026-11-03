@@ -1,4 +1,4 @@
-import { Download, PictureInPicture2, RotateCw, ShieldCheck, Smartphone } from "lucide-react"
+import { Download, PictureInPicture2, RotateCw, Smartphone } from "lucide-react"
 import { motion } from "motion/react"
 import { useState } from "react"
 import { Navigate, useNavigate, useParams } from "react-router"
@@ -35,21 +35,10 @@ export function ToolPage() {
       <div className="mb-2 flex items-center gap-2 px-1">
         <Icon className="size-4 shrink-0 text-highlight" />
         <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold">{tool.name}</h1>
-        {isHtml ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-foreground">
-                <ShieldCheck className="size-3.5" /> Изолировано
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64">
-              Тулза работает в песочнице: без доступа к твоим конспектам, хранилищу браузера и сети.
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <span className="hidden px-2 text-[12px] text-muted-foreground sm:inline">
-            {kindLabels[tool.kind]}
-            {tool.size !== undefined && ` · ${fileSize(tool.size)}`}
+        {!isHtml && (
+          <span className="hidden gap-2 px-2 text-[12px] text-muted-foreground sm:inline-flex">
+            <span>{kindLabels[tool.kind]}</span>
+            {tool.size !== undefined && <span>{fileSize(tool.size)}</span>}
           </span>
         )}
         {isHtml && (
@@ -70,11 +59,11 @@ export function ToolPage() {
         )}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Скачать оригинал" onClick={() => void downloadProjectFile(tool)}>
+            <Button variant="ghost" size="icon-sm" aria-label="Скачать" onClick={() => void downloadProjectFile(tool)}>
               <Download />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Скачать оригинал</TooltipContent>
+          <TooltipContent>Скачать</TooltipContent>
         </Tooltip>
         <Button
           variant="ghost"
@@ -84,7 +73,7 @@ export function ToolPage() {
             navigate(`/s/${subject.id}`)
           }}
         >
-          <PictureInPicture2 /> В окно
+          <PictureInPicture2 /> В отдельном окне
         </Button>
         <ToolActions tool={tool} onOpenWindow={() => navigate(`/s/${subject.id}`)} />
       </div>

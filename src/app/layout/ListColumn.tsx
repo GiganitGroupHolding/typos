@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu"
+import { Kbd } from "@/components/ui/Kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
 import { BoardActions } from "@/features/boards/BoardActions"
 import { boardText } from "@/features/boards/model"
@@ -90,7 +91,9 @@ function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
             <SquarePen />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Новый конспект · Alt N</TooltipContent>
+        <TooltipContent className="flex items-center gap-2">
+          Новый конспект <Kbd>Alt N</Kbd>
+        </TooltipContent>
       </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -270,7 +273,7 @@ export function ListColumn() {
                   <span className="block truncate text-[14px] font-medium">{b.name}</span>
                   <span className="block truncate text-[12px] text-muted-foreground">
                     {b.data.nodes.length ? plural(b.data.nodes.length, ["элемент", "элемента", "элементов"]) : "Пустая"}
-                    {boardText(b.data) && ` · ${boardText(b.data).split("\n")[0]}`}
+                    {boardText(b.data) && <span className="ml-2">{boardText(b.data).split("\n")[0]}</span>}
                   </span>
                 </span>
               </Link>

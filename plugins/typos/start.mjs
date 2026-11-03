@@ -21,7 +21,7 @@ try {
     },
   )
   child.once("error", () => {
-    console.error("Не получилось запустить MCP TYPOS — проверь Node.js и зависимости репозитория")
+    console.error("Не удалось запустить MCP TYPOS. Проверь Node.js и зависимости.")
     process.exitCode = 1
   })
   child.once("exit", (code) => {

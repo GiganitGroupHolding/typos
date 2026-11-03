@@ -79,7 +79,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
 
   server.registerTool(
     "list_subjects",
-    { title: "Предметы", description: "Все предметы и сколько в них конспектов, карточек закрепа, тулз и досок.", annotations: read },
+    { title: "Предметы", description: "Список предметов с количеством конспектов, карточек закрепа, тулз и досок.", annotations: read },
     run(() => vault.listSubjects()),
   )
 
@@ -88,7 +88,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     {
       title: "Содержимое предмета",
       description:
-        "Конспекты (id, заголовок, превью), карточки закрепа, тулзы и доски предмета. Отсюда берутся id для read_note / update_note / read_board / update_board.",
+        "Конспекты (id, заголовок, превью), карточки закрепа, тулзы и доски предмета. Используй id из ответа в read_note / update_note / read_board / update_board.",
       inputSchema: { subject },
       annotations: read,
     },
@@ -120,7 +120,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     "create_note",
     {
       title: "Новый конспект",
-      description: "Создаёт конспект в предмете. С source, который уже встречался в этом предмете, обновляет тот конспект.",
+      description: "Создаёт конспект в предмете. Если source уже есть в этом предмете, обновляет соответствующий конспект.",
       inputSchema: {
         subject,
         title: z.string().min(1).describe("Заголовок (первая строка и имя файла)"),
@@ -189,7 +189,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     "update_pin",
     {
       title: "Изменить карточку",
-      description: "Меняет заголовок, формулу или текст карточки закрепа (не переданное остаётся).",
+      description: "Меняет заголовок, формулу или текст карточки закрепа. Поля, которые не переданы, остаются без изменений.",
       inputSchema: { id: z.string(), title: z.string().optional(), tex: z.string().optional(), text: z.string().optional() },
       annotations: write,
     },
@@ -201,7 +201,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     {
       title: "Добавить тулзу",
       description:
-        "Кладёт самодостаточный HTML (калькулятор, решатель, тренажёр) в «Проекты» предмета. В приложении он работает в песочнице без доступа к данным.",
+        "Сохраняет самодостаточный HTML (калькулятор, решатель, тренажёр) в «Проекты» предмета. В приложении он работает в песочнице без доступа к данным.",
       inputSchema: {
         subject,
         name: z.string().min(1),
@@ -228,7 +228,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
       {
         title: "Добавить файл в проекты",
         description:
-          "Копирует файл из разрешённых папок компьютера (PDF, PPTX, DOCX, картинка, HTML…) в «Проекты» предмета как есть. В приложении он открывается прямо на сайте.",
+          "Копирует файл из разрешённых папок компьютера (PDF, PPTX, DOCX, картинка, HTML…) в «Проекты» предмета как есть. Файл можно открыть в приложении.",
         inputSchema: {
           subject,
           file: z.string().describe(`Полный путь к файлу в разрешённых папках (${files.roots.join(", ")})`),
@@ -247,7 +247,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
       .min(1)
       .max(64)
       .optional()
-      .describe("Свой id: на него ссылаются стрелки и children. Узел с таким id уже есть — правятся только переданные поля"),
+      .describe("Свой id: на него ссылаются стрелки и children. Если узел с таким id уже есть, меняются только переданные поля"),
     type: z
       .enum(["text", "group", "link", "file"])
       .optional()
@@ -264,7 +264,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     height: z.number().optional(),
   })
   const boardEdge = z.object({
-    id: z.string().min(1).max(64).optional().describe("Стрелка с таким id уже есть — правятся переданные поля"),
+    id: z.string().min(1).max(64).optional().describe("Если стрелка с таким id уже есть, меняются только переданные поля"),
     from: z.string().optional().describe("id узла, откуда стрелка (для новой — обязательно)"),
     to: z.string().optional().describe("id узла, куда стрелка (для новой — обязательно)"),
     label: z.string().optional(),
@@ -303,7 +303,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     {
       title: "Изменить доску",
       description:
-        "Добавляет и правит узлы и стрелки (по id), удаляет по id (remove — узлы вместе с их стрелками), переименовывает. Новые узлы без x/y встанут под тем, что уже есть. Если доска открыта в приложении, оно сольёт правки со своими.",
+        "Добавляет и правит узлы и стрелки (по id), удаляет по id (remove — узлы вместе с их стрелками), переименовывает. Новые узлы без x/y встанут под тем, что уже есть. Если доска открыта в приложении, оно объединит эти правки с локальными.",
       inputSchema: {
         id: z.string(),
         name: z.string().optional().describe("Новое название"),
@@ -330,7 +330,7 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     "trash",
     {
       title: "В корзину",
-      description: "Переносит конспект, карточку, тулзу или доску в корзину приложения. Восстанавливается там же в течение 30 дней.",
+      description: "Переносит конспект, карточку, тулзу или доску в корзину приложения. Восстановить можно там же в течение 30 дней.",
       inputSchema: { kind: z.enum(["note", "pin", "tool", "board"]), id: z.string() },
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     },

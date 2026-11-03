@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { toast } from "sonner"
 import { create } from "zustand"
 import { Button } from "@/components/ui/Button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
 import { Input } from "@/components/ui/Input"
 import { errorText } from "@/lib/errors"
 import { submitOnCtrlEnter } from "@/lib/forms"
@@ -63,11 +63,10 @@ export function PinEditorDialog() {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent aria-describedby={undefined} className="sm:max-w-lg">
         <form onSubmit={submit} onKeyDown={submitOnCtrlEnter} className="contents">
           <DialogHeader>
             <DialogTitle>{pin ? "Карточка закрепа" : "Новая карточка"}</DialogTitle>
-            <DialogDescription>Формула или определение, которое всегда под рукой.</DialogDescription>
           </DialogHeader>
 
           <div>
@@ -86,7 +85,7 @@ export function PinEditorDialog() {
 
           <div>
             <label htmlFor="pin-tex" className="mb-1 block text-[13px] font-medium">
-              Формула <span className="font-normal text-muted-foreground">· LaTeX, необязательно</span>
+              Формула LaTeX
             </label>
             <textarea
               id="pin-tex"
@@ -104,14 +103,14 @@ export function PinEditorDialog() {
 
           <div>
             <label htmlFor="pin-text" className="mb-1 block text-[13px] font-medium">
-              Пояснение <span className="font-normal text-muted-foreground">· необязательно</span>
+              Пояснение
             </label>
             <textarea
               id="pin-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={2}
-              placeholder="Работает, только если det A ≠ 0"
+              placeholder="det A ≠ 0"
               className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>

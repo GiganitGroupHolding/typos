@@ -1,169 +1,301 @@
 <!doctype html>
 <html lang="ru">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TYPOS: стекло и туманности</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TYPOS: стекло и туманности</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --app-bg: #f3f2ed;
+      --foreground: #1f1e1d;
+      --muted-foreground: #2c2b28;
+      --card: #ffffff;
+      --border: rgb(31 30 29 / 0.1);
+      --sidebar: rgb(255 255 255 / 0.24);
+      --sidebar-accent: rgb(255 255 255 / 0.45);
+      --column-blur: 12px;
+      --glass-sat: 150%;
+      --sheen: 0.35;
+      --radius: 0.75rem;
+      --radius-surface: 1.5rem;
+      --dur-base: 200ms;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-  :root {
-    --app-bg: #f3f2ed; --foreground: #1f1e1d; --muted-foreground: #2c2b28; --card: #ffffff;
-    --border: rgb(31 30 29 / 0.1);
-    --sidebar: rgb(255 255 255 / 0.24);
-    --sidebar-accent: rgb(255 255 255 / 0.45);
-    --column-blur: 12px; --glass-sat: 150%; --sheen: 0.35;
-    --radius: 0.75rem; --radius-surface: 1.5rem;
-    --dur-base: 200ms; --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --lens-tint: rgb(255 255 255 / 0.16);
+      --lens-shadow: 0 10px 28px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
+      --prism-alpha: 0.64;
+      --prism-corner-alpha: 0.32;
+      --prism-spectrum: repeating-conic-gradient(from 200deg,
+          #ff6b6b 0deg, #ffb347 13deg, #fff176 26deg, #7ee8a2 39deg, #5ad1ff 52deg, #7d8bff 65deg, #d07bff 78deg, #ff6b6b 90deg);
+    }
 
-    --lens-tint: rgb(255 255 255 / 0.16);
-    --lens-shadow: 0 10px 28px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
-    --prism-alpha: 0.64; --prism-corner-alpha: 0.32;
-    --prism-spectrum: repeating-conic-gradient(from 200deg,
-      #ff6b6b 0deg, #ffb347 13deg, #fff176 26deg, #7ee8a2 39deg, #5ad1ff 52deg, #7d8bff 65deg, #d07bff 78deg, #ff6b6b 90deg);
-  }
-  .dark {
-    --app-bg: #191918; --foreground: #f2f1ec; --muted-foreground: #b8b5ac; --card: #2a2a28;
-    --border: rgb(245 244 238 / 0.09);
-    --sidebar: rgb(30 30 28 / 0.5); --sidebar-accent: rgb(255 255 255 / 0.08); --sheen: 0.05;
-    --lens-tint: rgb(255 255 255 / 0.035);
-    --lens-shadow: 0 12px 32px rgb(0 0 0 / 0.38), 0 1px 3px rgb(0 0 0 / 0.3), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
-    --prism-alpha: 0.72; --prism-corner-alpha: 0.36;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { background: var(--app-bg); color: var(--foreground); font: 15px/1.5 Inter, 'Segoe UI', system-ui, sans-serif; }
+    .dark {
+      --app-bg: #191918;
+      --foreground: #f2f1ec;
+      --muted-foreground: #b8b5ac;
+      --card: #2a2a28;
+      --border: rgb(245 244 238 / 0.09);
+      --sidebar: rgb(30 30 28 / 0.5);
+      --sidebar-accent: rgb(255 255 255 / 0.08);
+      --sheen: 0.05;
+      --lens-tint: rgb(255 255 255 / 0.035);
+      --lens-shadow: 0 12px 32px rgb(0 0 0 / 0.38), 0 1px 3px rgb(0 0 0 / 0.3), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
+      --prism-alpha: 0.72;
+      --prism-corner-alpha: 0.36;
+    }
 
-  #nebula { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-  #nebula canvas { width: 100%; height: 100%; display: block; }
+    * {
+      box-sizing: border-box;
+    }
 
-  .liquid-column {
-    background: var(--sidebar);
-    -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
-    backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
-    box-shadow: inset -1px 0 0 rgb(255 255 255 / calc(var(--sheen) * 1.6)), inset 1px 1px 0 rgb(255 255 255 / calc(var(--sheen) * 1.2));
-  }
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
 
-  .liquid-2 {
-    position: relative;
-    background: color-mix(in srgb, var(--sidebar), var(--card) 14%);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
-    -webkit-backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
-    backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
-  }
+    body {
+      background: var(--app-bg);
+      color: var(--foreground);
+      font: 15px/1.5 Inter, 'Segoe UI', system-ui, sans-serif;
+    }
 
-  .liquid-lava {
-    background: var(--sidebar);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
-    -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
-    backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
-  }
+    #nebula {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
 
-  .liquid-lens { position: relative; background: var(--lens-tint); box-shadow: var(--lens-shadow); }
-  .liquid-lens > * { position: relative; z-index: 1; }
+    #nebula canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
-  .liquid-lens::after {
-    content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
-    opacity: var(--prism-corner-alpha); background: #fff;
-    mask: var(--prism-corners, linear-gradient(transparent 0 0)), linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-size: 100% 100%, auto, auto;
-    mask-composite: intersect, exclude, add;
-  }
-  .dark .liquid-lens::after { mix-blend-mode: plus-lighter; }
+    .liquid-column {
+      background: var(--sidebar);
+      -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
+      backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
+      box-shadow: inset -1px 0 0 rgb(255 255 255 / calc(var(--sheen) * 1.6)), inset 1px 1px 0 rgb(255 255 255 / calc(var(--sheen) * 1.2));
+    }
 
-  .liquid-lens::before {
-    content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1.5px; pointer-events: none;
-    opacity: 0; transition: opacity var(--dur-base) var(--ease-out);
-    background:
-      radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #fff 0%, rgb(255 255 255 / 0.75) 20%, rgb(255 255 255 / 0) 48%),
-      var(--prism-spectrum);
-    mask:
-      radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #000 0%, rgb(0 0 0 / 0.55) 55%, transparent 100%),
-      linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: intersect, exclude, add;
-  }
-  .dark .liquid-lens::before { mix-blend-mode: plus-lighter; }
-  .liquid-lens[data-lit]::before { opacity: var(--prism-alpha); }
+    .liquid-2 {
+      position: relative;
+      background: color-mix(in srgb, var(--sidebar), var(--card) 14%);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
+      -webkit-backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
+      backdrop-filter: blur(calc(var(--column-blur) * 1.5)) saturate(var(--glass-sat));
+    }
 
-  .app { display: flex; height: 100%; }
-  aside { width: 256px; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; }
-  .brand { font-weight: 700; letter-spacing: 0.06em; padding: 4px 6px; }
-  .search { height: 36px; border-radius: 12px; display: flex; align-items: center; padding: 0 12px; color: var(--muted-foreground); }
-  .row { padding: 8px 10px; border-radius: 10px; }
-  .row.on { background: var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6)); }
-  main { flex: 1; display: grid; place-items: center; padding: 32px; }
-  .card { width: min(420px, 100%); padding: 24px; border-radius: var(--radius-surface); }
-  .card h2 { margin: 0 0 6px; font-size: 22px; }
-  .card p { margin: 0; color: var(--muted-foreground); }
-  .toggle { position: fixed; right: 16px; bottom: 16px; height: 40px; padding: 0 16px; border-radius: 999px; border: 0;
-    font: inherit; font-weight: 600; color: var(--foreground); cursor: pointer; }
-</style>
+    .liquid-lava {
+      background: var(--sidebar);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
+      -webkit-backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
+      backdrop-filter: blur(var(--column-blur)) saturate(var(--glass-sat));
+    }
+
+    .liquid-lens {
+      position: relative;
+      background: var(--lens-tint);
+      box-shadow: var(--lens-shadow);
+    }
+
+    .liquid-lens>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    .liquid-lens::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      border-radius: inherit;
+      padding: 1px;
+      pointer-events: none;
+      opacity: var(--prism-corner-alpha);
+      background: #fff;
+      mask: var(--prism-corners, linear-gradient(transparent 0 0)), linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-size: 100% 100%, auto, auto;
+      mask-composite: intersect, exclude, add;
+    }
+
+    .dark .liquid-lens::after {
+      mix-blend-mode: plus-lighter;
+    }
+
+    .liquid-lens::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      border-radius: inherit;
+      padding: 1.5px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--dur-base) var(--ease-out);
+      background:
+        radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #fff 0%, rgb(255 255 255 / 0.75) 20%, rgb(255 255 255 / 0) 48%),
+        var(--prism-spectrum);
+      mask:
+        radial-gradient(var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%), #000 0%, rgb(0 0 0 / 0.55) 55%, transparent 100%),
+        linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: intersect, exclude, add;
+    }
+
+    .dark .liquid-lens::before {
+      mix-blend-mode: plus-lighter;
+    }
+
+    .liquid-lens[data-lit]::before {
+      opacity: var(--prism-alpha);
+    }
+
+    .app {
+      display: flex;
+      height: 100%;
+    }
+
+    aside {
+      width: 256px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 4px 6px;
+    }
+
+    .search {
+      height: 36px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--muted-foreground);
+    }
+
+    .row {
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+
+    .row.on {
+      background: var(--sidebar-accent);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .card {
+      width: min(420px, 100%);
+      padding: 24px;
+      border-radius: var(--radius-surface);
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted-foreground);
+    }
+
+    .toggle {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 0;
+      font: inherit;
+      font-weight: 600;
+      color: var(--foreground);
+      cursor: pointer;
+    }
+  </style>
 </head>
+
 <body>
-<div id="nebula"></div>
-<div class="app">
-  <aside class="liquid-column">
-    <div class="brand">TYPOS</div>
-    <div class="search liquid-2">Поиск</div>
-    <div class="row on">Математика</div>
-    <div class="row">Экономика</div>
-    <div class="row">Физика</div>
-  </aside>
-  <main>
-    <div class="card" id="lens-card">
-      <h2>Линза Liquid Glass</h2>
-      <p>Фон преломляется у кромки, по краю — радужная кайма. Наведи курсор: появится блик.</p>
-    </div>
-  </main>
-</div>
-<button class="toggle liquid-2" id="theme">Тема</button>
+  <div id="nebula"></div>
+  <div class="app">
+    <aside class="liquid-column">
+      <div class="brand">TYPOS</div>
+      <div class="search liquid-2">Поиск</div>
+      <div class="row on">Математика</div>
+      <div class="row">Экономика</div>
+      <div class="row">Физика</div>
+    </aside>
+    <main>
+      <div class="card" id="lens-card">
+        <h2>Линза Liquid Glass</h2>
+        <p>Фон преломляется у кромки, по краю — радужная кайма. Наведи курсор: появится блик.</p>
+      </div>
+    </main>
+  </div>
+  <button class="toggle liquid-2" id="theme">Тема</button>
 
-<script>
+  <script>
 
-  const lensSupported = /Chrome\/\d/.test(navigator.userAgent) && !/Firefox|FxiOS/.test(navigator.userAgent)
+    const lensSupported = /Chrome\/\d/.test(navigator.userAgent) && !/Firefox|FxiOS/.test(navigator.userAgent)
 
-  function lensMap(w, h, radius, bezel) {
-    const c = document.createElement('canvas'); c.width = w; c.height = h
-    const ctx = c.getContext('2d'); const img = ctx.createImageData(w, h)
-    const hx = w / 2, hy = h / 2, r = Math.min(radius, hx, hy)
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const px = x + 0.5 - hx, py = y + 0.5 - hy
-      const qx = Math.abs(px) - (hx - r), qy = Math.abs(py) - (hy - r)
-      const inside = -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r)
-      let nx = 0, ny = 0
-      if (qx > 0 && qy > 0) { const l = Math.hypot(qx, qy) || 1; nx = (qx / l) * Math.sign(px); ny = (qy / l) * Math.sign(py) }
-      else if (qx > qy) nx = Math.sign(px); else ny = Math.sign(py)
-      const t = Math.min(Math.max(1 - inside / bezel, 0), 1), m = t * t * (3 - 2 * t)
-      const i = (y * w + x) * 4
-      img.data[i] = 128 - nx * m * 127; img.data[i + 1] = 128 - ny * m * 127; img.data[i + 2] = 128; img.data[i + 3] = 255
+    function lensMap(w, h, radius, bezel) {
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      const ctx = c.getContext('2d'); const img = ctx.createImageData(w, h)
+      const hx = w / 2, hy = h / 2, r = Math.min(radius, hx, hy)
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const px = x + 0.5 - hx, py = y + 0.5 - hy
+        const qx = Math.abs(px) - (hx - r), qy = Math.abs(py) - (hy - r)
+        const inside = -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r)
+        let nx = 0, ny = 0
+        if (qx > 0 && qy > 0) { const l = Math.hypot(qx, qy) || 1; nx = (qx / l) * Math.sign(px); ny = (qy / l) * Math.sign(py) }
+        else if (qx > qy) nx = Math.sign(px); else ny = Math.sign(py)
+        const t = Math.min(Math.max(1 - inside / bezel, 0), 1), m = t * t * (3 - 2 * t)
+        const i = (y * w + x) * 4
+        img.data[i] = 128 - nx * m * 127; img.data[i + 1] = 128 - ny * m * 127; img.data[i + 2] = 128; img.data[i + 3] = 255
+      }
+      ctx.putImageData(img, 0, 0); return c.toDataURL()
     }
-    ctx.putImageData(img, 0, 0); return c.toDataURL()
-  }
 
-  function cornerMask(w, h, r) {
-    const c = document.createElement('canvas'); c.width = w; c.height = h
-    const ctx = c.getContext('2d'); const img = ctx.createImageData(w, h)
-    const k = r * (1 - Math.SQRT1_2), sigma = Math.max(r * 0.75, 8)
-    const corners = [[k, k], [w - k, k], [k, h - k], [w - k, h - k]]
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      let d2 = Infinity
-      for (const [cx, cy] of corners) d2 = Math.min(d2, (x - cx) ** 2 + (y - cy) ** 2)
-      img.data[(y * w + x) * 4 + 3] = Math.round(255 * Math.exp(-d2 / (2 * sigma * sigma)))
+    function cornerMask(w, h, r) {
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      const ctx = c.getContext('2d'); const img = ctx.createImageData(w, h)
+      const k = r * (1 - Math.SQRT1_2), sigma = Math.max(r * 0.75, 8)
+      const corners = [[k, k], [w - k, k], [k, h - k], [w - k, h - k]]
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        let d2 = Infinity
+        for (const [cx, cy] of corners) d2 = Math.min(d2, (x - cx) ** 2 + (y - cy) ** 2)
+        img.data[(y * w + x) * 4 + 3] = Math.round(255 * Math.exp(-d2 / (2 * sigma * sigma)))
+      }
+      ctx.putImageData(img, 0, 0); return `url(${c.toDataURL()})`
     }
-    ctx.putImageData(img, 0, 0); return `url(${c.toDataURL()})`
-  }
 
-  const channel = (c) => [0, 1, 2].map((k) => [0, 1, 2, 3, 4].map((j) => (k === c && j === k ? 1 : 0)).join(' ')).join('  ') + '  0 0 0 1 0'
+    const channel = (c) => [0, 1, 2].map((k) => [0, 1, 2, 3, 4].map((j) => (k === c && j === k ? 1 : 0)).join(' ')).join('  ') + '  0 0 0 1 0'
 
-  function applyLens(el, { bezel = 14, refraction = 16, dispersion = 0.08, frost = 1 } = {}) {
-    if (!lensSupported) { el.classList.add('liquid-lava'); return }
-    const w = el.offsetWidth, h = el.offsetHeight
-    const r = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, w / 2, h / 2)
-    const id = 'lens-' + Math.random().toString(36).slice(2)
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.style.position = 'absolute'
-    svg.innerHTML = `<filter id="${id}" x="0" y="0" width="${w}" height="${h}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    function applyLens(el, { bezel = 14, refraction = 16, dispersion = 0.08, frost = 1 } = {}) {
+      if (!lensSupported) { el.classList.add('liquid-lava'); return }
+      const w = el.offsetWidth, h = el.offsetHeight
+      const r = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, w / 2, h / 2)
+      const id = 'lens-' + Math.random().toString(36).slice(2)
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.style.position = 'absolute'
+      svg.innerHTML = `<filter id="${id}" x="0" y="0" width="${w}" height="${h}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feImage href="${lensMap(w, h, r, Math.min(bezel, w / 2, h / 2))}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="map"/>
       <feGaussianBlur in="SourceGraphic" stdDeviation="${frost}" result="src"/>
       ${[0, 1, 2].map((k) => `<feDisplacementMap in="src" in2="map" scale="${refraction * 2 * (1 + (k - 1) * dispersion)}" xChannelSelector="R" yChannelSelector="G" result="d${k}"/>`).join('')}
@@ -172,30 +304,31 @@
       <feComposite in="rg" in2="c2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rgb"/>
       <feColorMatrix in="rgb" type="saturate" values="1.35"/>
     </filter>`
-    document.body.appendChild(svg)
-    el.classList.add('liquid-lens')
-    el.style.backdropFilter = el.style.webkitBackdropFilter = `url(#${id})`
-    el.style.setProperty('--prism-r', `${Math.round(Math.min(130, Math.max(w, h) * 0.3))}px`)
-    el.style.setProperty('--prism-corners', cornerMask(w, h, r))
-    el.addEventListener('pointermove', (e) => {
-      el.dataset.lit = ''
-      const b = el.getBoundingClientRect()
-      el.style.setProperty('--lx', `${e.clientX - b.left}px`); el.style.setProperty('--ly', `${e.clientY - b.top}px`)
-    })
-    el.addEventListener('pointerleave', () => delete el.dataset.lit)
-  }
+      document.body.appendChild(svg)
+      el.classList.add('liquid-lens')
+      el.style.backdropFilter = el.style.webkitBackdropFilter = `url(#${id})`
+      el.style.setProperty('--prism-r', `${Math.round(Math.min(130, Math.max(w, h) * 0.3))}px`)
+      el.style.setProperty('--prism-corners', cornerMask(w, h, r))
+      el.addEventListener('pointermove', (e) => {
+        el.dataset.lit = ''
+        const b = el.getBoundingClientRect()
+        el.style.setProperty('--lx', `${e.clientX - b.left}px`); el.style.setProperty('--ly', `${e.clientY - b.top}px`)
+      })
+      el.addEventListener('pointerleave', () => delete el.dataset.lit)
+    }
 
-  applyLens(document.getElementById('lens-card'), { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4 })
-  document.getElementById('theme').onclick = () => document.documentElement.classList.toggle('dark')
-</script>
+    applyLens(document.getElementById('lens-card'), { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4 })
+    document.getElementById('theme').onclick = () => document.documentElement.classList.toggle('dark')
+  </script>
 
-<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" } }</script>
-<script type="module">
-  import * as THREE from 'three'
-  const MAX = 10
+  <script
+    type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" } }</script>
+  <script type="module">
+    import * as THREE from 'three'
+    const MAX = 10
 
-  const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`
-  const fragmentShader = `
+    const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`
+    const fragmentShader = `
     #define MAX${MAX}
     uniform vec2 iResolution;
     uniform vec4 uSpots[MAX];
@@ -273,70 +406,71 @@
       gl_FragColor = vec4(clamp(o, 0.0, 1.0), 1.0);
     }`
 
-  const rand = (a, b) => a + Math.random() * (b - a)
-  const host = document.getElementById('nebula')
-  const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'low-power' })
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * 0.5)
-  host.appendChild(renderer.domElement)
-  const uniforms = {
-    iResolution: { value: new THREE.Vector2() },
-    uSpots: { value: Array.from({ length: MAX }, () => new THREE.Vector4(0, 0, 3, rand(0, 50))) },
-    uLook: { value: Array.from({ length: MAX }, () => new THREE.Vector4()) },
-    uAlpha: { value: new Array(MAX).fill(0) },
-    uBg: { value: new THREE.Vector3() },
-    uTintCol: { value: new THREE.Vector3(0.55, 0.42, 0.95) },
-    uTint: { value: 0 },
-    uLight: { value: true },
-  }
-  const scene = new THREE.Scene()
-  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms })))
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+    const rand = (a, b) => a + Math.random() * (b - a)
+    const host = document.getElementById('nebula')
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'low-power' })
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * 0.5)
+    host.appendChild(renderer.domElement)
+    const uniforms = {
+      iResolution: { value: new THREE.Vector2() },
+      uSpots: { value: Array.from({ length: MAX }, () => new THREE.Vector4(0, 0, 3, rand(0, 50))) },
+      uLook: { value: Array.from({ length: MAX }, () => new THREE.Vector4()) },
+      uAlpha: { value: new Array(MAX).fill(0) },
+      uBg: { value: new THREE.Vector3() },
+      uTintCol: { value: new THREE.Vector3(0.55, 0.42, 0.95) },
+      uTint: { value: 0 },
+      uLight: { value: true },
+    }
+    const scene = new THREE.Scene()
+    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms })))
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
 
-  const speeds = []
-  function layout() {
-    const w = innerWidth, h = innerHeight, mn = Math.min(w, h), W = w / mn, H = h / mn
-    const anchor = (role) => (role === 'tl' ? [0.08, H - 0.08] : [W - 0.08, 0.08])
-    const near = (role, r0, r1) => {
-      const [ax, ay] = anchor(role)
-      const ang = rand(0, Math.PI / 2) + (role === 'tl' ? -Math.PI / 2 : Math.PI / 2), r = rand(r0, r1)
-      return [ax + Math.cos(ang) * r, ay + Math.sin(ang) * r]
+    const speeds = []
+    function layout() {
+      const w = innerWidth, h = innerHeight, mn = Math.min(w, h), W = w / mn, H = h / mn
+      const anchor = (role) => (role === 'tl' ? [0.08, H - 0.08] : [W - 0.08, 0.08])
+      const near = (role, r0, r1) => {
+        const [ax, ay] = anchor(role)
+        const ang = rand(0, Math.PI / 2) + (role === 'tl' ? -Math.PI / 2 : Math.PI / 2), r = rand(r0, r1)
+        return [ax + Math.cos(ang) * r, ay + Math.sin(ang) * r]
+      }
+      const spots = []
+      for (const role of ['tl', 'br']) {
+        spots.push([...near(role, 0, 0.12), rand(0.8, 1.2)])
+        for (let i = Math.floor(rand(0, 4)); i > 0; i--) spots.push([...near(role, 0.25, 0.7), rand(1.6, 3.6)])
+      }
+      for (let i = Math.floor(rand(0, 5)); i > 0 && spots.length < MAX; i--) spots.push([rand(0.22, 0.78) * W, rand(0.18, 0.82) * H, rand(1.4, 3.2)])
+      uniforms.uSpots.value.forEach((sp, i) => {
+        const s = spots[i]
+        uniforms.uAlpha.value[i] = s ? 1 : 0
+        if (!s) return
+        sp.set(s[0], s[1], s[2], sp.w)
+        uniforms.uLook.value[i].set(rand(0.36, 0.44), Math.random(), rand(0, Math.PI * 2), Math.random() < 0.5 ? -1 : 1)
+        speeds[i] = rand(0.85, 1.15)
+      })
     }
-    const spots = []
-    for (const role of ['tl', 'br']) {
-      spots.push([...near(role, 0, 0.12), rand(0.8, 1.2)])
-      for (let i = Math.floor(rand(0, 4)); i > 0; i--) spots.push([...near(role, 0.25, 0.7), rand(1.6, 3.6)])
+    function readColors() {
+      const dark = document.documentElement.classList.contains('dark')
+      uniforms.uLight.value = !dark
+      const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).map(Number)
+      uniforms.uBg.value.set(r / 255, g / 255, b / 255)
     }
-    for (let i = Math.floor(rand(0, 5)); i > 0 && spots.length < MAX; i--) spots.push([rand(0.22, 0.78) * W, rand(0.18, 0.82) * H, rand(1.4, 3.2)])
-    uniforms.uSpots.value.forEach((sp, i) => {
-      const s = spots[i]
-      uniforms.uAlpha.value[i] = s ? 1 : 0
-      if (!s) return
-      sp.set(s[0], s[1], s[2], sp.w)
-      uniforms.uLook.value[i].set(rand(0.36, 0.44), Math.random(), rand(0, Math.PI * 2), Math.random() < 0.5 ? -1 : 1)
-      speeds[i] = rand(0.85, 1.15)
+    function resize() {
+      renderer.setSize(innerWidth, innerHeight, false)
+      uniforms.iResolution.value.set(innerWidth, innerHeight)
+    }
+    addEventListener('resize', () => { resize(); layout() })
+    new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    resize(); layout(); readColors()
+
+    const clock = new THREE.Clock()
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(clock.getDelta(), 0.1)
+
+      uniforms.uSpots.value.forEach((sp, i) => (sp.w += dt * (speeds[i] ?? 1)))
+      renderer.render(scene, camera)
     })
-  }
-  function readColors() {
-    const dark = document.documentElement.classList.contains('dark')
-    uniforms.uLight.value = !dark
-    const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).map(Number)
-    uniforms.uBg.value.set(r / 255, g / 255, b / 255)
-  }
-  function resize() {
-    renderer.setSize(innerWidth, innerHeight, false)
-    uniforms.iResolution.value.set(innerWidth, innerHeight)
-  }
-  addEventListener('resize', () => { resize(); layout() })
-  new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-  resize(); layout(); readColors()
-
-  const clock = new THREE.Clock()
-  renderer.setAnimationLoop(() => {
-    const dt = Math.min(clock.getDelta(), 0.1)
-
-    uniforms.uSpots.value.forEach((sp, i) => (sp.w += dt * (speeds[i] ?? 1)))
-    renderer.render(scene, camera)
-  })
-</script>
+  </script>
 </body>
+
 </html>

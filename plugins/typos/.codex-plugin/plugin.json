@@ -1,13 +1,13 @@
 {
   "name": "typos",
   "version": "0.1.0",
-  "description": "Учебные конспекты TYPOS в личном серверном хранилище.",
+  "description": "Учебные конспекты TYPOS на твоём сервере хранения.",
   "author": { "name": "robloxlover44" },
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "TYPOS",
-    "shortDescription": "Читай и редактируй свои учебные конспекты через ИИ.",
-    "longDescription": "Локальный MCP подключается к твоему серверу хранения TYPOS по личной ссылке. Требует Node.js и локальную копию репозитория с зависимостями.",
+    "shortDescription": "Читай и редактируй конспекты TYPOS с ИИ-помощником.",
+    "longDescription": "Плагин запускает локальный MCP и подключается к твоему серверу хранения TYPOS по личной ссылке. Требует Node.js и локальную копию репозитория с зависимостями.",
     "developerName": "robloxlover44",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],

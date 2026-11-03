@@ -51,13 +51,13 @@ export function ToolActions({ tool, className, onOpenWindow }: { tool: Tool; cla
             onOpenWindow?.()
           }}
         >
-          <PictureInPicture2 /> В окне поверх
+          <PictureInPicture2 /> В отдельном окне
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openToolDialog({ subjectId: tool.subjectId, toolId: tool.id })}>
-          <Pencil /> {tool.kind === "html" ? "Название и иконка" : "Переименовать"}
+          <Pencil /> Изменить
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void downloadProjectFile(tool)}>
-          <Download /> Скачать оригинал
+          <Download /> Скачать
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={remove}>

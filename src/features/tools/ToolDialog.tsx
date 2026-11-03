@@ -4,7 +4,7 @@ import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { create } from "zustand"
 import { Button } from "@/components/ui/Button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
 import { Input } from "@/components/ui/Input"
 import { toolIconLabels, toolIcons } from "@/features/subjects/visuals"
 import { errorText } from "@/lib/errors"
@@ -110,7 +110,7 @@ export function ToolDialog() {
         const t = await v.importProjectFile(target.subjectId, { name: file.name, blob: file, title: name })
         navigate(`/s/${t.subjectId}/t/${t.id}`)
       } else {
-        if (!looksLikeHtml(html)) throw new Error("Это не похоже на HTML. Нужен целый файл артефакта.")
+        if (!looksLikeHtml(html)) throw new Error("Вставь полный HTML-документ.")
         const t = await v.importTool(target.subjectId, { name, html, icon })
         navigate(`/s/${t.subjectId}/t/${t.id}`)
       }
@@ -127,22 +127,15 @@ export function ToolDialog() {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent aria-describedby={undefined} className="sm:max-w-lg">
         <form onSubmit={submit} onKeyDown={submitOnCtrlEnter} className="contents">
           <DialogHeader>
-            <DialogTitle>{tool ? (htmlish ? "Тулза" : "Файл") : "Добавить в проекты"}</DialogTitle>
-            <DialogDescription>
-              {tool
-                ? htmlish
-                  ? "Название и иконка."
-                  : "Название файла в папке «Проекты»."
-                : "PDF, презентация, документ, картинка или HTML-тулза. Тулза работает в песочнице, без доступа к конспектам."}
-            </DialogDescription>
+            <DialogTitle>{tool ? "Изменить проект" : "Добавить в проекты"}</DialogTitle>
           </DialogHeader>
 
           {!tool && (
             <div>
-              <div role="tablist" aria-label="Откуда взять" className="liquid-2 mb-2 flex rounded-xl p-1">
+              <div role="tablist" aria-label="Источник файла" className="liquid-2 mb-2 flex rounded-xl p-1">
                 {(
                   [
                     ["file", "Файл"],

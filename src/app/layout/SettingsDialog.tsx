@@ -2,7 +2,7 @@ import { isTauri } from "@tauri-apps/api/core"
 import { Minus, Plus, Settings } from "lucide-react"
 import { useUi } from "@/app/store"
 import { Button } from "@/components/ui/Button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/Dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/Dialog"
 import { SidebarMenuButton } from "@/components/ui/Sidebar"
 import { SUBJECT_COLORS } from "@/lib/subjectPalette"
 
@@ -25,10 +25,9 @@ export function SettingsDialog() {
           <span>Настройки</span>
         </SidebarMenuButton>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Настройки</DialogTitle>
-          <DialogDescription>Оформление сохраняется на этом устройстве.</DialogDescription>
         </DialogHeader>
         <fieldset className="grid gap-2">
           <legend className="mb-2 font-medium">Тема</legend>
@@ -79,10 +78,7 @@ export function SettingsDialog() {
             <input type="checkbox" checked={responsive} onChange={(event) => setResponsive(event.target.checked)} />
             Цвет по предмету
           </label>
-          <p className="text-xs text-muted-foreground">
-            {responsive ? "Акцент меняется под цвет открытого предмета." : "Один цвет для всех предметов и общего экрана."}
-          </p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Палитра акцента">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Акцентные цвета">
             {SUBJECT_COLORS.map((swatch) => (
               <button
                 key={swatch.id}
@@ -143,7 +139,6 @@ export function SettingsDialog() {
                 Сбросить
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Ctrl + / − · Ctrl 0 — вернуть 100%</p>
           </fieldset>
         )}
       </DialogContent>

@@ -130,19 +130,19 @@ const VPN_IF = /^(tun|tap|wg|tailscale|utun|zt|ppp)/
 
 /** @param {string} ip @param {string} [iface] */
 function addressKind(ip, iface = "") {
-  if (ip === "localhost" || ip === "::1" || ip.startsWith("127.")) return "на этом же компьютере (localhost)"
-  if (VPN_IF.test(iface)) return `через VPN ${iface} (${ip})`
+  if (ip === "localhost" || ip === "::1" || ip.startsWith("127.")) return "Этот компьютер: localhost"
+  if (VPN_IF.test(iface)) return `VPN ${iface}: ${ip}`
   const [a, b] = ip.split(".").map(Number)
-  if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return `на другом устройстве в локальной сети (${ip})`
-  if (a === 100 && b >= 64 && b <= 127) return `через Tailscale или другой VPN (${ip})`
-  return `через интернет (${ip}) — лучше с HTTPS`
+  if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return `Локальная сеть: ${ip}`
+  if (a === 100 && b >= 64 && b <= 127) return `Tailscale / VPN: ${ip}`
+  return `Интернет: ${ip}. Используй HTTPS`
 }
 
 const VIRTUAL_IF = /^(docker|br-|veth|virbr|vmnet|cni|flannel|kube|podman|lxc|lxd)/
 
 /** @param {Listen} l @returns {{ label: string, base: string }[]} */
 export function connectionTargets(l) {
-  if (l.publicUrl) return [{ label: `по внешнему адресу (${new URL(l.publicUrl).host})`, base: l.publicUrl }]
+  if (l.publicUrl) return [{ label: `Внешний адрес: ${new URL(l.publicUrl).host}`, base: l.publicUrl }]
   const proto = l.tls ? "https" : "http"
   /** @param {string} h @param {string} [iface] */
   const target = (h, iface) => ({ label: addressKind(h, iface), base: `${proto}://${h.includes(":") ? `[${h}]` : h}:${l.port}` })
@@ -163,7 +163,7 @@ function vaultParts(pathname) {
   try {
     parts = pathname.slice(FILES.length).split("/").filter(Boolean).map(decodeURIComponent)
   } catch {
-    throw new HttpError(400, "Битый путь")
+    throw new HttpError(400, "Некорректная кодировка пути")
   }
   if (parts.some((p) => p === "." || p === ".." || /[\\/:\0]/.test(p))) throw new HttpError(400, "Недопустимый путь")
   if (parts.length && isStateDir(parts[0])) throw new HttpError(404)
@@ -284,9 +284,7 @@ export async function startServer(opts) {
     })
     watcher.on("error", () => watcher?.close())
   } catch {
-    log(
-      "слежение за папкой недоступно в этой версии Node — изменения, сделанные мимо сервера, устройства увидят при следующей синхронизации",
-    )
+    log("Наблюдение за папкой недоступно. Прямые правки файлов появятся при следующей синхронизации.")
   }
 
   const heartbeat = setInterval(async () => {
@@ -489,7 +487,7 @@ export async function startServer(opts) {
     const abs = await resolve(parts)
     if (device.access === "read" && !["OPTIONS", "GET", "HEAD", "PROPFIND"].includes(req.method ?? "")) {
       req.resume()
-      throw new HttpError(403, "Ключ этого устройства только для чтения")
+      throw new HttpError(403, "Ключ этого устройства разрешает только чтение")
     }
     switch (req.method) {
       case "OPTIONS":
@@ -541,7 +539,7 @@ export async function startServer(opts) {
           const bytes = used.bytes + body.length - (st?.size ?? 0)
           const files = used.files + (st ? 0 : 1)
           if (bytes > maxVault || files > maxFiles)
-            throw new HttpError(507, "Хранилище заполнено — удали лишнее или увеличь --max-vault / --max-files на сервере")
+            throw new HttpError(507, "Хранилище заполнено. Удали файлы или увеличь --max-vault / --max-files.")
           await writeAtomic(abs, body)
           Object.assign(used, { bytes, files })
           const etag = etagOfBuffer(body)
@@ -553,7 +551,7 @@ export async function startServer(opts) {
         return
       }
       case "DELETE": {
-        if (!parts.length) throw new HttpError(403, "Корень удалить нельзя")
+        if (!parts.length) throw new HttpError(403, "Нельзя удалить корень хранилища")
         req.resume()
         await exclusive(async () => {
           const st = await statOrNull(abs)
@@ -694,7 +692,7 @@ export async function startServer(opts) {
       return
     }
     if (url.pathname === "/.typos/events" && req.method === "GET") {
-      if (streams.size >= maxStreams) throw new HttpError(429, "Слишком много открытых подключений к серверу — закрой лишние вкладки")
+      if (streams.size >= maxStreams) throw new HttpError(429, "Слишком много подключений. Закрой лишние вкладки.")
       res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "X-Accel-Buffering": "no" })
       res.write(`event: hello\ndata: ${JSON.stringify({ vaultId: (await currentState()).vaultId })}\n\n`)
       const stream = { res, device: device.name }
@@ -794,43 +792,44 @@ function numberFlag(flags, name, min, max) {
 
 const HELP = `Сервер хранения TYPOS
 
-  node typos-server.mjs [serve] --dir <папка>   запустить сервер (ссылку с ключом он не печатает)
-  node typos-server.mjs link [устройство]      показать ссылку (для нового устройства — завести ему ключ)
-  node typos-server.mjs rotate <устройство>    новый ключ устройству, старая ссылка перестанет работать
-  node typos-server.mjs devices                устройства и когда заходили
+Команды:
+  node typos-server.mjs [serve] --dir <папка>   запустить сервер
+  node typos-server.mjs link [устройство]      получить ссылку или создать ключ
+  node typos-server.mjs rotate <устройство>    заменить ключ и отключить старую ссылку
+  node typos-server.mjs devices                список устройств
   node typos-server.mjs revoke <устройство>    отключить устройство
 
-  Все ссылки открывают одно хранилище. Отдельные устройства нужны, чтобы отключать их по одному.
-  ИИ-помощнику (MCP) заведи свой ключ: link mcp. Только читать — link <имя> --read-only (с rotate тоже).
-
-  --dir <папка>         vault (или переменная TYPOS_VAULT)
-  --port <порт>         по умолчанию ${DEFAULT_PORT}
-  --host <адрес>        по умолчанию 0.0.0.0 (этот компьютер и вся сеть); 127.0.0.1 — только этот компьютер
-  --name <имя>          как хранилище называется в приложении
-  --cert, --key <файл>  HTTPS (нужен, если приложение открыто по https)
-  --public-url <url>    внешний адрес, если сервер за прокси: https://notes.example.com
-                        (тогда адрес клиента берётся из X-Forwarded-For от прокси на этом же компьютере)
-  --origin <url,...>    пускать только эти адреса приложения (по умолчанию любые)
-  --trust-proxy         адрес клиента — из X-Forwarded-For от любого прокси (хостинг вроде Railway: прокси не на этом компьютере)
-  --max-size <МБ>       предел размера файла, по умолчанию 50
-  --max-vault <МБ>      предел объёма всего хранилища, по умолчанию 10240
-  --max-files <число>   предел числа файлов, по умолчанию 100000
-  --read-only           для link и rotate: ключ только для чтения
-  --quiet               не писать в консоль неверные ключи и ошибки`
+Параметры:
+  --dir <папка>         папка хранилища или TYPOS_VAULT
+  --port <порт>         порт сервера, по умолчанию ${DEFAULT_PORT}
+  --host <адрес>        адрес сервера, по умолчанию 0.0.0.0
+                       127.0.0.1 ограничивает доступ этим компьютером
+  --name <имя>          название хранилища
+  --cert, --key <файл>  сертификат и ключ для HTTPS
+  --public-url <url>    внешний адрес за прокси
+                       доверяет X-Forwarded-For от локального прокси
+  --origin <url,...>    разрешённые адреса приложения, по умолчанию любые
+  --trust-proxy         доверять X-Forwarded-For от любого прокси
+                       используй только за доверенным прокси
+  --max-size <МБ>       размер файла, по умолчанию 50
+  --max-vault <МБ>      размер хранилища, по умолчанию 10240
+  --max-files <число>   число файлов, по умолчанию 100000
+  --read-only           ключ только для чтения для link и rotate
+  --quiet               не выводить ошибки и попытки входа с неверным ключом`
 
 /**
  * @param {ServerState} state @param {string} token @param {{ label: string, base: string }[]} targets
  * @param {string} dir @param {string} device
  */
 function printLinks(state, token, targets, dir, device) {
-  console.log("\nСсылка подключения — вставь в TYPOS: «Хранилище» → «Сервер хранения».")
-  if (targets.length > 1) console.log("Бери ту, что подходит к месту, где открыт TYPOS:")
+  console.log("\nСсылка подключения:")
+  if (targets.length > 1) console.log("Выбери адрес подключения:")
   for (const t of targets) {
-    console.log(`\n  TYPOS ${t.label}:`)
+    console.log(`\n  ${t.label}`)
     console.log(`  ${buildLink({ base: t.base, token, name: state.name, vaultId: state.vaultId })}`)
   }
   const again = `node typos-server.mjs link${device === DEFAULT_DEVICE ? "" : ` ${device}`} --dir ${JSON.stringify(dir)}`
-  console.log(`\nСсылка — это ключ: не публикуй её. Показать снова: ${again}`)
+  console.log(`\nНе публикуй ссылку: она содержит ключ доступа.\nПоказать снова: ${again}`)
 }
 
 /** @param {Record<string, string>} flags @param {Listen | undefined} saved @returns {Listen} */
@@ -847,7 +846,7 @@ export async function main(argv) {
   const command = positional[0] ?? "serve"
   if (command === "help" || flags.help) return console.log(HELP)
   const dir = flags.dir ?? process.env.TYPOS_VAULT
-  if (!dir) throw new Error("Укажи папку: --dir ./vault (или TYPOS_VAULT). Справка: --help")
+  if (!dir) throw new Error("Укажи --dir ./vault или TYPOS_VAULT. Справка: --help")
   const root = path.resolve(dir)
 
   if (command === "serve") {
@@ -872,10 +871,11 @@ export async function main(argv) {
       log: flags.quiet ? undefined : (line) => console.error(`[${new Date().toISOString()}] ${line}`),
     })
     const listen = /** @type {Listen} */ (srv.state.listen)
-    const everywhere = listen.host === "0.0.0.0" || listen.host === "::"
     console.log(`TYPOS storage «${srv.state.name}» запущен`)
     console.log(`  папка:  ${root}`)
-    console.log(`  доступ: ${everywhere ? "этот компьютер и вся сеть" : listen.host} · порт ${srv.port}${listen.tls ? " · HTTPS" : ""}`)
+    console.log(`  адрес:  ${listen.host}`)
+    console.log(`  порт:   ${srv.port}`)
+    if (listen.tls) console.log("  HTTPS")
 
     console.log(`\nСсылка подключения: node typos-server.mjs link [устройство] --dir ${JSON.stringify(dir)}`)
     if (srv.state.devices.length) console.log(`Устройства: ${srv.state.devices.map((d) => d.name).join(", ")}`)
@@ -892,21 +892,21 @@ export async function main(argv) {
   if (command === "link") {
     const device = positional[1] ?? DEFAULT_DEVICE
     const { state, token, created, readOnly } = await deviceKey(root, device, { readOnly: Boolean(flags["read-only"]) })
-    if (created && device !== DEFAULT_DEVICE) console.log(`Устройству «${device}» заведён отдельный ключ. Отключить: revoke ${device}`)
+    if (created && device !== DEFAULT_DEVICE) console.log(`Ключ создан: ${device}. Отключить: revoke ${device}`)
     if (!created && Boolean(flags["read-only"]) !== readOnly)
       console.log(
-        `У «${device}» уже есть ключ ${readOnly ? "только для чтения" : "с полным доступом"}. Сменить права: rotate ${device}${readOnly ? "" : " --read-only"}`,
+        `Ключ «${device}»: ${readOnly ? "только для чтения" : "полный доступ"}. Сменить права: rotate ${device}${readOnly ? "" : " --read-only"}`,
       )
-    if (readOnly) console.log("Этот ключ только для чтения.")
+    if (readOnly) console.log("Доступ: только чтение.")
     printLinks(state, token, connectionTargets(listenFromFlags(flags, state.listen)), dir, device)
     return
   }
 
   if (command === "rotate") {
     const device = positional[1]
-    if (!device) throw new Error("Какому устройству новый ключ? rotate <имя> (общая ссылка — rotate default)")
+    if (!device) throw new Error("Укажи устройство: rotate <имя>. Общий ключ: rotate default")
     const { state, token, readOnly } = await rotateDevice(root, device, { readOnly: Boolean(flags["read-only"]) })
-    console.log(`Устройству «${device}» выдан новый ключ${readOnly ? " только для чтения" : ""} — старая ссылка больше не работает.`)
+    console.log(`Ключ «${device}» заменён.${readOnly ? " Доступ: только чтение." : ""} Старая ссылка отключена.`)
     printLinks(state, token, connectionTargets(listenFromFlags(flags, state.listen)), dir, device)
     return
   }
@@ -916,16 +916,17 @@ export async function main(argv) {
     if (!state?.devices.length) return console.log("Устройств нет. Добавить: link <имя>")
     /** @type {Record<string, string>} */
     const seen = await fs.readFile(seenPath(root), "utf8").then(JSON.parse, () => ({}))
+    console.log("Устройство           Доступ           Создано      Последнее подключение")
     for (const d of state.devices)
       console.log(
-        `${d.name.padEnd(20)} ${d.access === "read" ? "чтение" : "полный доступ"} · добавлено ${d.created.slice(0, 10)} · заходило ${seen[d.name] ?? "ещё нет"}`,
+        `${d.name.padEnd(20)} ${(d.access === "read" ? "чтение" : "полный доступ").padEnd(16)} ${d.created.slice(0, 10)}   ${seen[d.name] ?? "ещё нет"}`,
       )
     return
   }
 
   if (command === "revoke") {
     const device = positional[1]
-    if (!device) throw new Error("Какое устройство отключить? revoke <имя>")
+    if (!device) throw new Error("Укажи устройство: revoke <имя>")
     console.log((await revokeDevice(root, device)) ? `«${device}» отключено.` : `Нет устройства «${device}».`)
     return
   }

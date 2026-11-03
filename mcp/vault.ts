@@ -40,13 +40,13 @@ export class StudyVault {
 
   private note(data: repo.VaultData, id: string): Note {
     const n = data.notes.find((x) => x.id === id)
-    if (!n) throw new Error(`Нет конспекта с id «${id}». Id — из get_subject или search.`)
+    if (!n) throw new Error(`Нет конспекта с id «${id}». Получи id через get_subject или search.`)
     return n
   }
 
   private board(data: repo.VaultData, id: string): Board {
     const b = data.boards.find((x) => x.id === id)
-    if (!b) throw new Error(`Нет доски с id «${id}». Id — из get_subject или search.`)
+    if (!b) throw new Error(`Нет доски с id «${id}». Получи id через get_subject или search.`)
     return b
   }
 
@@ -156,7 +156,7 @@ export class StudyVault {
         out = out.replace(whole, `![${alt}](${rel})`)
       } catch (e) {
         warnings.push(
-          `Картинка не скачалась (${src.slice(0, 80)}): ${(e as Error).message}. В приложении внешние ссылки на картинки не показываются.`,
+          `Не удалось скачать картинку (${src.slice(0, 80)}): ${(e as Error).message}. В приложении внешние ссылки на картинки не показываются.`,
         )
       }
     }
@@ -264,7 +264,7 @@ export class StudyVault {
     const d = await this.load()
     const list = { note: d.notes, pin: d.pins, tool: d.tools, board: d.boards }[input.kind]
     const item = list.find((x) => x.id === input.id)
-    if (!item) throw new Error(`Не нашёл: ${input.kind} «${input.id}»`)
+    if (!item) throw new Error(`Не найдено: ${input.kind} «${input.id}»`)
     const trashPath = await repo.trashEntry(this.a, item.path)
     return { moved: item.path, trash: trashPath, note: "Вернуть можно в приложении: Корзина → Восстановить (30 дней)." }
   }
@@ -345,7 +345,7 @@ function checkBoard(data: { nodes: { id: string; text?: string }[] }, ids: strin
 function checkPin(tex?: string, text?: string): string[] {
   const w: string[] = []
   if (tex) w.push(...checkMarkdown(`$$\n${tex}\n$$`))
-  if (text?.includes("$")) w.push("В text формулы не рендерятся — это простой текст под формулой. Формулу клади в tex.")
+  if (text?.includes("$")) w.push("Поле text содержит обычный текст и не отображает формулы. Передай формулу в tex.")
   return w
 }
 

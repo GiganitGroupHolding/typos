@@ -187,7 +187,7 @@ export function BoardCanvas({ board }: { board: Board }) {
           dataRef.current = merged
           setDataState({ data: merged })
         },
-        (e) => toast.error("Доска не сохранилась", { id: "board-save", description: errorText(e) }),
+        (e) => toast.error("Не удалось сохранить доску", { id: "board-save", description: errorText(e) }),
       )
   }, [boardId])
 

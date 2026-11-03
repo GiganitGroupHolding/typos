@@ -38,7 +38,7 @@ export function PinsDrawer() {
           className="glass absolute top-14 right-3 bottom-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col rounded-[var(--radius-surface)]"
         >
           <header className="flex items-center gap-1 border-b py-2 pr-2 pl-4">
-            <h2 className="flex-1 truncate text-sm font-semibold">Закреп{subject ? ` · ${subject.name}` : ""}</h2>
+            <h2 className="flex-1 truncate text-sm font-semibold">{subject ? subject.name : "Закреп"}</h2>
             {subject && (
               <Button variant="ghost" size="icon-sm" aria-label="Новая карточка" onClick={() => openPinEditor({ subjectId: subject.id })}>
                 <Plus />
@@ -50,10 +50,10 @@ export function PinsDrawer() {
           </header>
 
           {!subject ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">Открой предмет, чтобы увидеть его закреп.</p>
+            <p className="p-6 text-center text-sm text-muted-foreground">Выбери предмет</p>
           ) : !pins.length ? (
             <div className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">В этом предмете пока ничего не закреплено.</p>
+              <p className="text-sm text-muted-foreground">Нет карточек</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => openPinEditor({ subjectId: subject.id })}>
                 <Plus /> Карточка
               </Button>
@@ -92,7 +92,7 @@ function PinRow({ pin, siblings, onDrop }: { pin: Pin; siblings: Pin[]; onDrop: 
   return (
     <Reorder.Item value={pin} dragListener={false} dragControls={controls} onDragEnd={onDrop} className="relative list-none">
       {floating ? (
-        <div className="rounded-xl border border-dashed px-4 py-3 text-[13px] text-muted-foreground">«{pin.title}» — в окне</div>
+        <div className="rounded-xl border border-dashed px-4 py-3 text-[13px] text-muted-foreground">«{pin.title}» открыто в окне</div>
       ) : (
         <motion.div
           layoutId={`pin-${pin.id}`}

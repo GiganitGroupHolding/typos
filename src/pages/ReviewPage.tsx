@@ -39,7 +39,7 @@ export function ReviewPage() {
           </Link>
         </Button>
         <SubjectBadge subject={subject} size="sm" />
-        <h1 className="flex-1 truncate text-[17px] font-semibold">Повторение · {subject.name}</h1>
+        <h1 className="flex-1 truncate text-[17px] font-semibold">Повторение</h1>
         <Button
           variant={shuffled ? "secondary" : "ghost"}
           size="sm"
@@ -117,7 +117,7 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
         </div>
         <h2 className="text-[24px] font-bold tracking-tight">Круг пройден</h2>
         <p className="text-[15px] text-muted-foreground">
-          С первого раза — {firstTry.size} из {plural(total, ["карточки", "карточек", "карточек"])}
+          С первого раза: {firstTry.size} из {plural(total, ["карточки", "карточек", "карточек"])}
         </p>
         <Button className="mt-2" onClick={onRestart}>
           <RotateCcw /> Ещё раз
@@ -161,7 +161,7 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
                 <span className="text-[13px] font-semibold tracking-wide text-(--subject) uppercase">Вспомни</span>
                 <span className="mt-3 text-[28px] leading-tight font-bold tracking-tight">{card.title}</span>
                 <span className="mt-6 text-[13px] text-muted-foreground">
-                  Нажми или <Kbd>Пробел</Kbd>, чтобы перевернуть
+                  Перевернуть <Kbd>Пробел</Kbd>
                 </span>
               </Face>
               <Face back>

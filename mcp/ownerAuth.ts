@@ -231,24 +231,24 @@ class OwnerProvider implements OAuthServerProvider {
     res.type("html")
       .send(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Подключить TYPOS</title><style>body{font:18px system-ui;max-width:34rem;margin:4rem auto;padding:1rem;color:#202020;background:#fafafa}label,input,button{display:block;margin:1rem 0}input,button{font:inherit;padding:.75rem;box-sizing:border-box;max-width:100%}input{width:100%}code{overflow-wrap:anywhere}.error{color:#a00}</style>
-<h1>Подключить TYPOS</h1><p>Клиент <b>${escape(pending.clientName)}</b> получит доступ к чтению и изменению всех заметок этого хранилища.</p>
-<p>Адрес возврата: <code>${escape(pending.params.redirectUri)}</code></p><p>Продолжай, только если ты сам начал это подключение в своём ИИ-клиенте.</p>
+<h1>Подключить TYPOS</h1><p>Клиент <b>${escape(pending.clientName)}</b> сможет читать и изменять все заметки этого хранилища.</p>
+<p>Адрес возврата: <code>${escape(pending.params.redirectUri)}</code></p><p>Подтверждай только своё подключение.</p>
 <p class="error">${escape(error)}</p><form method="post" action="/consent"><input type="hidden" name="request" value="${id}">
-<label for="key">Личный ключ владельца MCP</label><input id="key" name="key" type="password" autocomplete="current-password" required maxlength="512">
-<button type="submit">Разрешить доступ</button></form><p>Ключ остаётся на этом сервере и не передаётся ИИ-клиенту. Чтобы отменить подключение, закрой страницу.</p></html>`)
+<label for="key">Ключ владельца MCP</label><input id="key" name="key" type="password" autocomplete="current-password" required maxlength="512">
+<button type="submit">Разрешить доступ</button></form><p>Ключ не передаётся клиенту. Для отмены закрой страницу.</p></html>`)
   }
 
   async consent(id: string, cookie: string, key: string, res: Response) {
     const pending = this.pending.get(id)
     if (!pending || pending.expires <= now() || !equal(hash(cookie), pending.cookie)) {
-      res.status(400).json({ error: "Вход устарел — начни подключение заново" })
+      res.status(400).json({ error: "Запрос недействителен. Подключись заново." })
       return
     }
     const [, salt, expected] = this.config.passwordHash.split(":")
     const actual = (await derive(key, Buffer.from(salt, "base64url"), 32)) as Buffer
     if (!timingSafeEqual(actual, Buffer.from(expected, "base64url"))) {
       res.status(401)
-      this.page(res, id, pending, "Ключ не подошёл — проверь его и попробуй снова")
+      this.page(res, id, pending, "Неверный ключ. Попробуй снова.")
       return
     }
 
@@ -317,7 +317,7 @@ class OwnerProvider implements OAuthServerProvider {
       if (grant.clientId !== client.client_id) continue
       if (grant.usedRefresh.includes(value)) {
         this.remove("grant", grant.id)
-        throw new InvalidGrantError("Повторно использованный токен — подключись заново")
+        throw new InvalidGrantError("Токен уже использован — подключись заново")
       }
       if (grant.refresh !== value) continue
       if (grant.refreshExpires <= now() || grant.usedRefresh.length >= 2048) {
@@ -405,7 +405,7 @@ export function createOwnerAuth(config: OwnerAuthConfig) {
     res.status(404).json({ error: "Не найдено" })
   })
   app.use((_error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    res.status(400).json({ error: "Не получилось обработать запрос входа — начни подключение заново" })
+    res.status(400).json({ error: "Ошибка входа. Подключись заново." })
   })
   return { provider, app }
 }

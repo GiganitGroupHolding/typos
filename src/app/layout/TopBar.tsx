@@ -2,6 +2,7 @@ import { ChevronRight, Focus, Pin, Search } from "lucide-react"
 import { Link, useParams } from "react-router"
 import { useUi } from "@/app/store"
 import { Button } from "@/components/ui/Button"
+import { Kbd } from "@/components/ui/Kbd"
 import { useLiquidLens } from "@/components/ui/LiquidLens"
 import { SidebarTrigger } from "@/components/ui/Sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
@@ -29,7 +30,9 @@ export function TopBar() {
         <TooltipTrigger asChild>
           <SidebarTrigger aria-label="Показать или скрыть предметы" />
         </TooltipTrigger>
-        <TooltipContent>Предметы · Ctrl B</TooltipContent>
+        <TooltipContent className="flex items-center gap-2">
+          Предметы <Kbd>Ctrl B</Kbd>
+        </TooltipContent>
       </Tooltip>
 
       <nav
@@ -71,7 +74,9 @@ export function TopBar() {
               <Search />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Поиск · Ctrl K</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">
+            Поиск <Kbd>Ctrl K</Kbd>
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -86,7 +91,9 @@ export function TopBar() {
               <Focus />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Режим фокуса · Ctrl \</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">
+            Режим фокуса <Kbd>Ctrl \</Kbd>
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -101,7 +108,9 @@ export function TopBar() {
               <Pin />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Закреп · Ctrl J</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">
+            Закреп <Kbd>Ctrl J</Kbd>
+          </TooltipContent>
         </Tooltip>
       </div>
       <WindowControls />

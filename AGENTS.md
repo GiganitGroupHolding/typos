@@ -25,7 +25,7 @@ src/vault/      file format (format.ts), file operations (repo.ts), app state (s
 server/         typos-server.mjs (storage server, one file, JSDoc-typed JS) + integration tests
 src-tauri/      desktop backend (Rust): window, folder picker, file access
 mcp/            MCP server; reuses src/vault through NodeFsAdapter (--vault) or DavAdapter (--link)
-deploy/         Docker Compose + Caddy for self-hosting (docs/self-hosting.md)
+deploy/         Docker Compose + Caddy for self-hosting (docs/deployment.md)
 ```
 
 All file access goes through `VaultAdapter` (`src/storage/VaultAdapter.ts`). UI and `repo.ts` never know which storage is open. Kinds: `browser` (IndexedDB), `folder` (File System Access in the browser, `TauriAdapter` on desktop), `remote` (`SyncedAdapter`: local IndexedDB copy + `SyncEngine` + `RemoteAdapter` transport; `DavAdapter` talks to the server directly with no local copy, for the MCP server and tests), `memory` (tests).

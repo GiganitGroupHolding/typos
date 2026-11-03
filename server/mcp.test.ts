@@ -71,7 +71,7 @@ describe("MCP с сервером хранения (--link)", () => {
 
   it("ссылку берёт и из STUDYNOTES_LINK; --vault и --link вместе — ошибка", async () => {
     expect(await openVault([], { STUDYNOTES_LINK: link })).toBeInstanceOf(DavAdapter)
-    await expect(openVault(["--vault", dir, "--link", link], {})).rejects.toThrow(/что-то одно/)
+    await expect(openVault(["--vault", dir, "--link", link], {})).rejects.toThrow(/только --vault или --link/)
   })
 
   it("чужое хранилище и неверный ключ — ошибка при запуске", async () => {

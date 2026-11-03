@@ -117,12 +117,12 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         toast.error("Не удалось сохранить", { description: errorText(e) })
       }
     }
-    toast.warning("Конспект изменили снаружи", {
+    toast.warning("Конспект изменён вне приложения", {
       id: `conflict-${id}`,
-      description: "Пока здесь шли правки, файл на диске поменялся. Какую версию оставить?",
+      description: "Какую версию сохранить?",
       duration: Infinity,
       action: { label: "С диска", onClick: () => void takeDisk() },
-      cancel: { label: "Мою", onClick: () => void keepMine() },
+      cancel: { label: "Текущую", onClick: () => void keepMine() },
     })
   }, [id, loadFromDisk, navigate, note.subjectId])
 
@@ -204,10 +204,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         diagrams: true,
       }),
       Placeholder.configure({
-        placeholder: ({ node }) =>
-          node.type.name === "heading" && node.attrs.level === 1
-            ? "Заголовок"
-            : "Пиши… $x^2$ — формула, $$ — блок формулы, # — заголовок, - — список",
+        placeholder: ({ node }) => (node.type.name === "heading" && node.attrs.level === 1 ? "Заголовок" : "Текст конспекта"),
       }),
       Folding.configure({ noteId: note.id }),
     ],
@@ -305,7 +302,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     const base = useVault.getState().noteBase(id)
     if (base === undefined || sameBody(base, note.body)) return
     loadFromDisk(note.body)
-    toast("Конспект обновился с диска", { id: `reload-${id}` })
+    toast("Конспект обновлён", { id: `reload-${id}` })
   }, [editor, id, note.body, loadFromDisk])
 
   const reading = useUi((s) => s.readingMode)
@@ -517,12 +514,12 @@ function SaveIndicator({ state }: { state: SaveState }) {
     >
       {state === "saving" || state === "dirty" ? (
         <>
-          <Loader2 className="size-3 animate-spin" /> Сохраняю
+          <Loader2 className="size-3 animate-spin" /> Сохранение…
         </>
       ) : state === "error" ? (
         "Ошибка сохранения"
       ) : state === "conflict" ? (
-        "Не сохранено: файл изменён снаружи"
+        "Не сохранено: файл изменён вне приложения"
       ) : (
         <>
           <Check className="size-3" /> Сохранено
