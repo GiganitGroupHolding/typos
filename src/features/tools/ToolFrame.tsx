@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { useResolvedTheme } from '@/app/theme'
-import { cn } from '@/lib/utils'
-import { TOOL_SANDBOX, withCsp, type ToolMessage } from './sandbox'
+import { useEffect, useMemo, useRef } from "react"
+import { useResolvedTheme } from "@/app/theme"
+import { cn } from "@/lib/utils"
+import { TOOL_SANDBOX, withCsp, type ToolMessage } from "./sandbox"
 
 interface Props {
   html: string
@@ -16,10 +16,10 @@ export function ToolFrame({ html, title, runKey = 0, className }: Props) {
   const theme = useResolvedTheme()
   const srcDoc = useMemo(() => withCsp(html), [html])
 
-  const post = (msg: ToolMessage) => ref.current?.contentWindow?.postMessage(msg, '*')
+  const post = (msg: ToolMessage) => ref.current?.contentWindow?.postMessage(msg, "*")
 
   useEffect(() => {
-    post({ type: 'theme', value: theme })
+    post({ type: "theme", value: theme })
   }, [theme])
 
   return (
@@ -30,8 +30,8 @@ export function ToolFrame({ html, title, runKey = 0, className }: Props) {
       sandbox={TOOL_SANDBOX}
       srcDoc={srcDoc}
       referrerPolicy="no-referrer"
-      onLoad={() => post({ type: 'theme', value: theme })}
-      className={cn('size-full border-0 bg-background', className)}
+      onLoad={() => post({ type: "theme", value: theme })}
+      className={cn("size-full border-0 bg-background", className)}
     />
   )
 }

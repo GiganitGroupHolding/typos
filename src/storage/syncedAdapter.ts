@@ -1,12 +1,12 @@
-import { createStore, del, delMany, entries, get, keys, set, update, type UseStore } from 'idb-keyval'
-import { monitorConnection, useConnection } from './connection'
-import { FlatAdapter, type FlatStore } from './flatAdapter'
-import { RemoteAdapter } from './remoteAdapter'
-import type { RemoteConfig } from './remoteLink'
-import { fromBlob, SyncEngine, touched, useSync, type EngineHooks, type MetaEntry, type MetaStore, type Replica } from './sync'
-import type { Entry, VaultAdapter } from './VaultAdapter'
+import { createStore, del, delMany, entries, get, keys, set, update, type UseStore } from "idb-keyval"
+import { monitorConnection, useConnection } from "./connection"
+import { FlatAdapter, type FlatStore } from "./flatAdapter"
+import { RemoteAdapter } from "./remoteAdapter"
+import type { RemoteConfig } from "./remoteLink"
+import { fromBlob, SyncEngine, touched, useSync, type EngineHooks, type MetaEntry, type MetaStore, type Replica } from "./sync"
+import type { Entry, VaultAdapter } from "./VaultAdapter"
 
-const INTERNAL = '\u0000'
+const INTERNAL = "\u0000"
 const READY_KEY = `${INTERNAL}ready`
 
 function idbFiles(store: UseStore): FlatStore {
@@ -32,13 +32,13 @@ function idbMeta(store: UseStore): MetaStore {
 export interface SyncHooks {
   onChanged?: () => void
 
-  onConflict?: EngineHooks['onConflict']
+  onConflict?: EngineHooks["onConflict"]
 
   onReconnected?: () => void
 }
 
 export class SyncedAdapter implements VaultAdapter {
-  readonly kind = 'remote' as const
+  readonly kind = "remote" as const
   readonly label: string
   readonly config: RemoteConfig
   readonly remote: RemoteAdapter
@@ -57,14 +57,14 @@ export class SyncedAdapter implements VaultAdapter {
   private periodic?: ReturnType<typeof setInterval>
   private stopMonitor?: () => void
 
-  constructor(config: RemoteConfig, scope = '') {
+  constructor(config: RemoteConfig, scope = "") {
     this.config = config
     this.label = config.name
     this.remote = new RemoteAdapter(config)
-    const db = `typos-sync-${config.vaultId}${scope ? `-${scope}` : ''}`
-    this.files = idbFiles(createStore(`${db}-files`, 'files'))
-    this.metaStore = createStore(`${db}-meta`, 'meta')
-    this.local = new FlatAdapter(this.files, 'remote', config.name)
+    const db = `typos-sync-${config.vaultId}${scope ? `-${scope}` : ""}`
+    this.files = idbFiles(createStore(`${db}-files`, "files"))
+    this.metaStore = createStore(`${db}-meta`, "meta")
+    this.local = new FlatAdapter(this.files, "remote", config.name)
     this.replica = { files: this.files, meta: idbMeta(this.metaStore), lock: (job) => this.lock(job) }
     this.engine = new SyncEngine(this.replica, this.remote)
     this.engine.hooks = { ...this.ownHooks }
@@ -85,15 +85,15 @@ export class SyncedAdapter implements VaultAdapter {
     this.engine.hooks = {
       ...this.ownHooks,
       onConflict: hooks.onConflict,
-      isOffline: () => useConnection.getState().status !== 'online',
+      isOffline: () => useConnection.getState().status !== "online",
     }
-    this.channel = typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel(`typos-sync-${this.config.vaultId}`)
+    this.channel = typeof BroadcastChannel === "undefined" ? undefined : new BroadcastChannel(`typos-sync-${this.config.vaultId}`)
     if (this.channel) this.channel.onmessage = () => this.onChanged?.()
     this.stopMonitor = monitorConnection(this.remote, {
       onChange: (status, prev) => {
-        if (status !== 'online') return
+        if (status !== "online") return
         this.engine.schedule(0)
-        if (prev === 'offline') hooks.onReconnected?.()
+        if (prev === "offline") hooks.onReconnected?.()
       },
       onServerChange: () => this.engine.schedule(150),
     })
@@ -121,7 +121,7 @@ export class SyncedAdapter implements VaultAdapter {
   }
 
   private changed(fromServer: boolean) {
-    this.channel?.postMessage('changed')
+    this.channel?.postMessage("changed")
     if (fromServer) this.onChanged?.()
   }
 
@@ -164,7 +164,7 @@ export class SyncedAdapter implements VaultAdapter {
   writeBlob(path: string, blob: Blob) {
     return this.edit(async () => {
       const value = await fromBlob(path, blob)
-      await (typeof value === 'string' ? this.local.writeText(path, value) : this.local.writeBlob(path, value))
+      await (typeof value === "string" ? this.local.writeText(path, value) : this.local.writeBlob(path, value))
       return [path]
     })
   }

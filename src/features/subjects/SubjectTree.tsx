@@ -1,14 +1,14 @@
-import { ChevronRight, FileText, FolderOpen, LayoutDashboard, Pin } from 'lucide-react'
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
-import { useState } from 'react'
-import { Link, useLocation, useParams, useSearchParams } from 'react-router'
-import { SidebarMenu, SidebarMenuButton } from '@/components/ui/sidebar'
-import { dur, easeOut, spring } from '@/lib/motion'
-import { cn } from '@/lib/utils'
-import type { Subject, SubjectTab } from '@/types'
-import { useBoardsOf, useNotesOf, usePinsOf, useSubjects, useToolsOf } from '@/vault/hooks'
-import { tabOfPath } from './tabs'
-import { SubjectBadge } from './visuals'
+import { ChevronRight, FileText, FolderOpen, LayoutDashboard, Pin } from "lucide-react"
+import { AnimatePresence, LayoutGroup, motion } from "motion/react"
+import { useState } from "react"
+import { Link, useLocation, useParams, useSearchParams } from "react-router"
+import { SidebarMenu, SidebarMenuButton } from "@/components/ui/Sidebar"
+import { dur, easeOut, spring } from "@/lib/motion"
+import { cn } from "@/lib/utils"
+import type { Subject, SubjectTab } from "@/types"
+import { useBoardsOf, useNotesOf, usePinsOf, useSubjects, useToolsOf } from "@/vault/hooks"
+import { tabOfPath } from "./tabs"
+import { SubjectBadge } from "./visuals"
 
 const ROW = 30
 
@@ -32,10 +32,10 @@ function TraceLine({ index, last }: { index: number; last: boolean }) {
 }
 
 const sections: { tab: SubjectTab; label: string; icon: typeof FileText }[] = [
-  { tab: 'notes', label: 'Конспекты', icon: FileText },
-  { tab: 'pins', label: 'Закреп', icon: Pin },
-  { tab: 'tools', label: 'Проекты', icon: FolderOpen },
-  { tab: 'boards', label: 'Доски', icon: LayoutDashboard },
+  { tab: "notes", label: "Конспекты", icon: FileText },
+  { tab: "pins", label: "Закреп", icon: Pin },
+  { tab: "tools", label: "Проекты", icon: FolderOpen },
+  { tab: "boards", label: "Доски", icon: LayoutDashboard },
 ]
 
 function SubjectNode({ subject }: { subject: Subject }) {
@@ -50,7 +50,7 @@ function SubjectNode({ subject }: { subject: Subject }) {
     tools: useToolsOf(subject.id).length,
     boards: useBoardsOf(subject.id).length,
   }
-  const currentTab: SubjectTab = (params.get('tab') as SubjectTab) ?? tabOfPath(pathname)
+  const currentTab: SubjectTab = (params.get("tab") as SubjectTab) ?? tabOfPath(pathname)
 
   return (
     <motion.li layout="position" transition={spring} className="relative list-none">
@@ -93,9 +93,9 @@ function SubjectNode({ subject }: { subject: Subject }) {
                     to={`/s/${subject.id}?tab=${s.tab}`}
                     data-active={isCurrent || undefined}
                     className={cn(
-                      'ml-8 flex h-full items-center gap-2 rounded-md px-2 text-[13px] text-sidebar-foreground outline-none',
-                      'hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-                      'data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground',
+                      "ml-8 flex h-full items-center gap-2 rounded-md px-2 text-[13px] text-sidebar-foreground outline-none",
+                      "hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                      "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground",
                     )}
                   >
                     <Icon className="size-3.5 opacity-70" />

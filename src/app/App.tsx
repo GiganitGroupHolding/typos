@@ -1,37 +1,37 @@
-import { FolderOpen } from 'lucide-react'
-import { MotionConfig } from 'motion/react'
-import { useEffect } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router'
-import { Button } from '@/components/ui/button'
-import { GlassFilter } from '@/components/ui/liquid-glass-button'
-import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import { HomePage } from '@/pages/HomePage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
-import { SubjectHome } from '@/pages/SubjectHome'
-import { useVault } from '@/vault/store'
-import { useDesktopZoom } from './desktopZoom'
-import { AppShell } from './layout/AppShell'
-import { useThemeSync } from './theme'
+import { FolderOpen } from "lucide-react"
+import { MotionConfig } from "motion/react"
+import { useEffect, type ReactNode } from "react"
+import { createBrowserRouter, RouterProvider } from "react-router"
+import { AppShell } from "@/app/layout/AppShell"
+import { Button } from "@/components/ui/Button"
+import { GlassFilter } from "@/components/ui/LiquidButton"
+import { Toaster } from "@/components/ui/Sonner"
+import { TooltipProvider } from "@/components/ui/Tooltip"
+import { HomePage } from "@/pages/HomePage"
+import { NotFoundPage } from "@/pages/NotFoundPage"
+import { SubjectHome } from "@/pages/SubjectHome"
+import { useVault } from "@/vault/store"
+import { useDesktopZoom } from "./desktopZoom"
+import { useThemeSync } from "./theme"
 
-const loadNote = () => import('@/pages/NotePage').then((m) => ({ Component: m.NotePage }))
+const loadNote = () => import("@/pages/NotePage").then((m) => ({ Component: m.NotePage }))
 const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500))
 idle(() => void loadNote())
 
 const router = createBrowserRouter([
-  { path: '/welcome', lazy: () => import('@/pages/WelcomePage').then((m) => ({ Component: m.WelcomePage })) },
+  { path: "/welcome", lazy: () => import("@/pages/WelcomePage").then((m) => ({ Component: m.WelcomePage })) },
   {
-    path: '/',
+    path: "/",
     element: <VaultShell />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 's/:subjectId', element: <SubjectHome /> },
-      { path: 's/:subjectId/n/:noteId', lazy: loadNote },
-      { path: 's/:subjectId/t/:toolId', lazy: () => import('@/pages/ToolPage').then((m) => ({ Component: m.ToolPage })) },
-      { path: 's/:subjectId/b/:boardId', lazy: () => import('@/pages/BoardPage').then((m) => ({ Component: m.BoardPage })) },
-      { path: 's/:subjectId/review', lazy: () => import('@/pages/ReviewPage').then((m) => ({ Component: m.ReviewPage })) },
-      { path: 'trash', lazy: () => import('@/pages/TrashPage').then((m) => ({ Component: m.TrashPage })) },
-      { path: '*', element: <NotFoundPage /> },
+      { path: "s/:subjectId", element: <SubjectHome /> },
+      { path: "s/:subjectId/n/:noteId", lazy: loadNote },
+      { path: "s/:subjectId/t/:toolId", lazy: () => import("@/pages/ToolPage").then((m) => ({ Component: m.ToolPage })) },
+      { path: "s/:subjectId/b/:boardId", lazy: () => import("@/pages/BoardPage").then((m) => ({ Component: m.BoardPage })) },
+      { path: "s/:subjectId/review", lazy: () => import("@/pages/ReviewPage").then((m) => ({ Component: m.ReviewPage })) },
+      { path: "trash", lazy: () => import("@/pages/TrashPage").then((m) => ({ Component: m.TrashPage })) },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ])
@@ -44,19 +44,19 @@ function VaultShell() {
   )
 }
 
-function VaultGate({ children }: { children: React.ReactNode }) {
+function VaultGate({ children }: { children: ReactNode }) {
   const status = useVault((s) => s.status)
   const error = useVault((s) => s.error)
   const init = useVault((s) => s.init)
-  const remote = useVault((s) => s.adapter?.kind === 'remote')
+  const remote = useVault((s) => s.adapter?.kind === "remote")
   const switchToBrowser = useVault((s) => s.switchToBrowser)
 
   useEffect(() => {
     void init()
   }, [init])
 
-  if (status === 'needs-permission') return <PermissionScreen />
-  if (status === 'error')
+  if (status === "needs-permission") return <PermissionScreen />
+  if (status === "error")
     return (
       <div role="alert" className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-[17px] font-semibold">Не удалось открыть конспекты</p>
@@ -70,7 +70,7 @@ function VaultGate({ children }: { children: React.ReactNode }) {
       </div>
     )
 
-  if (status === 'loading') return <div className="min-h-dvh bg-sidebar" aria-busy="true" />
+  if (status === "loading") return <div className="min-h-dvh bg-sidebar" aria-busy="true" />
   return children
 }
 

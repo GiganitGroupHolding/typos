@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import { useResolvedTheme } from '@/app/theme'
-import { cn } from '@/lib/utils'
-import { deviceFrame } from './deviceFrame'
-import { ToolFrame } from './ToolFrame'
+import { useLayoutEffect, useRef, useState } from "react"
+import { useResolvedTheme } from "@/app/theme"
+import { cn } from "@/lib/utils"
+import { deviceFrame } from "./deviceFrame"
+import { ToolFrame } from "./ToolFrame"
 
 export interface DeviceFrame {
   src: string
@@ -43,14 +43,14 @@ export function PhonePreview({ html, title, runKey }: { html: string; title: str
 
   return (
     <div ref={box} className="flex size-full items-center justify-center overflow-hidden">
-      <div style={{ width: stageW * scale, height: stageH * scale }} className={cn('relative shrink-0', !scale && 'invisible')}>
+      <div style={{ width: stageW * scale, height: stageH * scale }} className={cn("relative shrink-0", !scale && "invisible")}>
         <div style={{ width: stageW, height: stageH, transform: `scale(${scale})` }} className="absolute top-0 left-0 origin-top-left">
           <div
             style={{ left: g.screen.x * k, top: g.screen.y * k, width: SCREEN_W, height: screenH, borderRadius: g.screen.radius * k }}
             className={cn(
-              'absolute flex flex-col overflow-hidden',
-              theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black',
-              !frame && 'shadow-float ring-[10px] ring-neutral-900',
+              "absolute flex flex-col overflow-hidden",
+              theme === "dark" ? "bg-black text-white" : "bg-white text-black",
+              !frame && "shadow-float ring-[10px] ring-neutral-900",
             )}
           >
             <StatusBar />

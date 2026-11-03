@@ -1,19 +1,19 @@
-import { Download, PictureInPicture2, RotateCw, ShieldCheck, Smartphone } from 'lucide-react'
-import { motion } from 'motion/react'
-import { useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router'
-import { useUi } from '@/app/store'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { kindLabels, toolIcon } from '@/features/subjects/visuals'
-import { PhonePreview } from '@/features/tools/PhonePreview'
-import { downloadProjectFile } from '@/features/tools/projectFiles'
-import { ProjectViewer } from '@/features/tools/ProjectViewer'
-import { ToolActions } from '@/features/tools/ToolActions'
-import { fileSize } from '@/lib/format'
-import { pageEnter } from '@/lib/motion'
-import { cn } from '@/lib/utils'
-import { useSubject, useTool } from '@/vault/hooks'
+import { Download, PictureInPicture2, RotateCw, ShieldCheck, Smartphone } from "lucide-react"
+import { motion } from "motion/react"
+import { useState } from "react"
+import { Navigate, useNavigate, useParams } from "react-router"
+import { useUi } from "@/app/store"
+import { Button } from "@/components/ui/Button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
+import { kindLabels, toolIcon } from "@/features/subjects/visuals"
+import { PhonePreview } from "@/features/tools/PhonePreview"
+import { downloadProjectFile } from "@/features/tools/projectFiles"
+import { ProjectViewer } from "@/features/tools/ProjectViewer"
+import { ToolActions } from "@/features/tools/ToolActions"
+import { fileSize } from "@/lib/format"
+import { pageEnter } from "@/lib/motion"
+import { cn } from "@/lib/utils"
+import { useSubject, useTool } from "@/vault/hooks"
 
 export function ToolPage() {
   const { subjectId, toolId } = useParams()
@@ -24,10 +24,10 @@ export function ToolPage() {
   const phone = useUi((s) => s.phonePreview)
   const togglePhone = useUi((s) => s.togglePhone)
   const navigate = useNavigate()
-  if (!tool || !subject || tool.subjectId !== subject.id) return <Navigate to={subject ? `/s/${subject.id}?tab=tools` : '/'} replace />
+  if (!tool || !subject || tool.subjectId !== subject.id) return <Navigate to={subject ? `/s/${subject.id}?tab=tools` : "/"} replace />
 
   const Icon = toolIcon(tool)
-  const isHtml = tool.kind === 'html'
+  const isHtml = tool.kind === "html"
   const inPhone = isHtml && phone
 
   return (
@@ -59,7 +59,7 @@ export function ToolPage() {
               size="sm"
               aria-pressed={phone}
               onClick={togglePhone}
-              className={cn(phone && 'bg-accent text-highlight')}
+              className={cn(phone && "bg-accent text-highlight")}
             >
               <Smartphone /> Телефон
             </Button>
@@ -80,7 +80,7 @@ export function ToolPage() {
           variant="ghost"
           size="sm"
           onClick={() => {
-            openWindow('tool', tool.id)
+            openWindow("tool", tool.id)
             navigate(`/s/${subject.id}`)
           }}
         >
@@ -88,7 +88,7 @@ export function ToolPage() {
         </Button>
         <ToolActions tool={tool} onOpenWindow={() => navigate(`/s/${subject.id}`)} />
       </div>
-      <div className={cn('min-h-0 flex-1 overflow-hidden', !inPhone && 'rounded-2xl border bg-background shadow-card')}>
+      <div className={cn("min-h-0 flex-1 overflow-hidden", !inPhone && "rounded-2xl border bg-background shadow-card")}>
         {inPhone ? <PhonePreview html={tool.html} title={tool.name} runKey={runKey} /> : <ProjectViewer tool={tool} runKey={runKey} />}
       </div>
     </motion.div>

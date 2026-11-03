@@ -1,4 +1,4 @@
-import { placeNodes, textSize } from '@/features/boards/layout'
+import { placeNodes, textSize } from "@/features/boards/layout"
 import {
   boardItemId,
   isBoardColor,
@@ -8,7 +8,7 @@ import {
   type BoardEdge,
   type BoardNode,
   type BoardNodeType,
-} from '@/features/boards/model'
+} from "@/features/boards/model"
 
 export interface BoardNodeInput {
   id?: string
@@ -32,7 +32,7 @@ export interface BoardEdgeInput {
   to?: string
   label?: string
   color?: string
-  arrow?: 'end' | 'both' | 'none'
+  arrow?: "end" | "both" | "none"
 }
 
 export interface BoardEdit {
@@ -41,10 +41,10 @@ export interface BoardEdit {
 
   remove?: string[]
 
-  direction?: 'LR' | 'TB'
+  direction?: "LR" | "TB"
 }
 
-const NAMED: Record<string, string> = { red: '1', orange: '2', yellow: '3', green: '4', cyan: '5', blue: '5', purple: '6', violet: '6' }
+const NAMED: Record<string, string> = { red: "1", orange: "2", yellow: "3", green: "4", cyan: "5", blue: "5", purple: "6", violet: "6" }
 
 function color(v: string | undefined, where: string): string | undefined | null {
   if (v === undefined) return null
@@ -55,8 +55,8 @@ function color(v: string | undefined, where: string): string | undefined | null 
 }
 
 function imagePath(file: string) {
-  const parts = file.split('/')
-  if (file.startsWith('/') || /[\\:]/.test(file) || parts.some((p) => !p || p === '.' || p === '..' || p.startsWith('.')))
+  const parts = file.split("/")
+  if (file.startsWith("/") || /[\\:]/.test(file) || parts.some((p) => !p || p === "." || p === ".." || p.startsWith(".")))
     throw new Error(`Картинка «${file}»: нужен путь внутри хранилища, как в ответе add_image (path)`)
   if (!/\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i.test(file)) throw new Error(`«${file}» — не картинка`)
   return file
@@ -101,15 +101,15 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
 
       next.height =
         size(input.height, MIN_NODE_H) ??
-        (next.type === 'text' && input.text !== undefined ? Math.max(next.height, textSize(input.text, next.width).height) : next.height)
+        (next.type === "text" && input.text !== undefined ? Math.max(next.height, textSize(input.text, next.width).height) : next.height)
       nodes = nodes.map((n) => (n.id === next.id ? next : n))
       ids.push(next.id)
       continue
     }
     const type: BoardNodeType =
-      input.type ?? (input.url ? 'link' : input.file ? 'file' : input.children || (input.label && !input.text) ? 'group' : 'text')
+      input.type ?? (input.url ? "link" : input.file ? "file" : input.children || (input.label && !input.text) ? "group" : "text")
     const id = input.id && !edges.some((e) => e.id === input.id) ? input.id : boardItemId()
-    const fit = type === 'text' ? textSize(input.text ?? '', size(input.width, MIN_NODE_W)) : DEFAULT_SIZE[type]
+    const fit = type === "text" ? textSize(input.text ?? "", size(input.width, MIN_NODE_W)) : DEFAULT_SIZE[type]
     const node: BoardNode = {
       id,
       type,
@@ -118,15 +118,15 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
       width: size(input.width, MIN_NODE_W) ?? fit.width,
       height: size(input.height, MIN_NODE_H) ?? fit.height,
       color: c ?? undefined,
-      text: type === 'text' ? (input.text ?? '') : undefined,
-      label: type === 'group' ? input.label || undefined : undefined,
-      url: type === 'link' ? url(input.url ?? '') : undefined,
-      file: type === 'file' ? imagePath(input.file ?? '') : undefined,
+      text: type === "text" ? (input.text ?? "") : undefined,
+      label: type === "group" ? input.label || undefined : undefined,
+      url: type === "link" ? url(input.url ?? "") : undefined,
+      file: type === "file" ? imagePath(input.file ?? "") : undefined,
     }
     if (input.x === undefined || input.y === undefined) unplaced.add(id)
-    if (type === 'group' && input.children?.length) children.set(id, input.children)
+    if (type === "group" && input.children?.length) children.set(id, input.children)
 
-    nodes = type === 'group' ? [node, ...nodes] : [...nodes, node]
+    nodes = type === "group" ? [node, ...nodes] : [...nodes, node]
     ids.push(id)
   }
 
@@ -148,15 +148,15 @@ export async function editBoard(data: BoardData, edit: BoardEdit): Promise<{ dat
     if (input.label !== undefined) next.label = input.label || undefined
     if (c !== null) next.color = c
     if (input.arrow) {
-      next.fromEnd = input.arrow === 'both' ? 'arrow' : undefined
-      next.toEnd = input.arrow === 'none' ? 'none' : undefined
+      next.fromEnd = input.arrow === "both" ? "arrow" : undefined
+      next.toEnd = input.arrow === "none" ? "none" : undefined
     }
     edges = existing ? edges.map((e) => (e.id === existing.id ? next : e)) : [...edges, next]
   }
 
   for (const [id, list] of children) {
     const missing = list.filter((c) => !known.has(c))
-    if (missing.length) throw new Error(`Рамка ${id}: нет узлов ${missing.join(', ')}`)
+    if (missing.length) throw new Error(`Рамка ${id}: нет узлов ${missing.join(", ")}`)
   }
   const result = { nodes, edges }
   return { data: unplaced.size ? await placeNodes(result, unplaced, children, edit.direction) : result, ids }
@@ -183,7 +183,7 @@ export function boardForModel(data: BoardData) {
       to: e.toNode,
       ...(e.label ? { label: e.label } : {}),
       ...(e.color ? { color: e.color } : {}),
-      ...(e.fromEnd === 'arrow' ? { arrow: 'both' } : e.toEnd === 'none' ? { arrow: 'none' } : {}),
+      ...(e.fromEnd === "arrow" ? { arrow: "both" } : e.toEnd === "none" ? { arrow: "none" } : {}),
     })),
   }
 }

@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { create } from 'zustand'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Tex } from '@/lib/tex'
-import { errorText, submitOnCtrlEnter } from '@/lib/undo'
-import { useVault } from '@/vault/store'
+import { useEffect, useState, type FormEvent } from "react"
+import { toast } from "sonner"
+import { create } from "zustand"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Input } from "@/components/ui/Input"
+import { errorText } from "@/lib/errors"
+import { submitOnCtrlEnter } from "@/lib/forms"
+import { Tex } from "@/lib/Tex"
+import { useVault } from "@/vault/store"
 
 interface Target {
   subjectId: string
@@ -29,19 +30,19 @@ export function PinEditorDialog() {
   const target = useTarget((s) => s.target)
   const close = () => useTarget.getState().set(null)
   const pin = useVault((s) => s.pins.find((p) => p.id === target?.pinId))
-  const [title, setTitle] = useState('')
-  const [tex, setTex] = useState('')
-  const [text, setText] = useState('')
+  const [title, setTitle] = useState("")
+  const [tex, setTex] = useState("")
+  const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!target) return
-    setTitle(pin?.title ?? target.title ?? '')
-    setTex(pin?.tex ?? target.tex ?? '')
-    setText(pin?.text ?? target.text ?? '')
+    setTitle(pin?.title ?? target.title ?? "")
+    setTex(pin?.tex ?? target.tex ?? "")
+    setText(pin?.text ?? target.text ?? "")
   }, [target, pin])
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (!target || !title.trim()) return
     setBusy(true)
@@ -50,11 +51,11 @@ export function PinEditorDialog() {
       if (pin) await v.updatePin(pin.id, { title, tex, text })
       else {
         await v.createPin(target.subjectId, { title, tex, text })
-        toast.success('Закреплено', { description: title.trim() })
+        toast.success("Закреплено", { description: title.trim() })
       }
       close()
     } catch (err) {
-      toast.error('Не удалось сохранить карточку', { description: errorText(err) })
+      toast.error("Не удалось сохранить карточку", { description: errorText(err) })
     } finally {
       setBusy(false)
     }
@@ -65,7 +66,7 @@ export function PinEditorDialog() {
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} onKeyDown={submitOnCtrlEnter} className="contents">
           <DialogHeader>
-            <DialogTitle>{pin ? 'Карточка закрепа' : 'Новая карточка'}</DialogTitle>
+            <DialogTitle>{pin ? "Карточка закрепа" : "Новая карточка"}</DialogTitle>
             <DialogDescription>Формула или определение, которое всегда под рукой.</DialogDescription>
           </DialogHeader>
 
@@ -120,7 +121,7 @@ export function PinEditorDialog() {
               Отмена
             </Button>
             <Button type="submit" disabled={!title.trim() || busy}>
-              {pin ? 'Сохранить' : 'Закрепить'}
+              {pin ? "Сохранить" : "Закрепить"}
             </Button>
           </DialogFooter>
         </form>

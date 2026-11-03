@@ -21,9 +21,8 @@ function edits(base: string[], next: string[]): Edit[] {
   const lcs = new Uint32Array((n + 1) * width)
   for (let i = n - 1; i >= 0; i--)
     for (let j = m - 1; j >= 0; j--)
-      lcs[i * width + j] = base[start + i] === next[start + j]
-        ? 1 + lcs[(i + 1) * width + j + 1]
-        : Math.max(lcs[(i + 1) * width + j], lcs[i * width + j + 1])
+      lcs[i * width + j] =
+        base[start + i] === next[start + j] ? 1 + lcs[(i + 1) * width + j + 1] : Math.max(lcs[(i + 1) * width + j], lcs[i * width + j + 1])
   const result: Edit[] = []
   let i = 0
   let j = 0
@@ -47,29 +46,32 @@ function edits(base: string[], next: string[]): Edit[] {
 
 /** Объединяет независимые правки строк; пересекающиеся изменения требуют выбора версии. */
 export function mergeText(base: string, mine: string, theirs: string): string | null {
-  const normalize = (text: string) => text.replace(/\r\n/g, '\n')
+  const normalize = (text: string) => text.replace(/\r\n/g, "\n")
   base = normalize(base)
   mine = normalize(mine)
   theirs = normalize(theirs)
   if (mine === theirs || theirs === base) return mine
   if (mine === base) return theirs
-  const lines = base.split('\n')
-  const left = edits(lines, mine.split('\n'))
-  const right = edits(lines, theirs.split('\n'))
+  const lines = base.split("\n")
+  const left = edits(lines, mine.split("\n"))
+  const right = edits(lines, theirs.split("\n"))
   const combined = [...left]
   for (const b of right) {
     let duplicate = false
     for (const a of left) {
-      if (a.start === b.start && a.end === b.end && a.lines.join('\n') === b.lines.join('\n')) {
+      if (a.start === b.start && a.end === b.end && a.lines.join("\n") === b.lines.join("\n")) {
         duplicate = true
         continue
       }
-      if (Math.max(a.start, b.start) < Math.min(a.end, b.end) ||
+      if (
+        Math.max(a.start, b.start) < Math.min(a.end, b.end) ||
         (a.start === a.end && a.start >= b.start && a.start <= b.end) ||
-        (b.start === b.end && b.start >= a.start && b.start <= a.end)) return null
+        (b.start === b.end && b.start >= a.start && b.start <= a.end)
+      )
+        return null
     }
     if (!duplicate) combined.push(b)
   }
   for (const edit of combined.sort((a, b) => b.start - a.start)) lines.splice(edit.start, edit.end - edit.start, ...edit.lines)
-  return lines.join('\n')
+  return lines.join("\n")
 }

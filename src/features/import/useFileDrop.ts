@@ -1,8 +1,8 @@
-import { useState, type DragEvent } from 'react'
-import { useNavigate } from 'react-router'
-import { importFiles } from './importFiles'
+import { useState, type DragEvent } from "react"
+import { useNavigate } from "react-router"
+import { importFiles } from "./importFiles"
 
-const hasFiles = (e: DragEvent) => [...e.dataTransfer.types].includes('Files')
+const hasFiles = (e: DragEvent) => [...e.dataTransfer.types].includes("Files")
 
 export function useFileDrop(subjectId?: string) {
   const [over, setOver] = useState(false)
@@ -12,7 +12,7 @@ export function useFileDrop(subjectId?: string) {
     onDragOver: (e: DragEvent) => {
       if (!subjectId || !hasFiles(e)) return
       e.preventDefault()
-      e.dataTransfer.dropEffect = 'copy'
+      e.dataTransfer.dropEffect = "copy"
       setOver(true)
     },
     onDragLeave: (e: DragEvent) => {

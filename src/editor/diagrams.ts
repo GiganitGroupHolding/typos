@@ -1,30 +1,30 @@
-import CodeBlock, { type CodeBlockOptions } from '@tiptap/extension-code-block'
-import type { Node as PMNode } from '@tiptap/pm/model'
-import { mapSlots } from './map/slots'
-import { codeHash } from './map/types'
+import CodeBlock, { type CodeBlockOptions } from "@tiptap/extension-code-block"
+import type { Node as PMNode } from "@tiptap/pm/model"
+import { mapSlots } from "@/editor/map/slots"
+import { codeHash } from "@/editor/map/types"
 
-type MermaidApi = typeof import('mermaid').default
+type MermaidApi = typeof import("mermaid").default
 let loading: Promise<MermaidApi> | null = null
-const loadMermaid = () => (loading ??= import('mermaid').then((m) => m.default))
+const loadMermaid = () => (loading ??= import("mermaid").then((m) => m.default))
 
-const isDark = () => document.documentElement.classList.contains('dark')
+const isDark = () => document.documentElement.classList.contains("dark")
 
 const PALETTE = {
   light: {
-    primaryColor: '#ffffff',
-    primaryTextColor: '#1f1e1d',
-    primaryBorderColor: '#d6d3cb',
-    lineColor: '#9b988f',
-    secondaryColor: '#f4f3ef',
-    tertiaryColor: '#f8f7f4',
+    primaryColor: "#ffffff",
+    primaryTextColor: "#1f1e1d",
+    primaryBorderColor: "#d6d3cb",
+    lineColor: "#9b988f",
+    secondaryColor: "#f4f3ef",
+    tertiaryColor: "#f8f7f4",
   },
   dark: {
-    primaryColor: '#1c1c1d',
-    primaryTextColor: '#f2f2f0',
-    primaryBorderColor: '#3d3d3f',
-    lineColor: '#8a8a88',
-    secondaryColor: '#242425',
-    tertiaryColor: '#202021',
+    primaryColor: "#1c1c1d",
+    primaryTextColor: "#f2f2f0",
+    primaryBorderColor: "#3d3d3f",
+    lineColor: "#8a8a88",
+    secondaryColor: "#242425",
+    tertiaryColor: "#202021",
   },
 }
 
@@ -43,16 +43,16 @@ async function renderDiagram(code: string): Promise<string> {
   const fontFamily = getComputedStyle(document.body).fontFamily
   mermaid.initialize({
     startOnLoad: false,
-    securityLevel: 'strict',
-    theme: 'base',
-    look: 'classic',
+    securityLevel: "strict",
+    theme: "base",
+    look: "classic",
 
-    layout: 'dagre',
+    layout: "dagre",
     fontFamily,
 
-    flowchart: { curve: 'basis', padding: 14, nodeSpacing: 28, rankSpacing: 40, useMaxWidth: false, wrappingWidth: 220 },
+    flowchart: { curve: "basis", padding: 14, nodeSpacing: 28, rankSpacing: 40, useMaxWidth: false, wrappingWidth: 220 },
     themeCSS: DIAGRAM_CSS,
-    themeVariables: { ...(dark ? PALETTE.dark : PALETTE.light), darkMode: dark, background: 'transparent', fontFamily, fontSize: '15px' },
+    themeVariables: { ...(dark ? PALETTE.dark : PALETTE.light), darkMode: dark, background: "transparent", fontFamily, fontSize: "15px" },
   })
   const id = `diagram-${++seq}`
   try {
@@ -65,9 +65,9 @@ async function renderDiagram(code: string): Promise<string> {
 
 const MIN_SCALE = 0.8
 function fit(view: HTMLElement) {
-  const svg = view.querySelector('svg')
+  const svg = view.querySelector("svg")
   if (!svg) return
-  const natural = svg.viewBox.baseVal?.width || Number(svg.getAttribute('width')) || 0
+  const natural = svg.viewBox.baseVal?.width || Number(svg.getAttribute("width")) || 0
   if (!natural) return
   const room = view.clientWidth - parseFloat(getComputedStyle(view).paddingLeft) * 2
   svg.style.width = `${natural * Math.max(MIN_SCALE, Math.min(1, room / natural))}px`
@@ -84,28 +84,28 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
 
   addNodeView() {
     if (!this.options.diagrams) return null
-    const prefix = this.options.languageClassPrefix ?? 'language-'
+    const prefix = this.options.languageClassPrefix ?? "language-"
     return ({ node, editor, getPos }) => {
       const lang = node.attrs.language as string | null
 
-      if (lang !== 'mermaid') {
-        const pre = document.createElement('pre')
-        const code = document.createElement('code')
+      if (lang !== "mermaid") {
+        const pre = document.createElement("pre")
+        const code = document.createElement("code")
         if (lang) code.className = `${prefix}${lang}`
         pre.append(code)
         return { dom: pre, contentDOM: code, update: (n: PMNode) => n.type === node.type && n.attrs.language === lang }
       }
 
-      const dom = document.createElement('div')
-      dom.className = 'diagram-block'
-      const view = document.createElement('div')
-      view.className = 'diagram-view'
-      view.contentEditable = 'false'
-      const slot = document.createElement('div')
-      slot.className = 'diagram-map-slot'
-      slot.contentEditable = 'false'
-      const pre = document.createElement('pre')
-      const code = document.createElement('code')
+      const dom = document.createElement("div")
+      dom.className = "diagram-block"
+      const view = document.createElement("div")
+      view.className = "diagram-view"
+      view.contentEditable = "false"
+      const slot = document.createElement("div")
+      slot.className = "diagram-map-slot"
+      slot.contentEditable = "false"
+      const pre = document.createElement("pre")
+      const code = document.createElement("code")
       code.className = `${prefix}mermaid`
       pre.append(code)
       dom.append(view, slot, pre)
@@ -119,15 +119,15 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
       let mapped = false
       let stale = true
 
-      const sync = () => dom.toggleAttribute('data-editing', inside || (failed && !mapped) || !current.textContent.trim())
+      const sync = () => dom.toggleAttribute("data-editing", inside || (failed && !mapped) || !current.textContent.trim())
 
       const applySlot = () => {
         const hash = codeHash(current.textContent)
         const h = mapSlots.height(hash)
         dom.dataset.mapHash = hash
         mapped = h !== undefined
-        dom.toggleAttribute('data-mapped', mapped)
-        slot.style.height = mapped ? `${h}px` : ''
+        dom.toggleAttribute("data-mapped", mapped)
+        slot.style.height = mapped ? `${h}px` : ""
         if (!mapped && stale) void draw()
         sync()
       }
@@ -150,9 +150,9 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           failed = false
         } catch (e) {
           if (mine !== version) return
-          const err = document.createElement('div')
-          err.className = 'diagram-error'
-          err.textContent = `Схема не рисуется: ${String((e as Error)?.message ?? e).split('\n')[0]}`
+          const err = document.createElement("div")
+          err.className = "diagram-error"
+          err.textContent = `Схема не рисуется: ${String((e as Error)?.message ?? e).split("\n")[0]}`
           view.replaceChildren(err)
           failed = true
         }
@@ -172,8 +172,8 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           .setTextSelection(pos + 1 + current.content.size)
           .run()
       }
-      view.addEventListener('mousedown', openCode)
-      slot.addEventListener('mousedown', openCode)
+      view.addEventListener("mousedown", openCode)
+      slot.addEventListener("mousedown", openCode)
       const unsubscribe = mapSlots.subscribe(applySlot)
 
       const onSelection = () => {
@@ -186,7 +186,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           sync()
         }
       }
-      editor.on('selectionUpdate', onSelection)
+      editor.on("selectionUpdate", onSelection)
 
       const themeWatch = new MutationObserver(() => {
         if (isDark() !== dark) {
@@ -194,7 +194,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           redraw()
         }
       })
-      themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
       const redraw = () => {
         stale = true
         if (!mapped) void draw()
@@ -209,7 +209,7 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
         dom,
         contentDOM: code,
         update(n: PMNode) {
-          if (n.type !== current.type || n.attrs.language !== 'mermaid') return false
+          if (n.type !== current.type || n.attrs.language !== "mermaid") return false
           const changed = n.textContent !== current.textContent
           current = n
           if (changed) {
@@ -220,11 +220,11 @@ export const DiagramCodeBlock = CodeBlock.extend<DiagramCodeBlockOptions>({
           return true
         },
 
-        ignoreMutation: (m) => m.type !== 'selection' && (!code.contains(m.target) || (m.type === 'attributes' && m.target === code)),
+        ignoreMutation: (m) => m.type !== "selection" && (!code.contains(m.target) || (m.type === "attributes" && m.target === code)),
         stopEvent: (e: Event) => view.contains(e.target as Node) || slot.contains(e.target as Node),
         destroy() {
           unsubscribe()
-          editor.off('selectionUpdate', onSelection)
+          editor.off("selectionUpdate", onSelection)
           themeWatch.disconnect()
           resize.disconnect()
           clearTimeout(timer)

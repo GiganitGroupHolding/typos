@@ -1,14 +1,14 @@
-import type { Node as PMNode } from '@tiptap/pm/model'
-import { NodeSelection, TextSelection } from '@tiptap/pm/state'
-import type { Editor } from '@tiptap/react'
-import { GripVertical, Plus } from 'lucide-react'
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { foldingKey } from './folding'
-import { blockPos, foldedBlocks, moveTarget, sectionRange } from './sections'
+import type { Node as PMNode } from "@tiptap/pm/model"
+import { NodeSelection, TextSelection } from "@tiptap/pm/state"
+import type { Editor } from "@tiptap/react"
+import { GripVertical, Plus } from "lucide-react"
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
+import { foldingKey } from "./folding"
+import { blockPos, foldedBlocks, moveTarget, sectionRange } from "./sections"
 
-const ITEM_TYPES = new Set(['listItem', 'taskItem'])
+const ITEM_TYPES = new Set(["listItem", "taskItem"])
 
-type Target = { kind: 'block'; index: number; el: HTMLElement } | { kind: 'item'; el: HTMLElement; pos: number }
+type Target = { kind: "block"; index: number; el: HTMLElement } | { kind: "item"; el: HTMLElement; pos: number }
 
 interface Gap {
   y: number
@@ -34,7 +34,7 @@ interface DragState {
   dim?: HTMLStyleElement
 }
 
-const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const reduced = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches
 
 function itemAtPos(doc: PMNode, pos: number) {
   const node = doc.nodeAt(pos)
@@ -44,7 +44,7 @@ function itemAtPos(doc: PMNode, pos: number) {
 }
 
 function itemAt(editor: Editor, el: HTMLElement) {
-  const inner = editor.view.posAtDOM(el.querySelector('p') ?? el, 0)
+  const inner = editor.view.posAtDOM(el.querySelector("p") ?? el, 0)
   if (inner < 0) return null
   const $p = editor.state.doc.resolve(inner)
   for (let d = $p.depth; d > 0; d--) {
@@ -67,10 +67,10 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const out: Target[] = []
     ;[...editor.view.dom.children].forEach((child, index) => {
       const el = child as HTMLElement
-      if (el.classList.contains('is-folded') || !el.offsetParent) return
-      out.push({ kind: 'block', index, el })
+      if (el.classList.contains("is-folded") || !el.offsetParent) return
+      out.push({ kind: "block", index, el })
       if (/^(UL|OL)$/.test(el.tagName))
-        for (const li of el.querySelectorAll<HTMLElement>(':scope > li')) out.push({ kind: 'item', el: li, pos: 0 })
+        for (const li of el.querySelectorAll<HTMLElement>(":scope > li")) out.push({ kind: "item", el: li, pos: 0 })
     })
     return out
   }
@@ -83,7 +83,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const cs = getComputedStyle(t.el)
     const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5
     const pad = parseFloat(cs.paddingTop) || 0
-    return { top: r.top - wr.top + pad + (lh - 24) / 2, left: (t.kind === 'item' ? r.left - wr.left - 22 : 0) - 76 }
+    return { top: r.top - wr.top + pad + (lh - 24) / 2, left: (t.kind === "item" ? r.left - wr.left - 22 : 0) - 76 }
   }
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       setHover(null)
       return
     }
-    const area = wrapper()?.closest<HTMLElement>('.note-prose') ?? wrapper()
+    const area = wrapper()?.closest<HTMLElement>(".note-prose") ?? wrapper()
     if (!area) return
     const onMove = (e: MouseEvent) => {
       if (drag.current) return
@@ -100,7 +100,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       for (const t of targets()) {
         const r = t.el.getBoundingClientRect()
         if (y >= r.top - 4 && y <= r.bottom + 4) {
-          if (!best || t.kind === 'item') best = t
+          if (!best || t.kind === "item") best = t
         }
       }
       if (!best) return
@@ -109,18 +109,18 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     }
     const onLeave = () => !drag.current && setHover(null)
     const onKey = () => !drag.current && setHover(null)
-    area.addEventListener('mousemove', onMove)
-    area.addEventListener('mouseleave', onLeave)
-    editor.view.dom.addEventListener('keydown', onKey)
+    area.addEventListener("mousemove", onMove)
+    area.addEventListener("mouseleave", onLeave)
+    editor.view.dom.addEventListener("keydown", onKey)
     return () => {
-      area.removeEventListener('mousemove', onMove)
-      area.removeEventListener('mouseleave', onLeave)
-      editor.view.dom.removeEventListener('keydown', onKey)
+      area.removeEventListener("mousemove", onMove)
+      area.removeEventListener("mouseleave", onLeave)
+      editor.view.dom.removeEventListener("keydown", onKey)
     }
-  }, [editor, disabled]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editor, disabled]) // oxlint-disable-line react-hooks/exhaustive-deps
 
   const sourcesOf = (t: Target): HTMLElement[] => {
-    if (t.kind === 'item') return [t.el]
+    if (t.kind === "item") return [t.el]
     const [from, to] = sectionRange(editor.state.doc, t.index)
     return [...editor.view.dom.children].slice(from, to) as HTMLElement[]
   }
@@ -132,7 +132,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const kids = [...editor.view.dom.children] as HTMLElement[]
     const { hidden } = foldedBlocks(doc, foldingKey.getState(editor.state) ?? new Set())
     const gaps: Gap[] = []
-    const range = t.kind === 'block' ? sectionRange(doc, t.index) : null
+    const range = t.kind === "block" ? sectionRange(doc, t.index) : null
     for (let i = 0; i <= kids.length; i++) {
       if (hidden.has(i)) continue
       if (range && moveTarget(range[0], range[1], i) === null) continue
@@ -141,11 +141,11 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       const r = el.getBoundingClientRect()
       gaps.push({ y: (i < kids.length ? r.top : r.bottom) - wr.top, left: 0, right: wr.width, index: i })
     }
-    if (t.kind === 'item') {
+    if (t.kind === "item") {
       const own = itemAt(editor, t.el)
       for (const list of kids) {
-        if (!/^(UL|OL)$/.test(list.tagName) || list.classList.contains('is-folded')) continue
-        const items = [...list.querySelectorAll<HTMLElement>(':scope > li')]
+        if (!/^(UL|OL)$/.test(list.tagName) || list.classList.contains("is-folded")) continue
+        const items = [...list.querySelectorAll<HTMLElement>(":scope > li")]
         items.forEach((li, k) => {
           const it = itemAt(editor, li)
           if (!it || !own || it.node.type !== own.node.type) return
@@ -165,7 +165,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     const t = hover.target
-    if (t.kind === 'item') t.pos = itemAt(editor, t.el)?.from ?? 0
+    if (t.kind === "item") t.pos = itemAt(editor, t.el)?.from ?? 0
     drag.current = { target: t, sx: e.clientX, sy: e.clientY, active: false, offsetY: 0, gaps: [], sources: [] }
   }
 
@@ -175,16 +175,16 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     d.gaps = gapsFor(d.target)
     const first = d.sources[0].getBoundingClientRect()
 
-    const prose = editor.view.dom.closest<HTMLElement>('.note-prose')
-    const ghost = document.createElement('div')
-    ghost.className = 'note-prose block-ghost'
+    const prose = editor.view.dom.closest<HTMLElement>(".note-prose")
+    const ghost = document.createElement("div")
+    ghost.className = "note-prose block-ghost"
     if (prose?.dataset.font) ghost.dataset.font = prose.dataset.font
     ghost.style.width = `${editor.view.dom.clientWidth}px`
     ghost.style.left = `${editor.view.dom.getBoundingClientRect().left}px`
-    const inner = document.createElement('div')
-    inner.className = 'tiptap'
+    const inner = document.createElement("div")
+    inner.className = "tiptap"
     for (const s of d.sources) inner.append(s.cloneNode(true))
-    inner.querySelectorAll('.fold-toggle').forEach((b) => b.remove())
+    inner.querySelectorAll(".fold-toggle").forEach((b) => b.remove())
     ghost.append(inner)
     document.body.append(ghost)
     d.ghost = ghost
@@ -196,10 +196,10 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       const list = s.parentElement!
       return `.tiptap > :nth-child(${kids.indexOf(list) + 1}) > li:nth-child(${[...list.children].indexOf(s) + 1})`
     })
-    d.dim = document.createElement('style')
-    d.dim.textContent = `${sel.join(',')} { opacity: 0.3; transition: opacity 120ms; }`
+    d.dim = document.createElement("style")
+    d.dim.textContent = `${sel.join(",")} { opacity: 0.3; transition: opacity 120ms; }`
     document.head.append(d.dim)
-    document.body.classList.add('is-block-dragging')
+    document.body.classList.add("is-block-dragging")
   }
 
   const onGripMove = (e: ReactPointerEvent) => {
@@ -211,7 +211,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     }
     d.ghost!.style.top = `${e.clientY - d.offsetY}px`
 
-    const scroller = editor.view.dom.closest<HTMLElement>('[data-scroll-root]') ?? document.scrollingElement
+    const scroller = editor.view.dom.closest<HTMLElement>("[data-scroll-root]") ?? document.scrollingElement
     if (scroller) {
       const edge = 70
       if (e.clientY < edge) scroller.scrollBy(0, -14)
@@ -231,13 +231,13 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     const d = drag.current
     drag.current = null
     setLine(null)
-    document.body.classList.remove('is-block-dragging')
+    document.body.classList.remove("is-block-dragging")
     if (!d) return
     d.dim?.remove()
     const ghostTop = d.ghost?.getBoundingClientRect().top
     d.ghost?.remove()
     if (!d.active) {
-      const pos = d.target.kind === 'block' ? blockPos(editor.state.doc, d.target.index) : d.target.pos
+      const pos = d.target.kind === "block" ? blockPos(editor.state.doc, d.target.index) : d.target.pos
       editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)))
       editor.view.focus()
       return
@@ -248,14 +248,14 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
 
   const move = (t: Target, gap: Gap, ghostTop?: number) => {
     const before = new Map<Element, number>()
-    const watched = [...editor.view.dom.querySelectorAll(':scope > *, :scope > ul > li, :scope > ol > li')]
+    const watched = [...editor.view.dom.querySelectorAll(":scope > *, :scope > ul > li, :scope > ol > li")]
     for (const el of watched) before.set(el, el.getBoundingClientRect().top)
 
     const { state } = editor
     const doc = state.doc
     let tr = state.tr
     let insertedAt = -1
-    if (t.kind === 'block') {
+    if (t.kind === "block") {
       const [from, to] = sectionRange(doc, t.index)
       const a = blockPos(doc, from)
       const b = blockPos(doc, to)
@@ -284,21 +284,21 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
 
     if (reduced()) return
     const anims: HTMLElement[] = []
-    for (const el of editor.view.dom.querySelectorAll<HTMLElement>(':scope > *, :scope > ul > li, :scope > ol > li')) {
+    for (const el of editor.view.dom.querySelectorAll<HTMLElement>(":scope > *, :scope > ul > li, :scope > ol > li")) {
       const now = el.getBoundingClientRect().top
       const was = before.get(el)
       const dy = was !== undefined ? was - now : ghostTop !== undefined ? ghostTop - now : 0
       if (Math.abs(dy) < 1) continue
-      el.style.transition = 'none'
+      el.style.transition = "none"
       el.style.transform = `translateY(${dy}px)`
       anims.push(el)
     }
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         for (const el of anims) {
-          el.style.transition = 'transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-          el.style.transform = ''
-          el.addEventListener('transitionend', () => (el.style.transition = ''), { once: true })
+          el.style.transition = "transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1)"
+          el.style.transform = ""
+          el.addEventListener("transitionend", () => (el.style.transition = ""), { once: true })
         }
       }),
     )
@@ -308,7 +308,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
     if (!hover) return
     const t = hover.target
     const { state } = editor
-    if (t.kind === 'item') {
+    if (t.kind === "item") {
       const it = itemAt(editor, t.el)
       if (!it) return
       const item = it.node.type.createAndFill()
@@ -318,7 +318,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
       editor.view.dispatch(tr)
     } else {
       const node = state.doc.child(t.index)
-      const collapsed = t.el.classList.contains('is-collapsed')
+      const collapsed = t.el.classList.contains("is-collapsed")
       const at = collapsed ? blockPos(state.doc, sectionRange(state.doc, t.index)[1]) : blockPos(state.doc, t.index) + node.nodeSize
       const tr = state.tr.insert(at, state.schema.nodes.paragraph.create())
       tr.setSelection(TextSelection.create(tr.doc, at + 1))
@@ -328,7 +328,7 @@ export function BlockHandle({ editor, disabled }: { editor: Editor; disabled?: b
   }
 
   const btn =
-    'flex size-6 items-center justify-center rounded-md text-muted-foreground/70 outline-none transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
+    "flex size-6 items-center justify-center rounded-md text-muted-foreground/70 outline-none transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
 
   return (
     <div ref={self} aria-hidden={!hover} className="pointer-events-none absolute top-0 left-0 z-[6] size-0">

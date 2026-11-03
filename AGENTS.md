@@ -39,7 +39,7 @@ Code in `src/storage/` and `src/vault/` also runs in Node (MCP server, tests): n
 
 ## Formatting and imports
 
-- Prettier formats everything except Rust and Markdown (`.prettierrc.json`): no semicolons, single quotes, trailing commas, 140 columns. Run `npm run format`; don't hand-format.
+- Prettier formats everything except Rust and Markdown (`.prettierrc.json`): no semicolons, double quotes, trailing commas, 140 columns. Run `npm run format`; don't hand-format.
 - Import order is enforced by the Prettier plugin: Node built-ins, packages, `@/…`, relative. No blank lines between groups. Side-effect imports (`import 'fake-indexeddb/auto'`) stay first.
 - Import app code through `@/`; use relative imports only inside the same folder (`./x`, `../store`).
 - Rust: `cargo fmt` with `src-tauri/rustfmt.toml` (2 spaces, 140 columns).

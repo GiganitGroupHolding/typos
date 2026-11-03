@@ -1,22 +1,22 @@
-import { FileText, Folder, FolderOpen, LayoutDashboard, Loader2, Pin, RotateCcw, Trash2, type LucideIcon } from 'lucide-react'
-import { motion } from 'motion/react'
-import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { plural, relativeTime } from '@/lib/format'
-import { listItem, listParent, pageEnter } from '@/lib/motion'
-import { errorText } from '@/lib/undo'
-import type { TrashItem, TrashKind } from '@/vault/repo'
-import { useVault } from '@/vault/store'
+import { FileText, Folder, FolderOpen, LayoutDashboard, Loader2, Pin, RotateCcw, Trash2, type LucideIcon } from "lucide-react"
+import { motion } from "motion/react"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { errorText } from "@/lib/errors"
+import { plural, relativeTime } from "@/lib/format"
+import { listItem, listParent, pageEnter } from "@/lib/motion"
+import type { TrashItem, TrashKind } from "@/vault/repo"
+import { useVault } from "@/vault/store"
 
 const KIND: Record<TrashKind, { icon: LucideIcon; label: string }> = {
-  note: { icon: FileText, label: 'Конспект' },
-  pin: { icon: Pin, label: 'Карточка закрепа' },
-  tool: { icon: FolderOpen, label: 'Проект' },
-  board: { icon: LayoutDashboard, label: 'Доска' },
-  subject: { icon: Folder, label: 'Предмет целиком' },
-  file: { icon: FileText, label: 'Файл' },
+  note: { icon: FileText, label: "Конспект" },
+  pin: { icon: Pin, label: "Карточка закрепа" },
+  tool: { icon: FolderOpen, label: "Проект" },
+  board: { icon: LayoutDashboard, label: "Доска" },
+  subject: { icon: Folder, label: "Предмет целиком" },
+  file: { icon: FileText, label: "Файл" },
 }
 
 export function TrashPage() {
@@ -30,7 +30,7 @@ export function TrashPage() {
   const load = useCallback(() => {
     listTrash().then(setItems, (e) => {
       setItems([])
-      toast.error('Не удалось открыть корзину', { description: errorText(e) })
+      toast.error("Не удалось открыть корзину", { description: errorText(e) })
     })
   }, [listTrash])
   useEffect(load, [load])
@@ -41,7 +41,7 @@ export function TrashPage() {
       toast.success(`«${item.name}» восстановлен`, { description: item.originalPath })
       load()
     } catch (e) {
-      toast.error('Не удалось восстановить', { description: errorText(e) })
+      toast.error("Не удалось восстановить", { description: errorText(e) })
     }
   }
 
@@ -53,7 +53,7 @@ export function TrashPage() {
       setConfirm(null)
       load()
     } catch (e) {
-      toast.error('Не удалось удалить', { description: errorText(e) })
+      toast.error("Не удалось удалить", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -94,7 +94,7 @@ export function TrashPage() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{item.name}</div>
                   <div className="truncate text-[13px] text-muted-foreground">
-                    {label} · {item.originalPath.split('/')[0]} · удалено {relativeTime(item.deletedAt)}
+                    {label} · {item.originalPath.split("/")[0]} · удалено {relativeTime(item.deletedAt)}
                   </div>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => restore(item)}>
@@ -116,7 +116,7 @@ export function TrashPage() {
             <DialogDescription>
               {confirm?.length === 1
                 ? `«${confirm[0].name}» исчезнет с диска.`
-                : `Все ${plural(confirm?.length ?? 0, ['объект', 'объекта', 'объектов'])} исчезнут с диска.`}{' '}
+                : `Все ${plural(confirm?.length ?? 0, ["объект", "объекта", "объектов"])} исчезнут с диска.`}{" "}
               Это нельзя отменить.
             </DialogDescription>
           </DialogHeader>

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useParams } from 'react-router'
-import { useCreateNote } from '@/vault/hooks'
-import { useUi } from './store'
+import { useEffect, useRef } from "react"
+import { useParams } from "react-router"
+import { useCreateNote } from "@/vault/hooks"
+import { useUi } from "./store"
 
 export function useHotkeys() {
   const createNote = useCreateNote()
@@ -16,24 +16,24 @@ export function useHotkeys() {
       if (e.defaultPrevented) return
       const ui = useUi.getState()
       const ctrl = e.ctrlKey || e.metaKey
-      if (e.code === 'KeyN' && ((e.altKey && !ctrl) || (ctrl && !e.altKey && !e.shiftKey))) {
+      if (e.code === "KeyN" && ((e.altKey && !ctrl) || (ctrl && !e.altKey && !e.shiftKey))) {
         e.preventDefault()
         void ctx.current.createNote(ctx.current.subjectId)
         return
       }
       if (!ctrl || e.altKey) return
-      if (e.code === 'KeyK') {
+      if (e.code === "KeyK") {
         e.preventDefault()
         ui.setPaletteOpen(!ui.paletteOpen)
-      } else if (e.code === 'KeyJ') {
+      } else if (e.code === "KeyJ") {
         e.preventDefault()
         ui.togglePins()
-      } else if (e.code === 'Backslash') {
+      } else if (e.code === "Backslash") {
         e.preventDefault()
         ui.toggleFocus()
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [])
 }

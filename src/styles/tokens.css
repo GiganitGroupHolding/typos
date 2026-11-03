@@ -218,7 +218,7 @@
   }
 }
 
-:root[data-accent='neutral'] {
+:root[data-accent="neutral"] {
   --primary: #1f1e1d;
   --primary-foreground: #ffffff;
   --highlight: #2c2b28;
@@ -232,7 +232,7 @@
   --hl-default: rgb(31 30 29 / 0.1);
   --chart-1: var(--highlight);
 }
-:root.dark[data-accent='neutral'] {
+:root.dark[data-accent="neutral"] {
   --primary: #f5f4f0;
   --primary-foreground: #1f1e1d;
   --highlight: #ffffff;

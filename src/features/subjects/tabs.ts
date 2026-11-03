@@ -1,4 +1,4 @@
-import type { SubjectTab } from '@/types'
+import type { SubjectTab } from "@/types"
 
 export const tabOfPath = (pathname: string): SubjectTab =>
-  pathname.includes('/t/') ? 'tools' : pathname.includes('/b/') ? 'boards' : 'notes'
+  pathname.includes("/t/") ? "tools" : pathname.includes("/b/") ? "boards" : "notes"

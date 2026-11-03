@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
-import * as THREE from 'three'
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js'
+import { useEffect, useRef } from "react"
+import * as THREE from "three"
+import { FXAAShader } from "three/addons/shaders/FXAAShader.js"
 
-export type BackgroundVariant = 'nebula' | 'metal'
+export type BackgroundVariant = "nebula" | "metal"
 
 export interface InteractiveNebulaShaderProps {
   variant?: BackgroundVariant
@@ -227,7 +227,7 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 const randInt = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1))
 const REACH = 0.62
 
-type Role = 'tl' | 'br' | 'mid'
+type Role = "tl" | "br" | "mid"
 
 interface Spot {
   x: number
@@ -239,14 +239,14 @@ interface Spot {
 
   look: [number, number, number, number]
 
-  dest?: { x: number; y: number; z: number; role: 'tl' | 'br' }
+  dest?: { x: number; y: number; z: number; role: "tl" | "br" }
 }
 
-const anchorAt = (role: 'tl' | 'br', W: number, H: number): [number, number] => (role === 'tl' ? [0.08, H - 0.08] : [W - 0.08, 0.08])
+const anchorAt = (role: "tl" | "br", W: number, H: number): [number, number] => (role === "tl" ? [0.08, H - 0.08] : [W - 0.08, 0.08])
 
-function near(role: 'tl' | 'br', W: number, H: number, rMin: number, rMax: number): [number, number] {
+function near(role: "tl" | "br", W: number, H: number, rMin: number, rMax: number): [number, number] {
   const [ax, ay] = anchorAt(role, W, H)
-  const ang = rand(0, Math.PI / 2) + (role === 'tl' ? -Math.PI / 2 : Math.PI / 2)
+  const ang = rand(0, Math.PI / 2) + (role === "tl" ? -Math.PI / 2 : Math.PI / 2)
   const r = rand(rMin, rMax)
   return [Math.min(Math.max(ax + Math.cos(ang) * r, -0.1), W + 0.1), Math.min(Math.max(ay + Math.sin(ang) * r, -0.1), H + 0.1)]
 }
@@ -255,9 +255,9 @@ const look = (): [number, number, number, number] => [rand(0.36, 0.44), Math.ran
 
 function anchoredLayout(W: number, H: number): Spot[] {
   const spots: Spot[] = []
-  const [tlx, tly] = anchorAt('tl', W, H)
-  const [brx, bry] = anchorAt('br', W, H)
-  for (const role of ['tl', 'br'] as const) {
+  const [tlx, tly] = anchorAt("tl", W, H)
+  const [brx, bry] = anchorAt("br", W, H)
+  for (const role of ["tl", "br"] as const) {
     const [x, y] = near(role, W, H, 0, 0.12)
     spots.push({ x, y, z: rand(0.8, 1.2), a: 1, role, speed: rand(0.85, 1.15), look: look() })
     for (let i = randInt(0, 3); i > 0; i--) {
@@ -269,19 +269,19 @@ function anchoredLayout(W: number, H: number): Spot[] {
     const x = rand(0.22, 0.78) * W
     const y = rand(0.18, 0.82) * H
     const toTl = Math.hypot(x - tlx, y - tly) < Math.hypot(x - brx, y - bry)
-    const [dx, dy] = near(toTl ? 'tl' : 'br', W, H, 0.2, 0.5)
+    const [dx, dy] = near(toTl ? "tl" : "br", W, H, 0.2, 0.5)
     spots.push({
       x,
       y,
       z: rand(1.4, 3.2),
       a: 1,
-      role: 'mid',
+      role: "mid",
       speed: rand(0.8, 1.2),
       look: look(),
-      dest: { x: dx, y: dy, z: rand(2.2, 3.6), role: toTl ? 'tl' : 'br' },
+      dest: { x: dx, y: dy, z: rand(2.2, 3.6), role: toTl ? "tl" : "br" },
     })
   }
-  while (spots.length < MAX) spots.push({ x: rand(0, W), y: rand(0, H), z: 3, a: 0, role: 'mid', speed: 1, look: look() })
+  while (spots.length < MAX) spots.push({ x: rand(0, W), y: rand(0, H), z: 3, a: 0, role: "mid", speed: 1, look: look() })
   return spots.slice(0, MAX)
 }
 
@@ -293,7 +293,7 @@ function noteLayout(free: Spot[], W: number, band: [number, number] | null, gap:
     const [x0, x1] = band
     const r = REACH / spot.z
     if (spot.x + r <= x0 - gap || spot.x - r >= x1 + gap) return spot
-    const left = spot.role === 'tl'
+    const left = spot.role === "tl"
 
     const room = left ? x0 - gap + 0.1 : W + 0.1 - (x1 + gap)
     const fit = Math.max(Math.min(r, room / 2), 0.05)
@@ -323,15 +323,15 @@ function oklch(L: number, C: number, hDeg: number): THREE.Vector3 {
 
 function appBackground(): THREE.Vector3 {
   const m = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g)
-  const [r, g, b] = (m ?? ['250', '249', '246']).map(Number)
+  const [r, g, b] = (m ?? ["250", "249", "246"]).map(Number)
   return new THREE.Vector3(r / 255, g / 255, b / 255)
 }
 
 export function InteractiveNebulaShader({
-  variant = 'nebula',
+  variant = "nebula",
   avoidText = false,
   disableCenterDimming = false,
-  className = '',
+  className = "",
 }: InteractiveNebulaShaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const avoidRef = useRef(avoidText)
@@ -360,13 +360,13 @@ export function InteractiveNebulaShader({
         alpha: false,
         depth: false,
         stencil: false,
-        powerPreference: 'high-performance',
+        powerPreference: "high-performance",
       })
     } catch {
       return
     }
-    renderer.domElement.style.width = '100%'
-    renderer.domElement.style.height = '100%'
+    renderer.domElement.style.width = "100%"
+    renderer.domElement.style.height = "100%"
     container.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
@@ -387,7 +387,7 @@ export function InteractiveNebulaShader({
       uLight: { value: true },
       disableCenterDimming: { value: disableCenterDimming },
     }
-    const shaderFor = (v: BackgroundVariant) => (v === 'metal' ? metalShader : fragmentShader)
+    const shaderFor = (v: BackgroundVariant) => (v === "metal" ? metalShader : fragmentShader)
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader: shaderFor(variantRef.current),
@@ -428,12 +428,12 @@ export function InteractiveNebulaShader({
       const root = document.documentElement
       const cs = getComputedStyle(root)
 
-      const h = parseFloat(root.style.getPropertyValue('--accent-h') || cs.getPropertyValue('--accent-h')) || 0
-      const parsedChroma = parseFloat(root.style.getPropertyValue('--accent-c') || cs.getPropertyValue('--accent-c'))
+      const h = parseFloat(root.style.getPropertyValue("--accent-h") || cs.getPropertyValue("--accent-h")) || 0
+      const parsedChroma = parseFloat(root.style.getPropertyValue("--accent-c") || cs.getPropertyValue("--accent-c"))
       const c = Number.isFinite(parsedChroma) ? parsedChroma : 1
-      const dark = root.classList.contains('dark')
+      const dark = root.classList.contains("dark")
       uniforms.uLight.value = !dark
-      target.tint = root.dataset.accent && root.dataset.accent !== 'neutral' ? 1 : 0
+      target.tint = root.dataset.accent && root.dataset.accent !== "neutral" ? 1 : 0
       if (target.tint) target.tintCol.copy(oklch(dark ? 0.72 : 0.62, (dark ? 0.14 : 0.16) * c, h))
       target.bg.copy(appBackground())
     }
@@ -442,7 +442,7 @@ export function InteractiveNebulaShader({
     uniforms.uTintCol.value.copy(target.tintCol)
     uniforms.uTint.value = target.tint
 
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
     let dirty = true
     let boost = 0
 
@@ -450,7 +450,7 @@ export function InteractiveNebulaShader({
       readColors()
       dirty = true
     })
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-accent'] })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-accent"] })
 
     const size = () => {
       const { x: w, y: h } = uniforms.iResolution.value
@@ -460,7 +460,7 @@ export function InteractiveNebulaShader({
 
     let band: [number, number] | null = null
     const readBand = (): [number, number] | null => {
-      const el = document.querySelector('#main .note-prose')
+      const el = document.querySelector("#main .note-prose")
       if (!el) return null
       const r = el.getBoundingClientRect()
       const box = container.getBoundingClientRect()
@@ -488,7 +488,7 @@ export function InteractiveNebulaShader({
       if (reduced) uniforms.uSpots.value.forEach((sp) => (sp.w += 3 + Math.random() * 6))
       relayout(true)
     }
-    window.addEventListener('lava:shuffle', onShuffle)
+    window.addEventListener("lava:shuffle", onShuffle)
 
     kick.current = () => relayout(!avoidRef.current)
 
@@ -523,7 +523,7 @@ export function InteractiveNebulaShader({
       }
       dirty = true
     }
-    window.addEventListener('resize', onResize)
+    window.addEventListener("resize", onResize)
     const resize = new ResizeObserver(onResize)
     resize.observe(container)
     onResize()
@@ -600,10 +600,10 @@ export function InteractiveNebulaShader({
         uniforms.uAlpha.value[i] = a + (t.a - a) * k
 
         if (!reduced) sp.w += dt * speeds[i] * (1 + boost)
-        if (variantRef.current === 'nebula' && uniforms.uAlpha.value[i] > 0.01) {
+        if (variantRef.current === "nebula" && uniforms.uAlpha.value[i] > 0.01) {
           uniforms.uRotation.value[i].set(Math.cos(sp.w * 0.4), Math.sin(sp.w * 0.4), Math.cos(sp.w * 0.3), Math.sin(sp.w * 0.3))
           uniforms.uDrift.value[i] = Math.sin(sp.w * 0.7) * 0.3
-        } else if (variantRef.current === 'metal' && uniforms.uAlpha.value[i] > 0.01) {
+        } else if (variantRef.current === "metal" && uniforms.uAlpha.value[i] > 0.01) {
           uniforms.uMetalSpots.value[i].set(
             sp.x + 0.016 * Math.sin(sp.w * 0.55 + i * 1.3),
             sp.y + 0.016 * Math.cos(sp.w * 0.42 + i * 2.1),
@@ -633,9 +633,9 @@ export function InteractiveNebulaShader({
 
     return () => {
       swap.current = () => {}
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener("resize", onResize)
       resize.disconnect()
-      window.removeEventListener('lava:shuffle', onShuffle)
+      window.removeEventListener("lava:shuffle", onShuffle)
       mo.disconnect()
       renderer.setAnimationLoop(null)
       container.removeChild(renderer.domElement)
@@ -645,7 +645,7 @@ export function InteractiveNebulaShader({
       mesh.geometry.dispose()
       renderer.dispose()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return <div ref={containerRef} className={`absolute inset-0 ${className}`} aria-hidden />

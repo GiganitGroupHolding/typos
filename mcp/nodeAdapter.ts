@@ -1,14 +1,14 @@
-import { randomBytes } from 'node:crypto'
-import { promises as fs } from 'node:fs'
-import path from 'node:path'
-import type { Entry, VaultAdapter } from '@/storage/VaultAdapter'
+import { randomBytes } from "node:crypto"
+import { promises as fs } from "node:fs"
+import path from "node:path"
+import type { Entry, VaultAdapter } from "@/storage/VaultAdapter"
 
-const isMissing = (e: unknown) => (e as NodeJS.ErrnoException)?.code === 'ENOENT'
+const isMissing = (e: unknown) => (e as NodeJS.ErrnoException)?.code === "ENOENT"
 
-const isServerStateDir = (name: string) => name.toLowerCase().replace(/[. ]+$/, '') === '.typos-server'
+const isServerStateDir = (name: string) => name.toLowerCase().replace(/[. ]+$/, "") === ".typos-server"
 
 export class NodeFsAdapter implements VaultAdapter {
-  readonly kind = 'folder' as const
+  readonly kind = "folder" as const
   readonly label: string
   readonly root: string
   private rootReal?: Promise<string>
@@ -19,9 +19,9 @@ export class NodeFsAdapter implements VaultAdapter {
   }
 
   abs(rel: string): string {
-    const parts = rel.split('/').filter(Boolean)
+    const parts = rel.split("/").filter(Boolean)
     if (
-      parts.some((p) => p === '.' || p === '..' || p.includes('\\') || p.includes(':') || p.includes('\0')) ||
+      parts.some((p) => p === "." || p === ".." || p.includes("\\") || p.includes(":") || p.includes("\0")) ||
       (parts.length && isServerStateDir(parts[0]))
     )
       throw new Error(`Недопустимый путь: ${rel}`)
@@ -36,7 +36,7 @@ export class NodeFsAdapter implements VaultAdapter {
       throw e
     })
     const rel = path.relative(await this.rootReal, real)
-    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return false
+    if (rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return false
     return !(rel && isServerStateDir(rel.split(path.sep)[0]))
   }
 
@@ -77,7 +77,7 @@ export class NodeFsAdapter implements VaultAdapter {
           if (!real || !(await this.inside(real))) continue
           isDir = (await fs.stat(real)).isDirectory()
         }
-        out.push({ name: d.name, kind: isDir ? 'dir' : 'file' })
+        out.push({ name: d.name, kind: isDir ? "dir" : "file" })
       }
       return out
     } catch (e) {
@@ -88,7 +88,7 @@ export class NodeFsAdapter implements VaultAdapter {
 
   async readText(p: string) {
     try {
-      return await fs.readFile(await this.safe(p), 'utf8')
+      return await fs.readFile(await this.safe(p), "utf8")
     } catch (e) {
       if (isMissing(e)) return null
       throw e
@@ -107,9 +107,9 @@ export class NodeFsAdapter implements VaultAdapter {
   private async writeBuffer(p: string, data: Buffer | string) {
     const target = await this.safe(p)
     await fs.mkdir(path.dirname(target), { recursive: true })
-    const tmp = `${target}.${randomBytes(4).toString('hex')}.tmp`
+    const tmp = `${target}.${randomBytes(4).toString("hex")}.tmp`
     try {
-      await fs.writeFile(tmp, data, { flag: 'wx' })
+      await fs.writeFile(tmp, data, { flag: "wx" })
       await fs.rename(tmp, target)
     } catch (e) {
       await fs.rm(tmp, { force: true })

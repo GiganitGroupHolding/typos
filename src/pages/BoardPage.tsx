@@ -1,21 +1,21 @@
-import { LayoutDashboard } from 'lucide-react'
-import { motion } from 'motion/react'
-import { useEffect, useRef } from 'react'
-import { Navigate, useParams, useSearchParams } from 'react-router'
-import { toast } from 'sonner'
-import { BoardActions } from '@/features/boards/BoardActions'
-import { BoardCanvas } from '@/features/boards/BoardCanvas'
-import { pageEnter } from '@/lib/motion'
-import { errorText } from '@/lib/undo'
-import type { Board } from '@/types'
-import { useBoard, useSubject } from '@/vault/hooks'
-import { useVault } from '@/vault/store'
+import { LayoutDashboard } from "lucide-react"
+import { motion } from "motion/react"
+import { useEffect, useRef } from "react"
+import { Navigate, useParams, useSearchParams } from "react-router"
+import { toast } from "sonner"
+import { BoardActions } from "@/features/boards/BoardActions"
+import { BoardCanvas } from "@/features/boards/BoardCanvas"
+import { errorText } from "@/lib/errors"
+import { pageEnter } from "@/lib/motion"
+import type { Board } from "@/types"
+import { useBoard, useSubject } from "@/vault/hooks"
+import { useVault } from "@/vault/store"
 
 export function BoardPage() {
   const { subjectId, boardId } = useParams()
   const board = useBoard(boardId)
   const subject = useSubject(subjectId)
-  if (!board || !subject || board.subjectId !== subject.id) return <Navigate to={subject ? `/s/${subject.id}?tab=boards` : '/'} replace />
+  if (!board || !subject || board.subjectId !== subject.id) return <Navigate to={subject ? `/s/${subject.id}?tab=boards` : "/"} replace />
 
   return (
     <motion.div {...pageEnter} key={board.id} className="flex h-full flex-col p-3 pt-2">
@@ -34,7 +34,7 @@ export function BoardPage() {
 function BoardTitle({ board }: { board: Board }) {
   const ref = useRef<HTMLInputElement>(null)
   const [params, setParams] = useSearchParams()
-  const focus = params.has('new') || params.has('rename')
+  const focus = params.has("new") || params.has("rename")
 
   useEffect(() => {
     if (!focus) return
@@ -53,7 +53,7 @@ function BoardTitle({ board }: { board: Board }) {
       await useVault.getState().renameBoard(board.id, name)
     } catch (e) {
       el.value = board.name
-      toast.error('Не удалось переименовать доску', { description: errorText(e) })
+      toast.error("Не удалось переименовать доску", { description: errorText(e) })
     }
   }
 
@@ -64,10 +64,10 @@ function BoardTitle({ board }: { board: Board }) {
       aria-label="Название доски"
       onBlur={(e) => void save(e.currentTarget)}
       onKeyDown={(e) => {
-        if (e.key !== 'Enter' && e.key !== 'Escape') return
-        if (e.key === 'Escape') e.currentTarget.value = board.name
+        if (e.key !== "Enter" && e.key !== "Escape") return
+        if (e.key === "Escape") e.currentTarget.value = board.name
 
-        document.querySelector<HTMLElement>('[data-board-canvas]')?.focus({ preventScroll: true })
+        document.querySelector<HTMLElement>("[data-board-canvas]")?.focus({ preventScroll: true })
       }}
       className="min-w-0 flex-1 truncate rounded-md bg-transparent px-1 py-0.5 text-[15px] font-semibold outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
     />

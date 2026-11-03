@@ -1,9 +1,12 @@
-import { FolderOpen, Home, MonitorDown, Plus, Search, Server, Trash2 } from 'lucide-react'
-import { motion } from 'motion/react'
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router'
-import { TyposMark } from '@/components/TyposMark'
-import { Kbd } from '@/components/ui/kbd'
+import { FolderOpen, Home, MonitorDown, Plus, Search, Server, Trash2 } from "lucide-react"
+import { motion } from "motion/react"
+import { useState } from "react"
+import { Link, useLocation } from "react-router"
+import { shuffleBackground } from "@/app/accent"
+import { useInstallPrompt } from "@/app/pwa"
+import { useUi } from "@/app/store"
+import { TyposMark } from "@/components/TyposMark"
+import { Kbd } from "@/components/ui/Kbd"
 import {
   Sidebar,
   SidebarContent,
@@ -16,19 +19,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar'
-import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
-import { SubjectTree } from '@/features/subjects/SubjectTree'
-import { upperFirst } from '@/lib/format'
-import { cn } from '@/lib/utils'
-import { useConnection } from '@/storage/connection'
-import { useSync } from '@/storage/sync'
-import { storageLabel } from '@/storage/VaultAdapter'
-import { useVault } from '@/vault/store'
-import { shuffleBackground } from '../accent'
-import { useInstallPrompt } from '../pwa'
-import { useUi } from '../store'
-import { SettingsDialog } from './SettingsDialog'
+} from "@/components/ui/Sidebar"
+import { openNewSubject } from "@/features/subjects/NewSubjectDialog"
+import { SubjectTree } from "@/features/subjects/SubjectTree"
+import { upperFirst } from "@/lib/format"
+import { cn } from "@/lib/utils"
+import { useConnection } from "@/storage/connection"
+import { useSync } from "@/storage/sync"
+import { storageLabel } from "@/storage/VaultAdapter"
+import { useVault } from "@/vault/store"
+import { SettingsDialog } from "./SettingsDialog"
 
 export function AppSidebar() {
   const { pathname } = useLocation()
@@ -54,7 +54,7 @@ export function AppSidebar() {
             animate={{ rotate: spins * 360 }}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18 }}
             className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
             <TyposMark className="h-[26px] w-auto" />
@@ -77,7 +77,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/'}>
+                <SidebarMenuButton asChild isActive={pathname === "/"}>
                   <Link to="/">
                     <Home />
                     <span>Главная</span>
@@ -110,7 +110,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/trash'}>
+            <SidebarMenuButton asChild isActive={pathname === "/trash"}>
               <Link to="/trash" viewTransition>
                 <Trash2 />
                 <span>Корзина</span>
@@ -120,9 +120,9 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/welcome">
-                {storage?.kind === 'remote' ? <Server /> : <FolderOpen />}
-                <span className="truncate">{upperFirst(storageLabel(storage) ?? 'в браузере · подключить папку')}</span>
-                {storage?.kind === 'remote' && pending > 0 && (
+                {storage?.kind === "remote" ? <Server /> : <FolderOpen />}
+                <span className="truncate">{upperFirst(storageLabel(storage) ?? "в браузере · подключить папку")}</span>
+                {storage?.kind === "remote" && pending > 0 && (
                   <span
                     className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums"
                     title="Правки, которые ещё не ушли на сервер"
@@ -130,8 +130,8 @@ export function AppSidebar() {
                     ↑{pending}
                   </span>
                 )}
-                {(connection === 'offline' || connection === 'revoked') && (
-                  <span className={cn('size-2 shrink-0 rounded-full bg-destructive', !pending && 'ml-auto')} aria-label="нет связи" />
+                {(connection === "offline" || connection === "revoked") && (
+                  <span className={cn("size-2 shrink-0 rounded-full bg-destructive", !pending && "ml-auto")} aria-label="нет связи" />
                 )}
               </Link>
             </SidebarMenuButton>

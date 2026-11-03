@@ -1,7 +1,7 @@
-import { create } from 'zustand'
-import type { RemoteAdapter } from './remoteAdapter'
+import { create } from "zustand"
+import type { RemoteAdapter } from "./remoteAdapter"
 
-export type ConnectionStatus = 'local' | 'connecting' | 'online' | 'offline' | 'revoked'
+export type ConnectionStatus = "local" | "connecting" | "online" | "offline" | "revoked"
 
 interface ConnectionState {
   status: ConnectionStatus
@@ -11,7 +11,7 @@ interface ConnectionState {
   retry: () => void
 }
 
-export const useConnection = create<ConnectionState>(() => ({ status: 'local', retry: () => {} }))
+export const useConnection = create<ConnectionState>(() => ({ status: "local", retry: () => {} }))
 
 export interface MonitorOptions {
   idleMs?: number
@@ -38,12 +38,12 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
     if (prev !== status) opts.onChange?.(status, prev)
   }
   const kick = () => wake?.()
-  const onVisible = () => document.visibilityState === 'visible' && kick()
-  window.addEventListener('online', kick)
-  document.addEventListener('visibilitychange', onVisible)
+  const onVisible = () => document.visibilityState === "visible" && kick()
+  window.addEventListener("online", kick)
+  document.addEventListener("visibilitychange", onVisible)
 
   adapter.onProblem = () => current?.abort()
-  useConnection.setState({ status: 'connecting', retryAt: undefined, retry: kick })
+  useConnection.setState({ status: "connecting", retryAt: undefined, retry: kick })
 
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
@@ -71,13 +71,13 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
             clearTimeout(connectTimer)
             attempt = 0
             recheck = true
-            set('online')
+            set("online")
           },
           opts.onServerChange,
         )
-        if (end === 'revoked') return set('revoked')
+        if (end === "revoked") return set("revoked")
 
-        if (end === 'idle') recheck = false
+        if (end === "idle") recheck = false
       } catch {
       } finally {
         clearTimeout(connectTimer)
@@ -88,7 +88,7 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
         continue
       }
       const delay = retryMs[Math.min(attempt++, retryMs.length - 1)]
-      set('offline', Date.now() + delay)
+      set("offline", Date.now() + delay)
       await sleep(delay)
     }
   })()
@@ -97,9 +97,9 @@ export function monitorConnection(adapter: RemoteAdapter, opts: MonitorOptions =
     stopped = true
     current?.abort()
     wake?.()
-    window.removeEventListener('online', kick)
-    document.removeEventListener('visibilitychange', onVisible)
+    window.removeEventListener("online", kick)
+    document.removeEventListener("visibilitychange", onVisible)
     adapter.onProblem = undefined
-    useConnection.setState({ status: 'local', retryAt: undefined, retry: () => {} })
+    useConnection.setState({ status: "local", retryAt: undefined, retry: () => {} })
   }
 }

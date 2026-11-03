@@ -1,13 +1,13 @@
-import { ChevronRight, Focus, Pin, Search } from 'lucide-react'
-import { Link, useParams } from 'react-router'
-import { Button } from '@/components/ui/button'
-import { useLiquidLens } from '@/components/ui/liquid-lens'
-import { SidebarTrigger } from '@/components/ui/sidebar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
-import { useBoard, useNote, useSubject, useTool } from '@/vault/hooks'
-import { useUi } from '../store'
-import { WindowControls } from './WindowControls'
+import { ChevronRight, Focus, Pin, Search } from "lucide-react"
+import { Link, useParams } from "react-router"
+import { useUi } from "@/app/store"
+import { Button } from "@/components/ui/Button"
+import { useLiquidLens } from "@/components/ui/LiquidLens"
+import { SidebarTrigger } from "@/components/ui/Sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
+import { cn } from "@/lib/utils"
+import { useBoard, useNote, useSubject, useTool } from "@/vault/hooks"
+import { WindowControls } from "./WindowControls"
 
 export function TopBar() {
   const { subjectId, noteId, toolId, boardId } = useParams()
@@ -15,13 +15,13 @@ export function TopBar() {
   const note = useNote(noteId)
   const tool = useTool(toolId)
   const board = useBoard(boardId)
-  const leaf = note ? note.title || 'Без названия' : (tool?.name ?? board?.name)
+  const leaf = note ? note.title || "Без названия" : (tool?.name ?? board?.name)
   const pinsOpen = useUi((s) => s.pinsOpen)
   const togglePins = useUi((s) => s.togglePins)
   const focusMode = useUi((s) => s.focusMode)
   const toggleFocus = useUi((s) => s.toggleFocus)
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
-  const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: 'liquid liquid-lava' })
+  const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: "liquid liquid-lava" })
 
   return (
     <div data-tauri-drag-region className="flex h-12 shrink-0 items-center gap-1 px-2">
@@ -57,7 +57,7 @@ export function TopBar() {
         ) : null}
       </nav>
 
-      <div ref={lens.attach} style={lens.style} className={cn(lens.className, 'flex items-center gap-0.5 rounded-full p-1')}>
+      <div ref={lens.attach} style={lens.style} className={cn(lens.className, "flex items-center gap-0.5 rounded-full p-1")}>
         {lens.extras}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -81,7 +81,7 @@ export function TopBar() {
               aria-label="Режим фокуса"
               aria-pressed={focusMode}
               onClick={toggleFocus}
-              className={cn('rounded-full hover:bg-foreground/5', focusMode && 'liquid-active hover:bg-transparent')}
+              className={cn("rounded-full hover:bg-foreground/5", focusMode && "liquid-active hover:bg-transparent")}
             >
               <Focus />
             </Button>
@@ -96,7 +96,7 @@ export function TopBar() {
               aria-label="Закреп"
               aria-pressed={pinsOpen}
               onClick={togglePins}
-              className={cn('rounded-full hover:bg-foreground/5', pinsOpen && 'liquid-active hover:bg-transparent')}
+              className={cn("rounded-full hover:bg-foreground/5", pinsOpen && "liquid-active hover:bg-transparent")}
             >
               <Pin />
             </Button>

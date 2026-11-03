@@ -1,25 +1,26 @@
-import { isTauri } from '@tauri-apps/api/core'
-import { ArrowLeft, FolderDown, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from 'lucide-react'
-import { motion } from 'motion/react'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { useAccentSync } from '@/app/accent'
-import { Nebula } from '@/app/layout/Nebula'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { LiquidButton } from '@/components/ui/liquid-glass-button'
-import { plural } from '@/lib/format'
-import { listItem, listParent } from '@/lib/motion'
-import { createBrowserAdapter } from '@/storage/browserAdapter'
-import { fsaSupported } from '@/storage/fsaAdapter'
-import { blockedAsMixedContent, MIXED_CONTENT_HINT, parseRemoteLink } from '@/storage/remoteLink'
-import { useSync } from '@/storage/sync'
-import { SyncedAdapter } from '@/storage/syncedAdapter'
-import { storageLabel } from '@/storage/VaultAdapter'
-import { countNotes } from '@/vault/repo'
-import { useVault } from '@/vault/store'
+import { isTauri } from "@tauri-apps/api/core"
+import { ArrowLeft, FolderDown, FolderOpen, HardDrive, Loader2, MonitorSmartphone, Server, TriangleAlert, WifiOff } from "lucide-react"
+import { motion } from "motion/react"
+import { useEffect, useState } from "react"
+import { Link, useNavigate } from "react-router"
+import { toast } from "sonner"
+import { useAccentSync } from "@/app/accent"
+import { Nebula } from "@/app/layout/Nebula"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Input } from "@/components/ui/Input"
+import { LiquidButton } from "@/components/ui/LiquidButton"
+import { errorText } from "@/lib/errors"
+import { plural } from "@/lib/format"
+import { listItem, listParent } from "@/lib/motion"
+import { createBrowserAdapter } from "@/storage/browserAdapter"
+import { fsaSupported } from "@/storage/fsaAdapter"
+import { blockedAsMixedContent, MIXED_CONTENT_HINT, parseRemoteLink } from "@/storage/remoteLink"
+import { useSync } from "@/storage/sync"
+import { SyncedAdapter } from "@/storage/syncedAdapter"
+import { storageLabel } from "@/storage/VaultAdapter"
+import { countNotes } from "@/vault/repo"
+import { useVault } from "@/vault/store"
 
 export function WelcomePage() {
   useAccentSync(undefined)
@@ -31,7 +32,7 @@ export function WelcomePage() {
   const connectRemote = useVault((s) => s.connectRemote)
   const switchToBrowser = useVault((s) => s.switchToBrowser)
   const copyToFolder = useVault((s) => s.copyToFolder)
-  const [link, setLink] = useState('')
+  const [link, setLink] = useState("")
   const [linkError, setLinkError] = useState<string | null>(null)
   const [browserNotes, setBrowserNotes] = useState<number | null>(null)
   const [folderNotes, setFolderNotes] = useState<number | null>(null)
@@ -41,8 +42,8 @@ export function WelcomePage() {
   const [confirmCopy, setConfirmCopy] = useState(false)
   const pending = useSync((s) => s.pending)
   const supported = fsaSupported() || isTauri()
-  const inFolder = adapter?.kind === 'folder'
-  const inRemote = adapter?.kind === 'remote'
+  const inFolder = adapter?.kind === "folder"
+  const inRemote = adapter?.kind === "remote"
   const inBrowser = !inFolder && !inRemote
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export function WelcomePage() {
   }, [init])
 
   useEffect(() => {
-    if (adapter?.kind !== 'folder') return
+    if (adapter?.kind !== "folder") return
     countNotes(adapter).then(setFolderNotes, () => setFolderNotes(0))
   }, [adapter])
 
@@ -60,12 +61,12 @@ export function WelcomePage() {
     try {
       const res = await connectFolder(migrate && !!browserNotes)
       if (!res) return
-      toast.success('Папка подключена', {
-        description: res.copied ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.` : 'Конспекты теперь сохраняются на диск.',
+      toast.success("Папка подключена", {
+        description: res.copied ? `Перенесено файлов: ${res.copied}. В браузере осталась копия.` : "Конспекты теперь сохраняются на диск.",
       })
-      navigate('/')
+      navigate("/")
     } catch (e) {
-      toast.error('Не получилось подключить папку', { description: e instanceof Error ? e.message : String(e) })
+      toast.error("Не получилось подключить папку", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -77,7 +78,7 @@ export function WelcomePage() {
     try {
       config = parseRemoteLink(link)
     } catch (e) {
-      setLinkError(e instanceof Error ? e.message : String(e))
+      setLinkError(errorText(e))
       return
     }
     if (blockedAsMixedContent(config)) {
@@ -87,15 +88,15 @@ export function WelcomePage() {
     setBusy(true)
     try {
       const res = await connectRemote(config, migrate && ((inBrowser && !!browserNotes) || (inFolder && !!folderNotes)))
-      toast.success('Сервер подключён', {
+      toast.success("Сервер подключён", {
         description: res.copied
-          ? `Перенесено файлов: ${res.copied}. ${inFolder ? 'В папке всё осталось как было.' : 'В браузере осталась копия.'}`
-          : 'Конспекты теперь сохраняются на сервер.',
+          ? `Перенесено файлов: ${res.copied}. ${inFolder ? "В папке всё осталось как было." : "В браузере осталась копия."}`
+          : "Конспекты теперь сохраняются на сервер.",
       })
-      setLink('')
-      navigate('/')
+      setLink("")
+      navigate("/")
     } catch (e) {
-      setLinkError(e instanceof Error ? e.message : String(e))
+      setLinkError(errorText(e))
     } finally {
       setBusy(false)
     }
@@ -109,7 +110,7 @@ export function WelcomePage() {
       if (!res) return
       toast.success(`Скопировано в папку «${res.folder}»`, { description: `Файлов: ${res.copied}. Работа по-прежнему идёт с сервером.` })
     } catch (e) {
-      toast.error('Не получилось скопировать в папку', { description: e instanceof Error ? e.message : String(e) })
+      toast.error("Не получилось скопировать в папку", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -119,12 +120,12 @@ export function WelcomePage() {
     setBusy(true)
     try {
       await switchToBrowser()
-      toast(inRemote ? 'Сервер отключён' : 'Папка отключена', {
-        description: `${inRemote ? 'Файлы на сервере' : 'Файлы в папке'} остались на месте. Открыто хранилище браузера.`,
+      toast(inRemote ? "Сервер отключён" : "Папка отключена", {
+        description: `${inRemote ? "Файлы на сервере" : "Файлы в папке"} остались на месте. Открыто хранилище браузера.`,
       })
-      navigate('/')
+      navigate("/")
     } catch (e) {
-      toast.error('Не получилось отключить', { description: e instanceof Error ? e.message : String(e) })
+      toast.error("Не получилось отключить", { description: errorText(e) })
     } finally {
       setBusy(false)
       setConfirmDisconnect(false)
@@ -142,7 +143,7 @@ export function WelcomePage() {
         animate="show"
         className="glass w-full max-w-md rounded-[var(--radius-surface)] p-8"
       >
-        {status === 'ready' && (
+        {status === "ready" && (
           <Link to="/" className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-3.5" /> Назад
           </Link>
@@ -171,7 +172,7 @@ export function WelcomePage() {
             <MonitorSmartphone className="size-4 shrink-0 text-muted-foreground" />
           )}
           <span className="min-w-0 flex-1">
-            Сейчас: <b className="font-semibold">{storageLabel(adapter) ?? 'хранилище браузера'}</b>
+            Сейчас: <b className="font-semibold">{storageLabel(adapter) ?? "хранилище браузера"}</b>
             {adapter instanceof SyncedAdapter && (
               <span className="block truncate text-[12px] text-muted-foreground">{adapter.config.url}</span>
             )}
@@ -231,7 +232,7 @@ export function WelcomePage() {
             <span>
               Перенести то, что уже есть в браузере
               <span className="block text-[13px] text-muted-foreground">
-                {plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом и проектами. Файлы с такими же именами на новом
+                {plural(browserNotes, ["конспект", "конспекта", "конспектов"])} с закрепом и проектами. Файлы с такими же именами на новом
                 месте не перезапишутся.
               </span>
             </span>
@@ -252,7 +253,7 @@ export function WelcomePage() {
             <span>
               При подключении сервера перенести папку «{adapter?.label}»
               <span className="block text-[13px] text-muted-foreground">
-                {plural(folderNotes, ['конспект', 'конспекта', 'конспектов'])} с закрепом, проектами и картами. Файлы с такими же именами на
+                {plural(folderNotes, ["конспект", "конспекта", "конспектов"])} с закрепом, проектами и картами. Файлы с такими же именами на
                 сервере не перезапишутся, в папке всё останется как было.
               </span>
             </span>
@@ -262,10 +263,10 @@ export function WelcomePage() {
         <motion.div variants={listItem} className="mt-6 flex flex-col gap-2">
           <LiquidButton size="xl" className="w-full rounded-full font-semibold" disabled={!supported || busy} onClick={connect}>
             {busy ? <Loader2 className="animate-spin" /> : <FolderOpen />}
-            {inFolder ? 'Выбрать другую папку' : 'Выбрать папку'}
+            {inFolder ? "Выбрать другую папку" : "Выбрать папку"}
           </LiquidButton>
           {inBrowser && (
-            <Button size="lg" variant="ghost" onClick={() => navigate('/')}>
+            <Button size="lg" variant="ghost" onClick={() => navigate("/")}>
               Пока остаться в браузере
             </Button>
           )}
@@ -280,7 +281,7 @@ export function WelcomePage() {
           }}
         >
           <label htmlFor="storage-link" className="flex items-center gap-2 text-[14px] font-semibold">
-            <Server className="size-4 text-highlight" /> {inRemote ? 'Другой сервер хранения' : 'Сервер хранения'}
+            <Server className="size-4 text-highlight" /> {inRemote ? "Другой сервер хранения" : "Сервер хранения"}
           </label>
           <p className="mt-1 text-[13px] text-muted-foreground">
             Запусти на сервере <code className="font-mono text-[12px]">node typos-server.mjs --dir ./vault</code> и вставь ссылку typos://,
@@ -298,11 +299,11 @@ export function WelcomePage() {
               autoComplete="off"
               spellCheck={false}
               aria-invalid={!!linkError}
-              aria-describedby={linkError ? 'storage-link-error' : undefined}
+              aria-describedby={linkError ? "storage-link-error" : undefined}
               className="h-9 font-mono text-[13px]"
             />
             <Button type="submit" size="lg" disabled={busy || !link.trim()}>
-              {busy ? <Loader2 className="animate-spin" /> : 'Подключить'}
+              {busy ? <Loader2 className="animate-spin" /> : "Подключить"}
             </Button>
           </div>
           {linkError && (
@@ -340,16 +341,16 @@ export function WelcomePage() {
             <DialogTitle>{inRemote ? `Отключиться от сервера «${adapter?.label}»?` : `Отключить папку «${adapter?.label}»?`}</DialogTitle>
             <DialogDescription>
               {inRemote
-                ? 'Конспекты останутся на сервере — подключиться снова можно той же ссылкой.'
-                : 'Файлы останутся в папке — подключить её снова можно в любой момент.'}{' '}
+                ? "Конспекты останутся на сервере — подключиться снова можно той же ссылкой."
+                : "Файлы останутся в папке — подключить её снова можно в любой момент."}{" "}
               {inRemote && pending > 0 && (
                 <b className="font-semibold text-foreground">
-                  {plural(pending, ['правка ещё не отправлена', 'правки ещё не отправлены', 'правок ещё не отправлено'])} — они останутся на
-                  этом устройстве и уйдут на сервер, когда подключишься снова.{' '}
+                  {plural(pending, ["правка ещё не отправлена", "правки ещё не отправлены", "правок ещё не отправлено"])} — они останутся на
+                  этом устройстве и уйдут на сервер, когда подключишься снова.{" "}
                 </b>
               )}
               Приложение откроет хранилище браузера: там то, что было до подключения
-              {browserNotes ? ` (${plural(browserNotes, ['конспект', 'конспекта', 'конспектов'])}).` : ', сейчас оно пустое.'}
+              {browserNotes ? ` (${plural(browserNotes, ["конспект", "конспекта", "конспектов"])}).` : ", сейчас оно пустое."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,20 +1,21 @@
-import { FileCode2, FileUp, Upload } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { create } from 'zustand'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { toolIconLabels, toolIcons } from '@/features/subjects/visuals'
-import { fileSize } from '@/lib/format'
-import { errorText, submitOnCtrlEnter } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import { fileExt, fileTitle } from '@/storage/VaultAdapter'
-import type { ToolIcon } from '@/types'
-import { fileKind } from '@/vault/format'
-import { guessToolName } from '@/vault/repo'
-import { useVault } from '@/vault/store'
+import { FileCode2, FileUp, Upload } from "lucide-react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { create } from "zustand"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Input } from "@/components/ui/Input"
+import { toolIconLabels, toolIcons } from "@/features/subjects/visuals"
+import { errorText } from "@/lib/errors"
+import { fileSize } from "@/lib/format"
+import { submitOnCtrlEnter } from "@/lib/forms"
+import { cn } from "@/lib/utils"
+import { fileExt, fileTitle } from "@/storage/VaultAdapter"
+import type { ToolIcon } from "@/types"
+import { fileKind } from "@/vault/format"
+import { guessToolName } from "@/vault/repo"
+import { useVault } from "@/vault/store"
 
 interface Target {
   subjectId: string
@@ -34,14 +35,14 @@ const looksLikeHtml = (s: string) => /<(html|body|script|div|canvas|svg|style)[\
 
 export function guessToolIcon(name: string): ToolIcon {
   const n = name.toLowerCase()
-  if (/матриц|определител|слау|вектор/.test(n)) return 'grid'
-  if (/график|функци|plot|chart/.test(n)) return 'chart'
-  if (/единиц|конверт|перевод/.test(n)) return 'ruler'
-  if (/алгоритм|сложност|сортир|двоич|бинар/.test(n)) return 'binary'
-  if (/таймер|время|помодоро/.test(n)) return 'timer'
-  if (/таблиц/.test(n)) return 'table'
-  if (/интеграл|производн|уравнен|формул/.test(n)) return 'function'
-  return 'calculator'
+  if (/матриц|определител|слау|вектор/.test(n)) return "grid"
+  if (/график|функци|plot|chart/.test(n)) return "chart"
+  if (/единиц|конверт|перевод/.test(n)) return "ruler"
+  if (/алгоритм|сложност|сортир|двоич|бинар/.test(n)) return "binary"
+  if (/таймер|время|помодоро/.test(n)) return "timer"
+  if (/таблиц/.test(n)) return "table"
+  if (/интеграл|производн|уравнен|формул/.test(n)) return "function"
+  return "calculator"
 }
 
 export async function importHtmlFile(subjectId: string, file: File) {
@@ -56,11 +57,11 @@ export function ToolDialog() {
   const tool = useVault((s) => s.tools.find((t) => t.id === target?.toolId))
   const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
-  const [mode, setMode] = useState<'file' | 'code'>('file')
-  const [name, setName] = useState('')
-  const [icon, setIcon] = useState<ToolIcon>('calculator')
-  const [html, setHtml] = useState('')
-  const [fileName, setFileName] = useState('')
+  const [mode, setMode] = useState<"file" | "code">("file")
+  const [name, setName] = useState("")
+  const [icon, setIcon] = useState<ToolIcon>("calculator")
+  const [html, setHtml] = useState("")
+  const [fileName, setFileName] = useState("")
 
   const [file, setFile] = useState<File | null>(null)
   const [iconTouched, setIconTouched] = useState(false)
@@ -68,13 +69,13 @@ export function ToolDialog() {
 
   useEffect(() => {
     if (!target) return
-    setName(tool?.name ?? '')
-    setIcon(tool?.icon ?? 'calculator')
-    setHtml('')
-    setFileName('')
+    setName(tool?.name ?? "")
+    setIcon(tool?.icon ?? "calculator")
+    setHtml("")
+    setFileName("")
     setFile(null)
     setIconTouched(!!tool)
-    setMode('file')
+    setMode("file")
   }, [target, tool])
 
   const autoName = () => (file ? fileTitle(file.name) : guessToolName(html, fileName))
@@ -82,7 +83,7 @@ export function ToolDialog() {
   const acceptHtml = (code: string, from?: string) => {
     const untouched = !name.trim() || name === autoName()
     setHtml(code)
-    setFileName(from ?? '')
+    setFileName(from ?? "")
     setFile(null)
     const guessed = guessToolName(code, from)
     if (untouched) setName(guessed)
@@ -90,14 +91,14 @@ export function ToolDialog() {
   }
 
   const acceptFile = async (f: File) => {
-    if (fileKind(fileExt(f.name)) === 'html') return acceptHtml(await f.text(), f.name)
+    if (fileKind(fileExt(f.name)) === "html") return acceptHtml(await f.text(), f.name)
     if (!name.trim() || name === autoName()) setName(fileTitle(f.name))
     setFile(f)
     setFileName(f.name)
-    setHtml('')
+    setHtml("")
   }
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (!target || !name.trim()) return
     setBusy(true)
@@ -109,33 +110,33 @@ export function ToolDialog() {
         const t = await v.importProjectFile(target.subjectId, { name: file.name, blob: file, title: name })
         navigate(`/s/${t.subjectId}/t/${t.id}`)
       } else {
-        if (!looksLikeHtml(html)) throw new Error('Это не похоже на HTML. Нужен целый файл артефакта.')
+        if (!looksLikeHtml(html)) throw new Error("Это не похоже на HTML. Нужен целый файл артефакта.")
         const t = await v.importTool(target.subjectId, { name, html, icon })
         navigate(`/s/${t.subjectId}/t/${t.id}`)
       }
       close()
     } catch (err) {
-      toast.error(tool ? 'Не удалось сохранить' : 'Не удалось добавить', { description: errorText(err) })
+      toast.error(tool ? "Не удалось сохранить" : "Не удалось добавить", { description: errorText(err) })
     } finally {
       setBusy(false)
     }
   }
 
   const ready = tool ? !!name.trim() : !!name.trim() && (!!file || !!html.trim())
-  const htmlish = tool ? tool.kind === 'html' : !file
+  const htmlish = tool ? tool.kind === "html" : !file
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} onKeyDown={submitOnCtrlEnter} className="contents">
           <DialogHeader>
-            <DialogTitle>{tool ? (htmlish ? 'Тулза' : 'Файл') : 'Добавить в проекты'}</DialogTitle>
+            <DialogTitle>{tool ? (htmlish ? "Тулза" : "Файл") : "Добавить в проекты"}</DialogTitle>
             <DialogDescription>
               {tool
                 ? htmlish
-                  ? 'Название и иконка.'
-                  : 'Название файла в папке «Проекты».'
-                : 'PDF, презентация, документ, картинка или HTML-тулза. Тулза работает в песочнице, без доступа к конспектам.'}
+                  ? "Название и иконка."
+                  : "Название файла в папке «Проекты»."
+                : "PDF, презентация, документ, картинка или HTML-тулза. Тулза работает в песочнице, без доступа к конспектам."}
             </DialogDescription>
           </DialogHeader>
 
@@ -144,8 +145,8 @@ export function ToolDialog() {
               <div role="tablist" aria-label="Откуда взять" className="liquid-2 mb-2 flex rounded-xl p-1">
                 {(
                   [
-                    ['file', 'Файл'],
-                    ['code', 'Вставить HTML'],
+                    ["file", "Файл"],
+                    ["code", "Вставить HTML"],
                   ] as const
                 ).map(([m, label]) => (
                   <button
@@ -155,21 +156,21 @@ export function ToolDialog() {
                     aria-selected={mode === m}
                     onClick={() => {
                       setMode(m)
-                      if (m === 'code' && file) {
+                      if (m === "code" && file) {
                         setFile(null)
-                        setFileName('')
+                        setFileName("")
                       }
                     }}
                     className={cn(
-                      'flex-1 rounded-md py-1.5 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      mode === m ? 'liquid-active text-foreground!' : 'text-muted-foreground hover:text-foreground',
+                      "flex-1 rounded-md py-1.5 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      mode === m ? "liquid-active text-foreground!" : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              {mode === 'file' ? (
+              {mode === "file" ? (
                 <button
                   type="button"
                   onClick={() => fileInput.current?.click()}
@@ -188,7 +189,7 @@ export function ToolDialog() {
                   ) : (
                     <FileCode2 className="size-6 text-highlight" />
                   )}
-                  <span className="text-[14px] font-medium break-all">{fileName || 'Выбрать или перетащить файл'}</span>
+                  <span className="text-[14px] font-medium break-all">{fileName || "Выбрать или перетащить файл"}</span>
                   {fileName && (
                     <span className="text-[12px] text-muted-foreground">{fileSize(file ? file.size : new Blob([html]).size)}</span>
                   )}
@@ -200,7 +201,7 @@ export function ToolDialog() {
                   rows={7}
                   spellCheck={false}
                   aria-label="HTML-код тулзы"
-                  placeholder={'<!doctype html>\n<html>…'}
+                  placeholder={"<!doctype html>\n<html>…"}
                   className="w-full resize-y rounded-lg border bg-background px-3 py-2 font-mono text-[12px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               )}
@@ -211,7 +212,7 @@ export function ToolDialog() {
                 onChange={async (e) => {
                   const f = e.target.files?.[0]
                   if (f) await acceptFile(f)
-                  e.target.value = ''
+                  e.target.value = ""
                 }}
               />
             </div>
@@ -249,10 +250,10 @@ export function ToolDialog() {
                         setIconTouched(true)
                       }}
                       className={cn(
-                        'flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
+                        "flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring",
                         icon === i
-                          ? 'border-highlight bg-accent text-highlight'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                          ? "border-highlight bg-accent text-highlight"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
                     >
                       <Icon className="size-5" />
@@ -268,7 +269,7 @@ export function ToolDialog() {
               Отмена
             </Button>
             <Button type="submit" disabled={!ready || busy}>
-              {tool ? 'Сохранить' : 'Добавить'}
+              {tool ? "Сохранить" : "Добавить"}
             </Button>
           </DialogFooter>
         </form>

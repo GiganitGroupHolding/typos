@@ -1,17 +1,17 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import sharp from 'sharp'
+import { mkdirSync, writeFileSync } from "node:fs"
+import sharp from "sharp"
 
 const [input, ...rest] = process.argv.slice(2)
 if (!input) {
-  console.error('Укажи файл рамки: node scripts/device-frame.mjs <файл.png>')
+  console.error("Укажи файл рамки: node scripts/device-frame.mjs <файл.png>")
   process.exit(1)
 }
-const name = rest.includes('--name') ? rest[rest.indexOf('--name') + 1] : 'phone'
+const name = rest.includes("--name") ? rest[rest.indexOf("--name") + 1] : "phone"
 
 const meta = await sharp(input).metadata()
 const up = Math.max(1, Math.ceil(2400 / (meta.height ?? 2400)))
 const { data, info } = await sharp(input)
-  .resize({ height: (meta.height ?? 0) * up, kernel: 'lanczos3' })
+  .resize({ height: (meta.height ?? 0) * up, kernel: "lanczos3" })
   .ensureAlpha()
   .raw()
   .toBuffer({ resolveWithObject: true })
@@ -76,7 +76,7 @@ const radius = Math.round(d / (1 - Math.SQRT1_2))
 if (!transparent) {
   for (let p = 0; p < W * H; p++) if (mask[p]) data[p * 4 + 3] = 0
 }
-mkdirSync('public/devices', { recursive: true })
+mkdirSync("public/devices", { recursive: true })
 const out = `public/devices/${name}.webp`
 await sharp(data, { raw: { width: W, height: H, channels: 4 } })
   .webp({ quality: 92, alphaQuality: 100, effort: 6 })
@@ -84,7 +84,7 @@ await sharp(data, { raw: { width: W, height: H, channels: 4 } })
 
 const frame = { src: `/devices/${name}.webp`, width: W, height: H, screen: { x: minX, y: minY, width: sw, height: sh, radius } }
 writeFileSync(
-  'src/features/tools/deviceFrame.ts',
+  "src/features/tools/deviceFrame.ts",
   `// Создано scripts/device-frame.mjs — координаты экрана в пикселях картинки рамки.\nimport type { DeviceFrame } from './PhonePreview'\n\nexport const deviceFrame: DeviceFrame | null = ${JSON.stringify(frame, null, 2)}\n`,
 )
 console.log(`${out}: ${W}×${H}, экран ${sw}×${sh} с (${minX}, ${minY}), радиус ${radius}`)

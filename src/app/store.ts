@@ -1,15 +1,15 @@
-import { create } from 'zustand'
-import { createJSONStorage, persist } from 'zustand/middleware'
-import { normalizeZoom } from './zoomValue'
+import { create } from "zustand"
+import { createJSONStorage, persist } from "zustand/middleware"
+import { normalizeZoom } from "./zoomValue"
 
-export type ThemePref = 'light' | 'dark' | 'system'
-export type NoteFont = 'inter' | 'golos' | 'serif'
+export type ThemePref = "light" | "dark" | "system"
+export type NoteFont = "inter" | "golos" | "serif"
 
-export type Backdrop = 'nebula' | 'metal'
+export type Backdrop = "nebula" | "metal"
 
 export interface FloatingWindow {
   id: string
-  kind: 'pin' | 'tool'
+  kind: "pin" | "tool"
   refId: string
 
   slot: number
@@ -49,14 +49,14 @@ interface UiState {
   setPaletteOpen: (v: boolean) => void
   togglePhone: () => void
   setMapMode: (v: boolean) => void
-  openWindow: (kind: FloatingWindow['kind'], refId: string) => void
+  openWindow: (kind: FloatingWindow["kind"], refId: string) => void
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
 }
 
 const safeStorage = createJSONStorage(() => {
   try {
-    const k = '__probe__'
+    const k = "__probe__"
     localStorage.setItem(k, k)
     localStorage.removeItem(k)
     return localStorage
@@ -70,16 +70,16 @@ const safeStorage = createJSONStorage(() => {
   }
 })
 
-const order: ThemePref[] = ['light', 'dark', 'system']
+const order: ThemePref[] = ["light", "dark", "system"]
 
 export const useUi = create<UiState>()(
   persist(
     (set) => ({
-      theme: 'light',
-      noteFont: 'inter',
-      backdrop: 'nebula',
+      theme: "light",
+      noteFont: "inter",
+      backdrop: "nebula",
       responsiveAccent: true,
-      fixedAccent: '#5078d4',
+      fixedAccent: "#5078d4",
       desktopZoom: 100,
       setResponsiveAccent: (responsiveAccent) => set({ responsiveAccent }),
       setFixedAccent: (fixedAccent) => {
@@ -96,7 +96,7 @@ export const useUi = create<UiState>()(
       windows: [],
       setTheme: (theme) => set({ theme }),
       cycleTheme: () => set((s) => ({ theme: order[(order.indexOf(s.theme) + 1) % order.length] })),
-      toggleBackdrop: () => set((s) => ({ backdrop: s.backdrop === 'metal' ? 'nebula' : 'metal' })),
+      toggleBackdrop: () => set((s) => ({ backdrop: s.backdrop === "metal" ? "nebula" : "metal" })),
       setNoteFont: (noteFont) => set({ noteFont }),
       toggleReading: () => set((s) => ({ readingMode: !s.readingMode })),
       toggleFocus: () => set((s) => ({ focusMode: !s.focusMode })),
@@ -122,7 +122,7 @@ export const useUi = create<UiState>()(
         }),
     }),
     {
-      name: 'studynotes-ui',
+      name: "studynotes-ui",
       storage: safeStorage,
       partialize: (s) => ({
         theme: s.theme,
@@ -138,16 +138,16 @@ export const useUi = create<UiState>()(
         return {
           ...current,
           ...saved,
-          responsiveAccent: typeof saved.responsiveAccent === 'boolean' ? saved.responsiveAccent : true,
-          fixedAccent: typeof saved.fixedAccent === 'string' && /^#[0-9a-f]{6}$/i.test(saved.fixedAccent) ? saved.fixedAccent : '#5078d4',
+          responsiveAccent: typeof saved.responsiveAccent === "boolean" ? saved.responsiveAccent : true,
+          fixedAccent: typeof saved.fixedAccent === "string" && /^#[0-9a-f]{6}$/i.test(saved.fixedAccent) ? saved.fixedAccent : "#5078d4",
           desktopZoom: normalizeZoom(saved.desktopZoom ?? 100),
         }
       },
 
       version: 1,
       migrate: (persisted, version) => {
-        const s = (persisted ?? {}) as Partial<Pick<UiState, 'theme' | 'noteFont' | 'backdrop'>>
-        if (version < 1 && (!s.theme || s.theme === 'system')) s.theme = 'light'
+        const s = (persisted ?? {}) as Partial<Pick<UiState, "theme" | "noteFont" | "backdrop">>
+        if (version < 1 && (!s.theme || s.theme === "system")) s.theme = "light"
         return s as UiState
       },
     },

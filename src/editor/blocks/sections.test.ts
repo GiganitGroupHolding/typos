@@ -1,16 +1,16 @@
-import { getSchema } from '@tiptap/core'
-import { describe, expect, it } from 'vitest'
-import { buildExtensions } from '../extensions'
-import { foldedBlocks, headingKey, sectionRange } from './sections'
+import { getSchema } from "@tiptap/core"
+import { describe, expect, it } from "vitest"
+import { buildExtensions } from "@/editor/extensions"
+import { foldedBlocks, headingKey, sectionRange } from "./sections"
 
 const schema = getSchema(buildExtensions())
 const h = (level: number, text: string) => schema.nodes.heading.create({ level }, schema.text(text))
 const p = (text: string) => schema.nodes.paragraph.create(null, schema.text(text))
 
-const doc = schema.nodes.doc.create(null, [h(1, 'Конспект'), p('вступление'), h(2, 'А'), p('а1'), h(3, 'А.1'), p('а2'), h(2, 'Б'), p('б1')])
+const doc = schema.nodes.doc.create(null, [h(1, "Конспект"), p("вступление"), h(2, "А"), p("а1"), h(3, "А.1"), p("а2"), h(2, "Б"), p("б1")])
 
-describe('разделы под заголовками', () => {
-  it('заголовку подчиняется всё до заголовка того же уровня или выше', () => {
+describe("разделы под заголовками", () => {
+  it("заголовку подчиняется всё до заголовка того же уровня или выше", () => {
     expect(sectionRange(doc, 2)).toEqual([2, 6])
     expect(sectionRange(doc, 4)).toEqual([4, 6])
     expect(sectionRange(doc, 6)).toEqual([6, 8])
@@ -18,7 +18,7 @@ describe('разделы под заголовками', () => {
     expect(sectionRange(doc, 3)).toEqual([3, 4])
   })
 
-  it('свёрнутый раздел прячет содержимое, вложенный свёрнутый внутри не считается отдельно', () => {
+  it("свёрнутый раздел прячет содержимое, вложенный свёрнутый внутри не считается отдельно", () => {
     const f = foldedBlocks(doc, new Set([headingKey(doc.child(2)), headingKey(doc.child(4))]))
     expect(f.headings).toEqual([2])
     expect([...f.hidden].sort()).toEqual([3, 4, 5])

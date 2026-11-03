@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { boardLinkUrl, type BoardNode } from './model'
+import { useState } from "react"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog"
+import { Input } from "@/components/ui/Input"
+import { boardLinkUrl, type BoardNode } from "./model"
 
 export function BoardLinkDialog({
   node,
@@ -23,15 +23,15 @@ export function BoardLinkDialog({
         onKeyDown={(e) => e.stopPropagation()}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogTitle>{node ? 'Редактировать ссылку' : 'Добавить ссылку'}</DialogTitle>
+        <DialogTitle>{node ? "Редактировать ссылку" : "Добавить ссылку"}</DialogTitle>
         <form
           className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault()
             const values = new FormData(e.currentTarget)
-            const url = boardLinkUrl(String(values.get('url')))
+            const url = boardLinkUrl(String(values.get("url")))
             if (!url) return setError(true)
-            onSave(url, String(values.get('label')).trim())
+            onSave(url, String(values.get("label")).trim())
           }}
         >
           <label className="grid gap-1">
@@ -44,7 +44,7 @@ export function BoardLinkDialog({
             <Input name="label" defaultValue={node?.label} />
           </label>
           <Button type="submit" className="justify-self-end">
-            {node ? 'Сохранить' : 'Добавить'}
+            {node ? "Сохранить" : "Добавить"}
           </Button>
         </form>
       </DialogContent>

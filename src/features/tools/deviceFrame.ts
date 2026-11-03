@@ -1,7 +1,7 @@
-import type { DeviceFrame } from './PhonePreview'
+import type { DeviceFrame } from "./PhonePreview"
 
 export const deviceFrame: DeviceFrame | null = {
-  src: '/devices/iphone.webp',
+  src: "/devices/iphone.webp",
   width: 1392,
   height: 2816,
   screen: {

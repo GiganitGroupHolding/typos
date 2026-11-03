@@ -1,8 +1,8 @@
-import { boardBounds, type BoardData, type BoardNode } from './model'
+import { boardBounds, type BoardData, type BoardNode } from "./model"
 
 export function textSize(text: string, width = 260) {
   const perLine = Math.max(8, Math.floor((width - 28) / 8.5))
-  const lines = text.split('\n').reduce((sum, l) => sum + Math.max(1, Math.ceil(l.length / perLine)), 0)
+  const lines = text.split("\n").reduce((sum, l) => sum + Math.max(1, Math.ceil(l.length / perLine)), 0)
   return { width, height: Math.max(60, lines * 22 + 32) }
 }
 
@@ -15,7 +15,7 @@ type Box = { x: number; y: number; width: number; height: number }
 
 const hit = (a: Box, b: Box) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
-function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block: Box, dir: 'TB' | 'LR', framed: boolean) {
+function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block: Box, dir: "TB" | "LR", framed: boolean) {
   const below = boardBounds(placed)
   if (!below) return { x: 0, y: 0 }
   const fallback = { x: below.x, y: below.y + below.height + GAP + (framed ? LABEL_ROOM : 0) }
@@ -24,21 +24,21 @@ function origin(data: BoardData, placed: BoardNode[], fresh: Set<string>, block:
 
   const taken = placed.map((n) => ({
     x: n.x - 24,
-    y: n.y - 24 - (n.type === 'group' ? LABEL_ROOM : 0),
+    y: n.y - 24 - (n.type === "group" ? LABEL_ROOM : 0),
     width: n.width + 48,
-    height: n.height + 48 + (n.type === 'group' ? LABEL_ROOM : 0),
+    height: n.height + 48 + (n.type === "group" ? LABEL_ROOM : 0),
   }))
   const pad = framed ? LABEL_ROOM : 0
-  let at = dir === 'LR' ? { x: src.x + src.width + 90, y: src.y + pad } : { x: src.x, y: src.y + src.height + 90 + pad }
+  let at = dir === "LR" ? { x: src.x + src.width + 90, y: src.y + pad } : { x: src.x, y: src.y + src.height + 90 + pad }
   for (let i = 0; i < 100; i++) {
     const box = { ...block, x: at.x, y: at.y - pad, height: block.height + pad }
     if (!taken.some((t) => hit(t, box))) return at
-    at = dir === 'LR' ? { ...at, y: at.y + 40 } : { ...at, x: at.x + 40 }
+    at = dir === "LR" ? { ...at, y: at.y + 40 } : { ...at, x: at.x + 40 }
   }
   return fallback
 }
 
-export async function placeNodes(data: BoardData, unplaced: Set<string>, children: Map<string, string[]>, dir: 'TB' | 'LR' = 'LR') {
+export async function placeNodes(data: BoardData, unplaced: Set<string>, children: Map<string, string[]>, dir: "TB" | "LR" = "LR") {
   const frames = new Set([...children.keys()].filter((id) => unplaced.has(id)))
   const fresh = data.nodes.filter((n) => unplaced.has(n.id) && !frames.has(n.id))
   const freshIds = new Set(fresh.map((n) => n.id))
@@ -48,7 +48,7 @@ export async function placeNodes(data: BoardData, unplaced: Set<string>, childre
   const at = new Map<string, Box>()
 
   if (fresh.length) {
-    const { default: dagre } = await import('@dagrejs/dagre')
+    const { default: dagre } = await import("@dagrejs/dagre")
     const g = new dagre.graphlib.Graph({ multigraph: true, compound: true })
     g.setGraph({ rankdir: dir, nodesep: clusters.length ? 40 + LABEL_ROOM / 2 : 40, ranksep: 90, marginx: 0, marginy: 0 })
     g.setDefaultEdgeLabel(() => ({}))

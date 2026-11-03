@@ -1,19 +1,19 @@
-import { Extension, InputRule } from '@tiptap/core'
-import Image from '@tiptap/extension-image'
-import { TaskItem, TaskList } from '@tiptap/extension-list'
-import { BlockMath, InlineMath } from '@tiptap/extension-mathematics'
-import { TableKit } from '@tiptap/extension-table'
-import { Markdown } from '@tiptap/markdown'
-import type { Node as PMNode } from '@tiptap/pm/model'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
-import StarterKit from '@tiptap/starter-kit'
-import { ColorHighlight, LastColor, TextColor } from './colors'
-import { DiagramCodeBlock } from './diagrams'
+import { Extension, InputRule } from "@tiptap/core"
+import Image from "@tiptap/extension-image"
+import { TaskItem, TaskList } from "@tiptap/extension-list"
+import { BlockMath, InlineMath } from "@tiptap/extension-mathematics"
+import { TableKit } from "@tiptap/extension-table"
+import { Markdown } from "@tiptap/markdown"
+import type { Node as PMNode } from "@tiptap/pm/model"
+import { Plugin, PluginKey } from "@tiptap/pm/state"
+import StarterKit from "@tiptap/starter-kit"
+import { ColorHighlight, LastColor, TextColor } from "./colors"
+import { DiagramCodeBlock } from "./diagrams"
 
-export const katexOptions = { throwOnError: false, strict: 'ignore' as const }
+export const katexOptions = { throwOnError: false, strict: "ignore" as const }
 
 export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => void }>({
-  name: 'dollarMath',
+  name: "dollarMath",
   addOptions() {
     return { onBlockCreated: undefined }
   },
@@ -25,11 +25,11 @@ export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => v
         find: /^\$\$\s$/,
         handler: ({ state, range, chain }) => {
           const $from = state.doc.resolve(range.from)
-          if ($from.parent.textContent.trim() !== '$$') return null
+          if ($from.parent.textContent.trim() !== "$$") return null
           const pos = $from.before()
           chain()
             .deleteRange({ from: pos, to: $from.after() })
-            .insertContentAt(pos, { type: block.name, attrs: { latex: '' } })
+            .insertContentAt(pos, { type: block.name, attrs: { latex: "" } })
             .run()
 
           if (onBlockCreated) setTimeout(() => onBlockCreated(pos))
@@ -43,12 +43,12 @@ export const DollarMath = Extension.create<{ onBlockCreated?: (pos: number) => v
 
     return [
       new Plugin({
-        key: new PluginKey('dollarMathConvert'),
+        key: new PluginKey("dollarMathConvert"),
         appendTransaction(trs, _old, state) {
           if (!trs.some((t) => t.docChanged)) return null
           const ops: { from: number; to: number; node: PMNode }[] = []
           state.doc.descendants((node, pos, parent) => {
-            if (node.type.name === 'paragraph' && parent?.canReplaceWith(0, 0, block)) {
+            if (node.type.name === "paragraph" && parent?.canReplaceWith(0, 0, block)) {
               const m = node.textContent.match(BLOCK_TEXT)
               if (m && node.childCount === 1 && node.firstChild?.isText) {
                 ops.push({ from: pos, to: pos + node.nodeSize, node: block.create({ latex: (m[1] ?? m[2]).trim() }) })
@@ -83,7 +83,7 @@ const INLINE_PAREN = /\\\(\s*([^\n]+?)\s*\\\)/g
 const BLOCK_TEXT = /^\s*(?:\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$)\s*$/
 
 export interface ExtensionOptions {
-  onMathClick?: (node: PMNode, pos: number, kind: 'inline' | 'block') => void
+  onMathClick?: (node: PMNode, pos: number, kind: "inline" | "block") => void
   onBlockMathCreated?: (pos: number) => void
 
   resolveImage?: (src: string) => Promise<string | null>
@@ -91,19 +91,19 @@ export interface ExtensionOptions {
   diagrams?: boolean
 }
 
-const VaultImage = Image.extend<{ resolve?: ExtensionOptions['resolveImage'] } & Record<string, unknown>>({
+const VaultImage = Image.extend<{ resolve?: ExtensionOptions["resolveImage"] } & Record<string, unknown>>({
   addOptions() {
     return { ...this.parent?.(), resolve: undefined }
   },
   addNodeView() {
     const resolve = this.options.resolve
     return ({ node }) => {
-      const img = document.createElement('img')
-      img.alt = node.attrs.alt ?? ''
+      const img = document.createElement("img")
+      img.alt = node.attrs.alt ?? ""
       img.draggable = true
-      const src: string = node.attrs.src ?? ''
+      const src: string = node.attrs.src ?? ""
       if (resolve && src && !/^(https?:|data:|blob:)/.test(src)) {
-        img.dataset.loading = 'true'
+        img.dataset.loading = "true"
         void resolve(src).then((url) => {
           if (url) img.src = url
           else img.alt = `Нет файла: ${src}`
@@ -132,16 +132,16 @@ export function buildExtensions({ onMathClick, onBlockMathCreated, resolveImage,
     VaultImage.configure({ inline: false, allowBase64: false, resolve: resolveImage }),
     InlineMath.configure({
       katexOptions,
-      onClick: onMathClick ? (node, pos) => onMathClick(node, pos, 'inline') : undefined,
+      onClick: onMathClick ? (node, pos) => onMathClick(node, pos, "inline") : undefined,
     }),
     BlockMath.configure({
       katexOptions: { ...katexOptions, displayMode: true },
-      onClick: onMathClick ? (node, pos) => onMathClick(node, pos, 'block') : undefined,
+      onClick: onMathClick ? (node, pos) => onMathClick(node, pos, "block") : undefined,
     }),
     DollarMath.configure({ onBlockCreated: onBlockMathCreated }),
     TextColor,
     ColorHighlight,
     LastColor,
-    Markdown.configure({ indentation: { style: 'space', size: 2 } }),
+    Markdown.configure({ indentation: { style: "space", size: 2 } }),
   ]
 }

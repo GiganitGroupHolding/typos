@@ -1,4 +1,4 @@
-type FsaPermissionMode = 'read' | 'readwrite'
+type FsaPermissionMode = "read" | "readwrite"
 
 interface FileSystemHandle {
   queryPermission(desc?: { mode?: FsaPermissionMode }): Promise<PermissionState>
@@ -14,6 +14,6 @@ interface Window {
   showDirectoryPicker?(options?: {
     id?: string
     mode?: FsaPermissionMode
-    startIn?: 'desktop' | 'documents' | 'downloads'
+    startIn?: "desktop" | "documents" | "downloads"
   }): Promise<FileSystemDirectoryHandle>
 }

@@ -1,21 +1,21 @@
-import { GripHorizontal, X } from 'lucide-react'
-import { AnimatePresence, motion, useDragControls } from 'motion/react'
-import { useRef, type RefObject } from 'react'
-import { useUi, type FloatingWindow } from '@/app/store'
-import { Button } from '@/components/ui/button'
-import { ProjectViewer } from '@/features/tools/ProjectViewer'
-import { dur, easeIn, springSoft } from '@/lib/motion'
-import { usePin, useTool } from '@/vault/hooks'
-import { PinBody } from './PinCard'
+import { GripHorizontal, X } from "lucide-react"
+import { AnimatePresence, motion, useDragControls } from "motion/react"
+import { useRef, type RefObject } from "react"
+import { useUi, type FloatingWindow } from "@/app/store"
+import { Button } from "@/components/ui/Button"
+import { ProjectViewer } from "@/features/tools/ProjectViewer"
+import { dur, easeIn, springSoft } from "@/lib/motion"
+import { usePin, useTool } from "@/vault/hooks"
+import { PinBody } from "./PinCard"
 
 function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDivElement | null> }) {
   const controls = useDragControls()
   const close = useUi((s) => s.closeWindow)
   const focus = useUi((s) => s.focusWindow)
-  const pin = usePin(win.kind === 'pin' ? win.refId : undefined)
-  const tool = useTool(win.kind === 'tool' ? win.refId : undefined)
-  const title = pin?.title ?? tool?.name ?? 'Окно'
-  const isTool = win.kind === 'tool'
+  const pin = usePin(win.kind === "pin" ? win.refId : undefined)
+  const tool = useTool(win.kind === "tool" ? win.refId : undefined)
+  const title = pin?.title ?? tool?.name ?? "Окно"
+  const isTool = win.kind === "tool"
 
   return (
     <motion.section
@@ -56,7 +56,7 @@ function Window({ win, bounds }: { win: FloatingWindow; bounds: RefObject<HTMLDi
           <X />
         </Button>
       </header>
-      <div className={isTool ? 'h-[380px] w-[min(440px,calc(100vw-16px))]' : 'w-[min(320px,calc(100vw-16px))] px-4 py-3'}>
+      <div className={isTool ? "h-[380px] w-[min(440px,calc(100vw-16px))]" : "w-[min(320px,calc(100vw-16px))] px-4 py-3"}>
         {pin && <PinBody pin={pin} hideTitle />}
         {tool && <ProjectViewer tool={tool} />}
       </div>

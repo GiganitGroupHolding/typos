@@ -1,11 +1,11 @@
-import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
-import { useRef } from 'react'
-import { Link } from 'react-router'
-import { useLiquidLens } from '@/components/ui/liquid-lens'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { toolIcon } from '@/features/subjects/visuals'
-import { cn } from '@/lib/utils'
-import type { Tool } from '@/types'
+import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "motion/react"
+import { useRef } from "react"
+import { Link } from "react-router"
+import { useLiquidLens } from "@/components/ui/LiquidLens"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
+import { toolIcon } from "@/features/subjects/visuals"
+import { cn } from "@/lib/utils"
+import type { Tool } from "@/types"
 
 const BASE = 48
 
@@ -50,14 +50,14 @@ function DockIcon({ tool, mouseX }: { tool: Tool; mouseX: MotionValue<number> })
 
 export function ToolDock({ tools }: { tools: Tool[] }) {
   const mouseX = useMotionValue(Infinity)
-  const lens = useLiquidLens({ bezel: 16, refraction: 16, dispersion: 0.09, frost: 1, fallback: 'liquid' })
+  const lens = useLiquidLens({ bezel: 16, refraction: 16, dispersion: 0.09, frost: 1, fallback: "liquid" })
   return (
     <div
       ref={lens.attach}
       style={lens.style}
-      onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.clientX)}
+      onPointerMove={(e) => e.pointerType === "mouse" && mouseX.set(e.clientX)}
       onPointerLeave={() => mouseX.set(Infinity)}
-      className={cn(lens.className, 'inline-flex items-end gap-3 rounded-[1.4rem] px-3 pt-3 pb-3')}
+      className={cn(lens.className, "inline-flex items-end gap-3 rounded-[1.4rem] px-3 pt-3 pb-3")}
     >
       {lens.extras}
       {tools.map((t) => (

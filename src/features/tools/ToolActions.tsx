@@ -1,20 +1,20 @@
-import { Download, MoreHorizontal, Pencil, PictureInPicture2, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router'
-import { useUi } from '@/app/store'
-import { Button } from '@/components/ui/button'
+import { Download, MoreHorizontal, Pencil, PictureInPicture2, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router"
+import { useUi } from "@/app/store"
+import { Button } from "@/components/ui/Button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { toastUndo } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import type { Tool } from '@/types'
-import { useVault } from '@/vault/store'
-import { downloadProjectFile } from './projectFiles'
-import { openToolDialog } from './ToolDialog'
+} from "@/components/ui/DropdownMenu"
+import { toastUndo } from "@/lib/undo"
+import { cn } from "@/lib/utils"
+import type { Tool } from "@/types"
+import { useVault } from "@/vault/store"
+import { downloadProjectFile } from "./projectFiles"
+import { openToolDialog } from "./ToolDialog"
 
 export function ToolActions({ tool, className, onOpenWindow }: { tool: Tool; className?: string; onOpenWindow?: () => void }) {
   const openWindow = useUi((s) => s.openWindow)
@@ -47,14 +47,14 @@ export function ToolActions({ tool, className, onOpenWindow }: { tool: Tool; cla
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onSelect={() => {
-            openWindow('tool', tool.id)
+            openWindow("tool", tool.id)
             onOpenWindow?.()
           }}
         >
           <PictureInPicture2 /> В окне поверх
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openToolDialog({ subjectId: tool.subjectId, toolId: tool.id })}>
-          <Pencil /> {tool.kind === 'html' ? 'Название и иконка' : 'Переименовать'}
+          <Pencil /> {tool.kind === "html" ? "Название и иконка" : "Переименовать"}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void downloadProjectFile(tool)}>
           <Download /> Скачать оригинал

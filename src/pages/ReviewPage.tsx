@@ -1,15 +1,15 @@
-import { ArrowLeft, Check, RotateCcw, Shuffle, X } from 'lucide-react'
-import { AnimatePresence, motion } from 'motion/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router'
-import { Button } from '@/components/ui/button'
-import { Kbd } from '@/components/ui/kbd'
-import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
-import { plural } from '@/lib/format'
-import { dur, easeIn, easeOut, pageEnter, spring } from '@/lib/motion'
-import { Tex } from '@/lib/tex'
-import type { Pin } from '@/types'
-import { usePinsOf, useSubject } from '@/vault/hooks'
+import { ArrowLeft, Check, RotateCcw, Shuffle, X } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { Link, Navigate, useParams } from "react-router"
+import { Button } from "@/components/ui/Button"
+import { Kbd } from "@/components/ui/Kbd"
+import { SubjectBadge, subjectStyle } from "@/features/subjects/visuals"
+import { plural } from "@/lib/format"
+import { dur, easeIn, easeOut, pageEnter, spring } from "@/lib/motion"
+import { Tex } from "@/lib/Tex"
+import type { Pin } from "@/types"
+import { usePinsOf, useSubject } from "@/vault/hooks"
 
 export function ReviewPage() {
   const { subjectId } = useParams()
@@ -41,7 +41,7 @@ export function ReviewPage() {
         <SubjectBadge subject={subject} size="sm" />
         <h1 className="flex-1 truncate text-[17px] font-semibold">Повторение · {subject.name}</h1>
         <Button
-          variant={shuffled ? 'secondary' : 'ghost'}
+          variant={shuffled ? "secondary" : "ghost"}
           size="sm"
           aria-pressed={shuffled}
           onClick={() => {
@@ -94,15 +94,15 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) return
-      if (e.code === 'Space' || e.code === 'Enter') {
+      if (e.code === "Space" || e.code === "Enter") {
         e.preventDefault()
         if (!flipped) setFlipped(true)
         else answer(true)
-      } else if (flipped && (e.code === 'ArrowRight' || e.code === 'KeyJ')) answer(true)
-      else if (flipped && (e.code === 'ArrowLeft' || e.code === 'KeyF')) answer(false)
+      } else if (flipped && (e.code === "ArrowRight" || e.code === "KeyJ")) answer(true)
+      else if (flipped && (e.code === "ArrowLeft" || e.code === "KeyF")) answer(false)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [flipped, answer])
 
   if (!card)
@@ -117,7 +117,7 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
         </div>
         <h2 className="text-[24px] font-bold tracking-tight">Круг пройден</h2>
         <p className="text-[15px] text-muted-foreground">
-          С первого раза — {firstTry.size} из {plural(total, ['карточки', 'карточек', 'карточек'])}
+          С первого раза — {firstTry.size} из {plural(total, ["карточки", "карточек", "карточек"])}
         </p>
         <Button className="mt-2" onClick={onRestart}>
           <RotateCcw /> Ещё раз
@@ -143,10 +143,10 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
       <div className="relative flex-1 [perspective:1200px]">
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.button
-            key={card.id + (missed.has(card.id) ? '-again' : '')}
+            key={card.id + (missed.has(card.id) ? "-again" : "")}
             type="button"
             onClick={() => setFlipped((f) => !f)}
-            aria-label={flipped ? 'Показать вопрос' : 'Показать ответ'}
+            aria-label={flipped ? "Показать вопрос" : "Показать ответ"}
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0, transition: { duration: dur.slow, ease: easeOut } }}
             exit={{ opacity: 0, x: -40, transition: { duration: dur.base * 0.65, ease: easeIn } }}
@@ -190,11 +190,11 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
   )
 }
 
-function Face({ back, children }: { back?: boolean; children: React.ReactNode }) {
+function Face({ back, children }: { back?: boolean; children: ReactNode }) {
   return (
     <div
       className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl border bg-card p-8 text-center shadow-float [backface-visibility:hidden]"
-      style={back ? { transform: 'rotateY(180deg)' } : undefined}
+      style={back ? { transform: "rotateY(180deg)" } : undefined}
     >
       {children}
     </div>

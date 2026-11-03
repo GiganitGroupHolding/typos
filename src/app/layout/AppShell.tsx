@@ -1,27 +1,27 @@
-import { useEffect } from 'react'
-import { Outlet, useLocation, useParams, useSearchParams } from 'react-router'
-import { toast } from 'sonner'
-import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
-import { FloatingWindows } from '@/features/pins/FloatingWindows'
-import { PinEditorDialog } from '@/features/pins/PinEditorDialog'
-import { PinsDrawer } from '@/features/pins/PinsDrawer'
-import { CommandPalette } from '@/features/search/CommandPalette'
-import { ClearSubjectsDialog } from '@/features/subjects/ClearSubjectsDialog'
-import { NewSubjectDialog } from '@/features/subjects/NewSubjectDialog'
-import { ToolDialog } from '@/features/tools/ToolDialog'
-import { cn } from '@/lib/utils'
-import { SyncedAdapter } from '@/storage/syncedAdapter'
-import { basename } from '@/storage/VaultAdapter'
-import { useSubject } from '@/vault/hooks'
-import { useVault } from '@/vault/store'
-import { useAccentSync } from '../accent'
-import { useUi } from '../store'
-import { useHotkeys } from '../useHotkeys'
-import { AppSidebar } from './AppSidebar'
-import { ConnectionBanner } from './ConnectionBanner'
-import { ListColumn } from './ListColumn'
-import { Nebula } from './Nebula'
-import { TopBar } from './TopBar'
+import { useEffect } from "react"
+import { Outlet, useLocation, useParams, useSearchParams } from "react-router"
+import { toast } from "sonner"
+import { useAccentSync } from "@/app/accent"
+import { useUi } from "@/app/store"
+import { useHotkeys } from "@/app/useHotkeys"
+import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/Sidebar"
+import { FloatingWindows } from "@/features/pins/FloatingWindows"
+import { PinEditorDialog } from "@/features/pins/PinEditorDialog"
+import { PinsDrawer } from "@/features/pins/PinsDrawer"
+import { CommandPalette } from "@/features/search/CommandPalette"
+import { ClearSubjectsDialog } from "@/features/subjects/ClearSubjectsDialog"
+import { NewSubjectDialog } from "@/features/subjects/NewSubjectDialog"
+import { ToolDialog } from "@/features/tools/ToolDialog"
+import { cn } from "@/lib/utils"
+import { SyncedAdapter } from "@/storage/syncedAdapter"
+import { basename } from "@/storage/VaultAdapter"
+import { useSubject } from "@/vault/hooks"
+import { useVault } from "@/vault/store"
+import { AppSidebar } from "./AppSidebar"
+import { ConnectionBanner } from "./ConnectionBanner"
+import { ListColumn } from "./ListColumn"
+import { Nebula } from "./Nebula"
+import { TopBar } from "./TopBar"
 
 function FocusSync() {
   const focusMode = useUi((s) => s.focusMode)
@@ -36,10 +36,10 @@ function useRefreshOnFocus() {
   useEffect(() => {
     const onFocus = () => {
       const kind = useVault.getState().adapter?.kind
-      if (kind === 'folder' || kind === 'remote') void useVault.getState().refresh()
+      if (kind === "folder" || kind === "remote") void useVault.getState().refresh()
     }
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
   }, [])
 }
 
@@ -50,11 +50,11 @@ function useServerSync() {
     adapter.start({
       onChanged: () => void useVault.getState().refresh(),
       onConflict: (path, copy) =>
-        toast.warning('Файл правили в двух местах', {
+        toast.warning("Файл правили в двух местах", {
           description: `«${basename(path)}» изменили и здесь, и на другом устройстве, пока не было связи. Обе версии сохранены, вторая — «${basename(copy)}».`,
           duration: 15_000,
         }),
-      onReconnected: () => toast.success('Связь с сервером восстановлена', { id: 'connection' }),
+      onReconnected: () => toast.success("Связь с сервером восстановлена", { id: "connection" }),
     })
     return () => adapter.stop()
   }, [adapter])
@@ -63,9 +63,9 @@ function useServerSync() {
 function useSearchShortcut() {
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    if (!params.has('search')) return
+    if (!params.has("search")) return
     useUi.getState().setPaletteOpen(true)
-    params.delete('search')
+    params.delete("search")
     setParams(params, { replace: true })
   }, [params, setParams])
 }
@@ -84,14 +84,14 @@ export function AppShell() {
   return (
     <SidebarProvider className="h-dvh overflow-hidden">
       <div aria-hidden className="ambient">
-        <Nebula avoidText={pathname.includes('/n/')} />
+        <Nebula avoidText={pathname.includes("/n/")} />
       </div>
       <FocusSync />
       <AppSidebar />
       <SidebarInset className="flex-row overflow-hidden bg-transparent">
         {subjectId && !focusMode && <ListColumn />}
 
-        <div id="main" className={cn('relative flex min-w-0 flex-1 flex-col', pathname.includes('/n/') && 'paper')}>
+        <div id="main" className={cn("relative flex min-w-0 flex-1 flex-col", pathname.includes("/n/") && "paper")}>
           <div className="glass-bar absolute inset-x-0 top-0 z-20">
             <TopBar />
           </div>

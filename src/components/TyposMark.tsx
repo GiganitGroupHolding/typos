@@ -5,7 +5,7 @@ const hex = (r: number) =>
   })
 const OUTER = hex(26)
 const INNER = hex(11)
-const pts = (p: readonly (readonly [number, number])[]) => p.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ')
+const pts = (p: readonly (readonly [number, number])[]) => p.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ")
 
 const FACE_ALPHA = [0.16, 0.08, 0.05, 0.07, 0.12, 0.22]
 

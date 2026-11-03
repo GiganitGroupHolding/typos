@@ -1,29 +1,22 @@
-import { isTauri } from '@tauri-apps/api/core'
-import { create } from 'zustand'
-import { createBrowserAdapter } from '@/storage/browserAdapter'
-import {
-  forgetHandle,
-  FsaAdapter,
-  hasPermission,
-  loadSavedHandle,
-  pickFolder,
-  requestPermission,
-  saveHandle,
-} from '@/storage/fsaAdapter'
-import { checkRemote, forgetRemoteConfig, loadRemoteConfig, saveRemoteConfig } from '@/storage/remoteAdapter'
-import type { RemoteConfig } from '@/storage/remoteLink'
-import { resetSyncState, SyncedAdapter } from '@/storage/syncedAdapter'
-import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from '@/storage/tauriAdapter'
-import { dirname, type VaultAdapter } from '@/storage/VaultAdapter'
-import type { Board, Note, Pin, SubjectColor, SubjectIcon, Subject, Tool, ToolIcon } from '@/types'
-import { extractExcerpt, extractTitle, sameBody } from './format'
-import { mergeText } from './mergeText'
-import { imagesByName, isMarkdownFile } from '@/lib/files'
-import * as repo from './repo'
-import { emptyMap, mapText, type NoteMap } from '@/editor/map/types'
-import { mergeBoards, parseBoard, serializeBoard, type BoardData } from '@/features/boards/model'
+import { isTauri } from "@tauri-apps/api/core"
+import { create } from "zustand"
+import { emptyMap, mapText, type NoteMap } from "@/editor/map/types"
+import { mergeBoards, parseBoard, serializeBoard, type BoardData } from "@/features/boards/model"
+import { errorText } from "@/lib/errors"
+import { imagesByName, isMarkdownFile } from "@/lib/files"
+import { createBrowserAdapter } from "@/storage/browserAdapter"
+import { forgetHandle, FsaAdapter, hasPermission, loadSavedHandle, pickFolder, requestPermission, saveHandle } from "@/storage/fsaAdapter"
+import { checkRemote, forgetRemoteConfig, loadRemoteConfig, saveRemoteConfig } from "@/storage/remoteAdapter"
+import type { RemoteConfig } from "@/storage/remoteLink"
+import { resetSyncState, SyncedAdapter } from "@/storage/syncedAdapter"
+import { forgetPath, loadSavedPath, pickFolderPath, savePath, TauriAdapter } from "@/storage/tauriAdapter"
+import { dirname, type VaultAdapter } from "@/storage/VaultAdapter"
+import type { Board, Note, Pin, Subject, SubjectColor, SubjectIcon, Tool, ToolIcon } from "@/types"
+import { extractExcerpt, extractTitle, sameBody } from "./format"
+import { mergeText } from "./mergeText"
+import * as repo from "./repo"
 
-type Status = 'loading' | 'ready' | 'needs-permission' | 'error'
+type Status = "loading" | "ready" | "needs-permission" | "error"
 type SubjectInput = { name: string; color: SubjectColor; icon: SubjectIcon }
 
 type Undo = () => Promise<void>
@@ -91,7 +84,7 @@ interface VaultState extends repo.VaultData {
   deleteForever: (item: repo.TrashItem) => Promise<void>
 }
 
-const isBlank = (body: string) => body.replace(/^#{1,6}\s*$/gm, '').trim() === ''
+const isBlank = (body: string) => body.replace(/^#{1,6}\s*$/gm, "").trim() === ""
 
 let initRun: Promise<void> | null = null
 let browser: VaultAdapter | null = null
@@ -112,7 +105,7 @@ const idle = () => Promise.allSettled([...queues.values()])
 export class NoteConflictError extends Error {
   readonly disk: string | null
   constructor(disk: string | null) {
-    super('Конспект изменили снаружи')
+    super("Конспект изменили снаружи")
     this.disk = disk
   }
 }
@@ -124,7 +117,7 @@ const boardBases = new Map<string, string>()
 export const useVault = create<VaultState>()((set, get) => {
   const need = () => {
     const a = get().adapter
-    if (!a) throw new Error('Хранилище не открыто')
+    if (!a) throw new Error("Хранилище не открыто")
     return a
   }
   const replaceNote = (note: Note) => set((s) => ({ notes: s.notes.map((n) => (n.id === note.id ? note : n)) }))
@@ -146,21 +139,21 @@ export const useVault = create<VaultState>()((set, get) => {
   }
 
   const open = async (a: VaultAdapter) => {
-    set({ status: 'loading', adapter: a, pendingFolder: undefined })
+    set({ status: "loading", adapter: a, pendingFolder: undefined })
     try {
-      await repo.migrateTools(a).catch((e) => console.warn('Перенос в «Проекты»', e))
+      await repo.migrateTools(a).catch((e) => console.warn("Перенос в «Проекты»", e))
       const data = await repo.loadVault(a)
-      set({ ...data, status: 'ready', error: undefined })
+      set({ ...data, status: "ready", error: undefined })
 
-      void repo.purgeTrash(a).catch((e) => console.warn('Очистка корзины', e))
+      void repo.purgeTrash(a).catch((e) => console.warn("Очистка корзины", e))
     } catch (e) {
       console.error(e)
-      set({ status: 'error', error: e instanceof Error ? e.message : String(e) })
+      set({ status: "error", error: errorText(e) })
     }
   }
 
   return {
-    status: 'loading',
+    status: "loading",
     adapter: null,
     subjects: [],
     notes: [],
@@ -169,7 +162,7 @@ export const useVault = create<VaultState>()((set, get) => {
     boards: [],
 
     init() {
-      if (initRun && get().status !== 'error') return initRun
+      if (initRun && get().status !== "error") return initRun
       initRun = (async () => {
         const remote = await loadRemoteConfig()
         if (remote) {
@@ -178,7 +171,7 @@ export const useVault = create<VaultState>()((set, get) => {
           try {
             if (!(await synced.isReady())) await synced.initialSync()
           } catch (e) {
-            set({ status: 'error', adapter: synced, error: e instanceof Error ? e.message : String(e) })
+            set({ status: "error", adapter: synced, error: errorText(e) })
             return
           }
           return open(synced)
@@ -190,7 +183,7 @@ export const useVault = create<VaultState>()((set, get) => {
         const handle = await loadSavedHandle()
         if (handle) {
           if (await hasPermission(handle).catch(() => false)) return open(new FsaAdapter(handle))
-          set({ status: 'needs-permission', pendingFolder: handle.name })
+          set({ status: "needs-permission", pendingFolder: handle.name })
           return
         }
         await open(browserAdapter())
@@ -200,12 +193,12 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async refresh() {
       const a = get().adapter
-      if (!a || get().status !== 'ready') return
+      if (!a || get().status !== "ready") return
       await idle()
       try {
         set(await repo.loadVault(a))
       } catch (e) {
-        console.warn('Не удалось перечитать хранилище', e)
+        console.warn("Не удалось перечитать хранилище", e)
       }
     },
 
@@ -228,7 +221,7 @@ export const useVault = create<VaultState>()((set, get) => {
       } else {
         const handle = await pickFolder()
         if (!handle) return null
-        if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
+        if (!(await requestPermission(handle))) throw new Error("Браузер не дал доступ к папке")
         folder = new FsaAdapter(handle)
         remember = () => saveHandle(handle)
       }
@@ -248,7 +241,7 @@ export const useVault = create<VaultState>()((set, get) => {
       await idle()
 
       const current = get().adapter
-      const source = current && current.kind !== 'remote' ? current : browserAdapter()
+      const source = current && current.kind !== "remote" ? current : browserAdapter()
       resetSyncState()
       const synced = new SyncedAdapter(full)
       await synced.initialSync()
@@ -271,12 +264,12 @@ export const useVault = create<VaultState>()((set, get) => {
       } else {
         const handle = await pickFolder()
         if (!handle) return null
-        if (!(await requestPermission(handle))) throw new Error('Браузер не дал доступ к папке')
+        if (!(await requestPermission(handle))) throw new Error("Браузер не дал доступ к папке")
         folder = new FsaAdapter(handle)
       }
 
       await idle()
-      const copied = await repo.copyVault(source, folder, '', { overwrite: true })
+      const copied = await repo.copyVault(source, folder, "", { overwrite: true })
       return { copied, folder: folder.label }
     },
 
@@ -325,7 +318,7 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async createNote(subjectId, body) {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const note = await repo.createNote(need(), subject, body)
       set((s) => ({ notes: [note, ...s.notes] }))
       return note
@@ -333,7 +326,7 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async importNotes(subjectId, files) {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const a = need()
       const images = imagesByName(files)
       const notes: Note[] = []
@@ -413,13 +406,13 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async saveImage(noteId, file) {
       const note = get().notes.find((n) => n.id === noteId)
-      if (!note) throw new Error('Конспект не найден')
+      if (!note) throw new Error("Конспект не найден")
       return repo.saveAsset(need(), dirname(note.path), file)
     },
 
     async createPin(subjectId, input) {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const order =
         Math.max(
           -1,
@@ -448,7 +441,7 @@ export const useVault = create<VaultState>()((set, get) => {
       set((s) => ({
         pins: s.pins
           .map((p) => (p.subjectId === subjectId && order.has(p.id) ? { ...p, order: order.get(p.id)! } : p))
-          .sort((x, y) => x.order - y.order || x.title.localeCompare(y.title, 'ru')),
+          .sort((x, y) => x.order - y.order || x.title.localeCompare(y.title, "ru")),
       }))
       await Promise.all(
         get()
@@ -464,17 +457,17 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async importTool(subjectId, input) {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const tool = await repo.importTool(need(), subject, input)
-      set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, "ru")) }))
       return tool
     },
 
     async importProjectFile(subjectId, input) {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const tool = await repo.importProjectFile(need(), subject, input)
-      set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      set((s) => ({ tools: [...s.tools, tool].sort((x, y) => x.name.localeCompare(y.name, "ru")) }))
       return tool
     },
 
@@ -492,12 +485,12 @@ export const useVault = create<VaultState>()((set, get) => {
       return tool ? trashWithUndo(tool.path) : async () => {}
     },
 
-    async createBoard(subjectId, name = 'Новая доска') {
+    async createBoard(subjectId, name = "Новая доска") {
       const subject = get().subjects.find((s) => s.id === subjectId)
-      if (!subject) throw new Error('Предмет не найден')
+      if (!subject) throw new Error("Предмет не найден")
       const board = await repo.createBoard(need(), subject, name)
       boardBases.set(board.id, serializeBoard(board.id, board.data))
-      set((s) => ({ boards: [...s.boards, board].sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+      set((s) => ({ boards: [...s.boards, board].sort((x, y) => x.name.localeCompare(y.name, "ru")) }))
       return board
     },
 
@@ -525,7 +518,7 @@ export const useVault = create<VaultState>()((set, get) => {
         const board = get().boards.find((b) => b.id === id)
         if (!board) return
         const next = await repo.renameBoard(need(), board, name)
-        set((s) => ({ boards: s.boards.map((b) => (b.id === id ? next : b)).sort((x, y) => x.name.localeCompare(y.name, 'ru')) }))
+        set((s) => ({ boards: s.boards.map((b) => (b.id === id ? next : b)).sort((x, y) => x.name.localeCompare(y.name, "ru")) }))
       })
     },
 
@@ -536,7 +529,7 @@ export const useVault = create<VaultState>()((set, get) => {
 
     async saveBoardImage(id, file) {
       const board = get().boards.find((b) => b.id === id)
-      if (!board) throw new Error('Доска не найдена')
+      if (!board) throw new Error("Доска не найдена")
       return repo.saveBoardImage(need(), board, file)
     },
 

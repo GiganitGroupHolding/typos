@@ -1,12 +1,12 @@
-import { Placeholder } from '@tiptap/extensions'
-import { TextSelection } from '@tiptap/pm/state'
-import { EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { BookOpen, Check, Download, Loader2, MoreHorizontal, PenLine, Trash2, Type } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { useUi, type NoteFont } from '@/app/store'
-import { Button } from '@/components/ui/button'
+import { Placeholder } from "@tiptap/extensions"
+import { TextSelection } from "@tiptap/pm/state"
+import { EditorContent, useEditor, type Editor } from "@tiptap/react"
+import { BookOpen, Check, Download, Loader2, MoreHorizontal, PenLine, Trash2, Type } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { useUi, type NoteFont } from "@/app/store"
+import { Button } from "@/components/ui/Button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -19,41 +19,42 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { openPinEditor } from '@/features/pins/PinEditorDialog'
-import { downloadBlob } from '@/lib/download'
-import { relativeTime } from '@/lib/format'
-import { toastUndo } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import { basename, dirname, joinPath } from '@/storage/VaultAdapter'
-import type { Note } from '@/types'
-import { sameBody } from '@/vault/format'
-import { mergeText } from '@/vault/mergeText'
-import { NoteConflictError, useVault, vaultFileUrl } from '@/vault/store'
-import { BlockHandle } from './blocks/BlockHandle'
-import { Folding } from './blocks/folding'
-import { BubbleToolbar } from './BubbleToolbar'
-import { buildExtensions } from './extensions'
-import { NoteCanvas } from './map/NoteCanvas'
-import { MathPopover, type MathEdit } from './MathPopover'
-import { SideToolbar } from './SideToolbar'
-import { TableMenu } from './TableMenu'
-import { htmlMathToNodes, looksLikeMarkdown, normalizeMarkdownMath } from './texImport'
+} from "@/components/ui/DropdownMenu"
+import { BlockHandle } from "@/editor/blocks/BlockHandle"
+import { Folding } from "@/editor/blocks/folding"
+import { NoteCanvas } from "@/editor/map/NoteCanvas"
+import { openPinEditor } from "@/features/pins/PinEditorDialog"
+import { downloadBlob } from "@/lib/download"
+import { errorText } from "@/lib/errors"
+import { relativeTime } from "@/lib/format"
+import { toastUndo } from "@/lib/undo"
+import { cn } from "@/lib/utils"
+import { basename, dirname, joinPath } from "@/storage/VaultAdapter"
+import type { Note } from "@/types"
+import { sameBody } from "@/vault/format"
+import { mergeText } from "@/vault/mergeText"
+import { NoteConflictError, useVault, vaultFileUrl } from "@/vault/store"
+import { BubbleToolbar } from "./BubbleToolbar"
+import { buildExtensions } from "./extensions"
+import { MathPopover, type MathEdit } from "./MathPopover"
+import { SideToolbar } from "./SideToolbar"
+import { TableMenu } from "./TableMenu"
+import { htmlMathToNodes, looksLikeMarkdown, normalizeMarkdownMath } from "./texImport"
 
 const SAVE_DELAY = 500
 
-type SaveState = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict'
+type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict"
 
 const mounted = new Set<string>()
 
-const isBlank = (md: string) => md.replace(/^#{1,6}\s*$/gm, '').trim() === ''
+const isBlank = (md: string) => md.replace(/^#{1,6}\s*$/gm, "").trim() === ""
 
 export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolean }) {
   const font = useUi((s) => s.noteFont)
   const setNoteFont = useUi((s) => s.setNoteFont)
   const toggleReading = useUi((s) => s.toggleReading)
   const navigate = useNavigate()
-  const [saveState, setSaveState] = useState<SaveState>('saved')
+  const [saveState, setSaveState] = useState<SaveState>("saved")
   const [math, setMath] = useState<MathEdit | null>(null)
   const timer = useRef<number | null>(null)
   const editorRef = useRef<Editor | null>(null)
@@ -69,7 +70,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   const conflict = useRef(false)
   const saving = useRef(0)
 
-  const unsaved = useRef('')
+  const unsaved = useRef("")
 
   const loadFromDisk = useCallback(
     (body: string) => {
@@ -81,47 +82,47 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       timer.current = null
       const at = ed.state.selection.from
       ed.chain()
-        .setContent(normalizeMarkdownMath(body), { contentType: 'markdown', emitUpdate: false })
+        .setContent(normalizeMarkdownMath(body), { contentType: "markdown", emitUpdate: false })
         .command(({ tr }) => {
           tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(at, tr.doc.content.size))))
           return true
         })
         .run()
-      setSaveState('saved')
+      setSaveState("saved")
     },
     [id],
   )
 
   const showConflict = useCallback(() => {
     conflict.current = true
-    setSaveState('conflict')
+    setSaveState("conflict")
     const takeDisk = async () => {
       await useVault.getState().refresh()
       const fresh = useVault.getState().notes.find((n) => n.id === id)
       if (fresh) return loadFromDisk(fresh.body)
       conflict.current = false
-      toast('Конспект удалили или переместили')
+      toast("Конспект удалили или переместили")
       navigate(`/s/${note.subjectId}`)
     }
     const keepMine = async () => {
       const ed = editorRef.current
       const md = ed && !ed.isDestroyed ? ed.getMarkdown() : unsaved.current
       conflict.current = false
-      setSaveState('saving')
+      setSaveState("saving")
       try {
         await useVault.getState().saveNote(id, md, { force: true })
-        setSaveState('saved')
+        setSaveState("saved")
       } catch (e) {
-        setSaveState('error')
-        toast.error('Не удалось сохранить', { description: e instanceof Error ? e.message : String(e) })
+        setSaveState("error")
+        toast.error("Не удалось сохранить", { description: errorText(e) })
       }
     }
-    toast.warning('Конспект изменили снаружи', {
+    toast.warning("Конспект изменили снаружи", {
       id: `conflict-${id}`,
-      description: 'Пока здесь шли правки, файл на диске поменялся. Какую версию оставить?',
+      description: "Пока здесь шли правки, файл на диске поменялся. Какую версию оставить?",
       duration: Infinity,
-      action: { label: 'С диска', onClick: () => void takeDisk() },
-      cancel: { label: 'Мою', onClick: () => void keepMine() },
+      action: { label: "С диска", onClick: () => void takeDisk() },
+      cancel: { label: "Мою", onClick: () => void keepMine() },
     })
   }, [id, loadFromDisk, navigate, note.subjectId])
 
@@ -141,7 +142,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         return
       }
       saving.current++
-      setSaveState('saving')
+      setSaveState("saving")
       try {
         const saved = await useVault.getState().saveNote(id, md)
         if (saved !== undefined && saved !== md && !ed.isDestroyed) {
@@ -151,21 +152,21 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
           loadFromDisk(merged)
           useVault.getState().adoptNote(id, saved)
           if (merged !== saved) {
-            setSaveState('dirty')
+            setSaveState("dirty")
             timer.current = window.setTimeout(() => {
               timer.current = null
               void saveCurrent()
             }, SAVE_DELAY)
           }
         }
-        setSaveState((s) => (s === 'saving' ? 'saved' : s))
+        setSaveState((s) => (s === "saving" ? "saved" : s))
       } catch (e) {
         if (e instanceof NoteConflictError) {
           unsaved.current = md
           return showConflict()
         }
-        setSaveState('error')
-        toast.error('Не удалось сохранить', { description: e instanceof Error ? e.message : String(e) })
+        setSaveState("error")
+        toast.error("Не удалось сохранить", { description: errorText(e) })
       } finally {
         saving.current--
       }
@@ -180,33 +181,33 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     void save()
   }, [save])
 
-  const openMath = useCallback((pos: number, kind: MathEdit['kind'], mode: MathEdit['mode'], to?: number) => {
+  const openMath = useCallback((pos: number, kind: MathEdit["kind"], mode: MathEdit["mode"], to?: number) => {
     const ed = editorRef.current
     if (!ed || !ed.isEditable) return
-    const dom = mode === 'edit' ? (ed.view.nodeDOM(pos) as HTMLElement | null) : null
+    const dom = mode === "edit" ? (ed.view.nodeDOM(pos) as HTMLElement | null) : null
     let rect = dom?.getBoundingClientRect()
     if (!rect) {
       const c = ed.view.coordsAtPos(pos)
       rect = new DOMRect(c.left, c.top, 1, c.bottom - c.top)
     }
-    const node = mode === 'edit' ? ed.state.doc.nodeAt(pos) : null
-    const selected = mode === 'new' && to !== undefined && to > pos ? ed.state.doc.textBetween(pos, to) : ''
+    const node = mode === "edit" ? ed.state.doc.nodeAt(pos) : null
+    const selected = mode === "new" && to !== undefined && to > pos ? ed.state.doc.textBetween(pos, to) : ""
     setMath({ mode, kind, pos, to, latex: (node?.attrs.latex as string | undefined) ?? selected, rect })
   }, [])
 
   const extensions = useMemo(
     () => [
       ...buildExtensions({
-        onMathClick: (_node, pos, kind) => openMath(pos, kind, 'edit'),
-        onBlockMathCreated: (pos) => openMath(pos, 'block', 'edit'),
+        onMathClick: (_node, pos, kind) => openMath(pos, kind, "edit"),
+        onBlockMathCreated: (pos) => openMath(pos, "block", "edit"),
         resolveImage: (src) => vaultFileUrl(joinPath(noteDir.current, src)),
         diagrams: true,
       }),
       Placeholder.configure({
         placeholder: ({ node }) =>
-          node.type.name === 'heading' && node.attrs.level === 1
-            ? 'Заголовок'
-            : 'Пиши… $x^2$ — формула, $$ — блок формулы, # — заголовок, - — список',
+          node.type.name === "heading" && node.attrs.level === 1
+            ? "Заголовок"
+            : "Пиши… $x^2$ — формула, $$ — блок формулы, # — заголовок, - — список",
       }),
       Folding.configure({ noteId: note.id }),
     ],
@@ -222,35 +223,35 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
           const src = await useVault.getState().saveImage(id, f)
           ed.chain()
             .focus()
-            .insertContentAt(at ?? ed.state.selection.from, { type: 'image', attrs: { src, alt: '' } })
+            .insertContentAt(at ?? ed.state.selection.from, { type: "image", attrs: { src, alt: "" } })
             .run()
         } catch (e) {
-          toast.error('Не удалось вставить картинку', { description: e instanceof Error ? e.message : String(e) })
+          toast.error("Не удалось вставить картинку", { description: errorText(e) })
         }
       }
     },
     [id],
   )
-  const imagesOf = (list?: FileList | null) => [...(list ?? [])].filter((f) => f.type.startsWith('image/'))
+  const imagesOf = (list?: FileList | null) => [...(list ?? [])].filter((f) => f.type.startsWith("image/"))
 
   const editor = useEditor(
     {
       extensions,
       ...(isBlank(note.body)
-        ? { content: { type: 'doc', content: [{ type: 'heading', attrs: { level: 1 } }] } }
-        : { content: normalizeMarkdownMath(note.body), contentType: 'markdown' as const }),
-      autofocus: autoFocus ? 'start' : false,
+        ? { content: { type: "doc", content: [{ type: "heading", attrs: { level: 1 } }] } }
+        : { content: normalizeMarkdownMath(note.body), contentType: "markdown" as const }),
+      autofocus: autoFocus ? "start" : false,
       editorProps: {
-        attributes: { 'aria-label': 'Текст конспекта', spellcheck: 'true', lang: 'ru' },
+        attributes: { "aria-label": "Текст конспекта", spellcheck: "true", lang: "ru" },
 
         handleKeyDown: (view, event) => {
           const mod = event.ctrlKey || event.metaKey
           if (!mod || view.state.selection.empty) return false
-          if (event.code === 'KeyK' && !event.shiftKey) {
+          if (event.code === "KeyK" && !event.shiftKey) {
             setLinkRequest((n) => n + 1)
             return true
           }
-          if (event.code === 'KeyE' && event.shiftKey) {
+          if (event.code === "KeyE" && event.shiftKey) {
             formulaRef.current()
             return true
           }
@@ -264,11 +265,11 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
             return true
           }
 
-          const text = data?.getData('text/plain') ?? ''
+          const text = data?.getData("text/plain") ?? ""
           const ed = editorRef.current
-          if (!ed || data?.getData('text/html') || view.state.selection.$from.parent.type.spec.code) return false
+          if (!ed || data?.getData("text/html") || view.state.selection.$from.parent.type.spec.code) return false
           if (!looksLikeMarkdown(text)) return false
-          ed.commands.insertContent(normalizeMarkdownMath(text), { contentType: 'markdown' })
+          ed.commands.insertContent(normalizeMarkdownMath(text), { contentType: "markdown" })
           return true
         },
 
@@ -282,7 +283,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
       },
       onUpdate: ({ transaction }) => {
         if (!transaction.docChanged) return
-        setSaveState('dirty')
+        setSaveState("dirty")
         if (timer.current !== null) clearTimeout(timer.current)
         timer.current = window.setTimeout(() => {
           timer.current = null
@@ -304,7 +305,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     const base = useVault.getState().noteBase(id)
     if (base === undefined || sameBody(base, note.body)) return
     loadFromDisk(note.body)
-    toast('Конспект обновился с диска', { id: `reload-${id}` })
+    toast("Конспект обновился с диска", { id: `reload-${id}` })
   }, [editor, id, note.body, loadFromDisk])
 
   const reading = useUi((s) => s.readingMode)
@@ -315,13 +316,13 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
   useEffect(() => {
     mounted.add(id)
-    const onHide = () => document.visibilityState === 'hidden' && flush()
-    window.addEventListener('beforeunload', flush)
-    document.addEventListener('visibilitychange', onHide)
+    const onHide = () => document.visibilityState === "hidden" && flush()
+    window.addEventListener("beforeunload", flush)
+    document.addEventListener("visibilitychange", onHide)
     return () => {
       mounted.delete(id)
-      window.removeEventListener('beforeunload', flush)
-      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener("beforeunload", flush)
+      document.removeEventListener("visibilitychange", onHide)
       flush()
 
       setTimeout(() => {
@@ -332,9 +333,9 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
   const saveMath = (latex: string) => {
     if (!editor || !math) return
-    const type = math.kind === 'inline' ? 'inlineMath' : 'blockMath'
+    const type = math.kind === "inline" ? "inlineMath" : "blockMath"
     const chain = editor.chain().focus()
-    if (math.mode === 'edit') {
+    if (math.mode === "edit") {
       chain.command(({ tr }) => {
         const node = tr.doc.nodeAt(math.pos)
         if (!node) return false
@@ -347,7 +348,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
     chain
       .command(({ tr }) => {
-        const at = math.mode === 'edit' ? math.pos : tr.mapping.map(math.pos, -1)
+        const at = math.mode === "edit" ? math.pos : tr.mapping.map(math.pos, -1)
         const node = tr.doc.nodeAt(at)
         if (!node) return true
         const after = Math.min(at + node.nodeSize, tr.doc.content.size)
@@ -360,7 +361,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
   const deleteMath = () => {
     if (!editor || !math) return
-    if (math.mode === 'edit') {
+    if (math.mode === "edit") {
       editor
         .chain()
         .focus()
@@ -376,14 +377,14 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   }
 
   const cancelMath = () => {
-    if (editor && math?.mode === 'edit' && !editor.state.doc.nodeAt(math.pos)?.attrs.latex) return deleteMath()
+    if (editor && math?.mode === "edit" && !editor.state.doc.nodeAt(math.pos)?.attrs.latex) return deleteMath()
     editor?.commands.focus()
     setMath(null)
   }
 
   const formulaFromSelection = () => {
     const ed = editorRef.current
-    if (ed) openMath(ed.state.selection.from, 'inline', 'new', ed.state.selection.to)
+    if (ed) openMath(ed.state.selection.from, "inline", "new", ed.state.selection.to)
   }
 
   useEffect(() => {
@@ -396,7 +397,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
   }
 
   const pinMath = (latex: string) => {
-    if (math?.mode === 'edit') saveMath(latex)
+    if (math?.mode === "edit") saveMath(latex)
     else setMath(null)
     openPinEditor({ subjectId: note.subjectId, tex: latex })
   }
@@ -405,7 +406,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
     flush()
     const undo = await useVault.getState().trashNote(id)
     navigate(`/s/${note.subjectId}`)
-    toastUndo('Конспект в корзине', undo, () => navigate(`/s/${note.subjectId}/n/${id}`))
+    toastUndo("Конспект в корзине", undo, () => navigate(`/s/${note.subjectId}/n/${id}`))
   }
 
   return (
@@ -414,7 +415,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
         editor={editor}
         hidden={reading}
         onFormula={formulaFromSelection}
-        onBlockFormula={() => editor && openMath(editor.state.selection.from, 'block', 'new')}
+        onBlockFormula={() => editor && openMath(editor.state.selection.from, "block", "new")}
         onImage={() => fileInput.current?.click()}
       />
       {editor && <BubbleToolbar editor={editor} linkRequest={linkRequest} onFormula={formulaFromSelection} onPin={pinSelection} />}
@@ -430,7 +431,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
             hidden
             onChange={(e) => {
               void insertImages(imagesOf(e.target.files))
-              e.target.value = ''
+              e.target.value = ""
             }}
           />
         </div>
@@ -468,7 +469,7 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
                 onSelect={() => {
                   const ed = editorRef.current
                   const markdown = ed && !ed.isDestroyed ? ed.getMarkdown() : note.body
-                  downloadBlob(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }), basename(note.path))
+                  downloadBlob(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), basename(note.path))
                 }}
               >
                 <Download /> Скачать Markdown
@@ -484,13 +485,13 @@ export function NoteEditor({ note, autoFocus }: { note: Note; autoFocus?: boolea
 
       <div
         className={cn(
-          'note-prose mx-auto w-full pt-8 pr-20 pb-32 pl-6 transition-colors duration-(--dur-slow) lg:px-6',
-          reading && 'note-reading',
+          "note-prose mx-auto w-full pt-8 pr-20 pb-32 pl-6 transition-colors duration-(--dur-slow) lg:px-6",
+          reading && "note-reading",
         )}
-        data-font={reading ? 'serif' : font}
+        data-font={reading ? "serif" : font}
       >
         <p className="mb-5 text-center text-[13px] text-muted-foreground">
-          {note.created === note.updated ? 'Новый конспект' : `Изменено ${relativeTime(note.updated)}`}
+          {note.created === note.updated ? "Новый конспект" : `Изменено ${relativeTime(note.updated)}`}
         </p>
 
         <div className="relative">
@@ -510,18 +511,18 @@ function SaveIndicator({ state }: { state: SaveState }) {
     <span
       aria-live="polite"
       className={cn(
-        'flex items-center gap-1 px-1 text-[12px]',
-        state === 'error' || state === 'conflict' ? 'text-destructive' : 'text-muted-foreground',
+        "flex items-center gap-1 px-1 text-[12px]",
+        state === "error" || state === "conflict" ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      {state === 'saving' || state === 'dirty' ? (
+      {state === "saving" || state === "dirty" ? (
         <>
           <Loader2 className="size-3 animate-spin" /> Сохраняю
         </>
-      ) : state === 'error' ? (
-        'Ошибка сохранения'
-      ) : state === 'conflict' ? (
-        'Не сохранено: файл изменён снаружи'
+      ) : state === "error" ? (
+        "Ошибка сохранения"
+      ) : state === "conflict" ? (
+        "Не сохранено: файл изменён снаружи"
       ) : (
         <>
           <Check className="size-3" /> Сохранено

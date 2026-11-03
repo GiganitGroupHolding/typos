@@ -1,18 +1,19 @@
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/Button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { errorText, toastUndo } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import type { Board } from '@/types'
-import { useVault } from '@/vault/store'
+} from "@/components/ui/DropdownMenu"
+import { errorText } from "@/lib/errors"
+import { toastUndo } from "@/lib/undo"
+import { cn } from "@/lib/utils"
+import type { Board } from "@/types"
+import { useVault } from "@/vault/store"
 
 export function BoardActions({ board, className }: { board: Board; className?: string }) {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export function BoardActions({ board, className }: { board: Board; className?: s
       if (location.pathname.includes(`/b/${board.id}`)) navigate(`/s/${board.subjectId}?tab=boards`)
       toastUndo(`«${board.name}» в корзине`, undo)
     } catch (e) {
-      toast.error('Не удалось удалить доску', { description: errorText(e) })
+      toast.error("Не удалось удалить доску", { description: errorText(e) })
     }
   }
 

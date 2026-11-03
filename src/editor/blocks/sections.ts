@@ -1,6 +1,6 @@
-import type { Node as PMNode } from '@tiptap/pm/model'
+import type { Node as PMNode } from "@tiptap/pm/model"
 
-export const headingLevel = (n: PMNode | null | undefined): number | null => (n?.type.name === 'heading' ? (n.attrs.level as number) : null)
+export const headingLevel = (n: PMNode | null | undefined): number | null => (n?.type.name === "heading" ? (n.attrs.level as number) : null)
 
 export function sectionRange(doc: PMNode, index: number): [number, number] {
   const level = headingLevel(doc.maybeChild(index))

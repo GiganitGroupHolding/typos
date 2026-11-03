@@ -1,8 +1,8 @@
-import { isTauri } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Copy, Minus, Square, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
+import { isTauri } from "@tauri-apps/api/core"
+import { getCurrentWindow } from "@tauri-apps/api/window"
+import { Copy, Minus, Square, X } from "lucide-react"
+import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 
 export function WindowControls() {
   const [maximized, setMaximized] = useState(false)
@@ -27,7 +27,7 @@ export function WindowControls() {
   if (!isTauri()) return null
   const win = getCurrentWindow()
   const btn =
-    'flex h-8 w-10 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors duration-(--dur-fast) hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4'
+    "flex h-8 w-10 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors duration-(--dur-fast) hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4"
 
   return (
     <div className="ml-1 flex items-center gap-0.5">
@@ -36,10 +36,10 @@ export function WindowControls() {
       </button>
       <button
         type="button"
-        aria-label={maximized ? 'Восстановить' : 'Развернуть'}
-        title={maximized ? 'Восстановить' : 'Развернуть'}
+        aria-label={maximized ? "Восстановить" : "Развернуть"}
+        title={maximized ? "Восстановить" : "Развернуть"}
         onClick={() => void win.toggleMaximize()}
-        className={cn(btn, '[&_svg]:size-3.5')}
+        className={cn(btn, "[&_svg]:size-3.5")}
       >
         {maximized ? <Copy className="-scale-x-100" /> : <Square />}
       </button>
@@ -48,7 +48,7 @@ export function WindowControls() {
         aria-label="Закрыть"
         title="Закрыть"
         onClick={() => void win.close()}
-        className={cn(btn, 'hover:bg-[#e81123] hover:text-white')}
+        className={cn(btn, "hover:bg-[#e81123] hover:text-white")}
       >
         <X />
       </button>

@@ -1,24 +1,16 @@
-import { toast } from 'sonner'
+import { toast } from "sonner"
+import { errorText } from "@/lib/errors"
 
 export function toastUndo(message: string, undo: () => Promise<void>, after?: () => void) {
   toast(message, {
     duration: 8000,
     action: {
-      label: 'Отменить',
+      label: "Отменить",
       onClick: () => {
         undo()
           .then(after)
-          .catch((e) => toast.error('Не удалось восстановить', { description: e instanceof Error ? e.message : String(e) }))
+          .catch((e) => toast.error("Не удалось восстановить", { description: errorText(e) }))
       },
     },
   })
-}
-
-export const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
-
-export function submitOnCtrlEnter(e: React.KeyboardEvent<HTMLFormElement>) {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault()
-    e.currentTarget.requestSubmit()
-  }
 }

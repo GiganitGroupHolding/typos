@@ -1,8 +1,8 @@
-import { createStore, del, delMany, get, keys, set } from 'idb-keyval'
-import { FlatAdapter } from './flatAdapter'
+import { createStore, del, delMany, get, keys, set } from "idb-keyval"
+import { FlatAdapter } from "./flatAdapter"
 
 export function createBrowserAdapter() {
-  const store = createStore('studynotes-vault', 'files')
+  const store = createStore("studynotes-vault", "files")
   return new FlatAdapter(
     {
       get: (p) => get<string | Blob>(p, store),
@@ -10,7 +10,7 @@ export function createBrowserAdapter() {
       del: (ps) => (ps.length === 1 ? del(ps[0], store) : delMany(ps, store)),
       keys: async () => (await keys(store)).map(String),
     },
-    'browser',
-    'Браузер',
+    "browser",
+    "Браузер",
   )
 }

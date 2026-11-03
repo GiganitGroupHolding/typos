@@ -1,37 +1,37 @@
-import { isTauri } from '@tauri-apps/api/core'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { registerSW } from 'virtual:pwa-register'
+import { isTauri } from "@tauri-apps/api/core"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { registerSW } from "virtual:pwa-register"
 
 export function setupPwa() {
-  if (!('serviceWorker' in navigator) || import.meta.env.DEV || isTauri()) return
+  if (!("serviceWorker" in navigator) || import.meta.env.DEV || isTauri()) return
   const update = registerSW({
     onNeedRefresh() {
-      toast('Доступна новая версия', {
+      toast("Доступна новая версия", {
         duration: Infinity,
-        action: { label: 'Обновить', onClick: () => void update(true) },
+        action: { label: "Обновить", onClick: () => void update(true) },
       })
     },
     onOfflineReady() {
-      toast.success('Готово к работе без интернета')
+      toast.success("Готово к работе без интернета")
     },
   })
 }
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
 let deferred: InstallPromptEvent | null = null
 const listeners = new Set<() => void>()
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault()
     deferred = e as InstallPromptEvent
     listeners.forEach((l) => l())
   })
-  window.addEventListener('appinstalled', () => {
+  window.addEventListener("appinstalled", () => {
     deferred = null
     listeners.forEach((l) => l())
   })

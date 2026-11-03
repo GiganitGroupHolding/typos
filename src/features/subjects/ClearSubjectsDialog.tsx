@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { create } from 'zustand'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { plural } from '@/lib/format'
-import { errorText, toastUndo } from '@/lib/undo'
-import { useVault } from '@/vault/store'
+import { useState } from "react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { create } from "zustand"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { errorText } from "@/lib/errors"
+import { plural } from "@/lib/format"
+import { toastUndo } from "@/lib/undo"
+import { useVault } from "@/vault/store"
 
 const useOpen = create<{ open: boolean; set: (v: boolean) => void }>((set) => ({ open: false, set: (open) => set({ open }) }))
 
@@ -24,10 +25,10 @@ export function ClearSubjectsDialog() {
     try {
       const undo = await useVault.getState().trashSubjects(subjects.map((s) => s.id))
       close()
-      navigate('/')
-      toastUndo('Все предметы в корзине', undo)
+      navigate("/")
+      toastUndo("Все предметы в корзине", undo)
     } catch (e) {
-      toast.error('Не получилось', { description: errorText(e) })
+      toast.error("Не получилось", { description: errorText(e) })
     } finally {
       setBusy(false)
     }
@@ -39,7 +40,7 @@ export function ClearSubjectsDialog() {
         <DialogHeader>
           <DialogTitle>Удалить все предметы?</DialogTitle>
           <DialogDescription>
-            {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} со всеми конспектами, закрепом и проектами уйдут в корзину. Их
+            {plural(subjects.length, ["предмет", "предмета", "предметов"])} со всеми конспектами, закрепом и проектами уйдут в корзину. Их
             можно вернуть в течение 30 дней.
           </DialogDescription>
         </DialogHeader>

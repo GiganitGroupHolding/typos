@@ -12,7 +12,7 @@ services:
       - ${VAULT_URL:?задай VAULT_URL в deploy/.env}
       - --name
       - ${VAULT_NAME:-TYPOS}
-    volumes: ['${TYPOS_DATA:?задай TYPOS_DATA в deploy/.env}/storage:/data']
+    volumes: ["${TYPOS_DATA:?задай TYPOS_DATA в deploy/.env}/storage:/data"]
     restart: unless-stopped
 
   mcp:
@@ -23,8 +23,8 @@ services:
       MCP_AUTH_MODE: owner
       MCP_PUBLIC_URL: ${MCP_URL:?задай MCP_URL в deploy/.env}/mcp
       MCP_AUTH_DATA_DIR: /data/auth
-      MCP_TRUST_PROXY: '1'
-    volumes: ['${TYPOS_DATA}/mcp:/data']
+      MCP_TRUST_PROXY: "1"
+    volumes: ["${TYPOS_DATA}/mcp:/data"]
     depends_on: [storage]
     restart: unless-stopped
 
@@ -32,7 +32,7 @@ services:
     image: caddy:2
 
     command: caddy run --config /etc/typos/${CADDYFILE:-Caddyfile} --adapter caddyfile
-    ports: ['80:80', '443:443', '443:443/udp', '8443:8443', '9443:9443']
+    ports: ["80:80", "443:443", "443:443/udp", "8443:8443", "9443:9443"]
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-}
       VAULT_DOMAIN: ${VAULT_DOMAIN:-}

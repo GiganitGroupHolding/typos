@@ -1,4 +1,4 @@
-import type { BoardFrameShape, Bounds } from './model'
+import type { BoardFrameShape, Bounds } from "./model"
 
 const SQRT3 = Math.sqrt(3)
 const hexRadius = (w: number, h: number) => Math.min(w / 2, h / SQRT3)
@@ -6,10 +6,10 @@ const hexRadius = (w: number, h: number) => Math.min(w / 2, h / SQRT3)
 export function frameRadius(shape: BoardFrameShape | undefined, w: number, h: number, x: number, y: number) {
   const a = w / 2
   const b = h / 2
-  if (shape === 'circle') return Math.min(a, b)
+  if (shape === "circle") return Math.min(a, b)
   x = Math.abs(x)
   y = Math.abs(y)
-  if (shape === 'hexagon') {
+  if (shape === "hexagon") {
     const r = hexRadius(w, h)
     return Math.min((r * SQRT3) / (2 * y), r / (x + y / SQRT3))
   }
@@ -33,11 +33,11 @@ export function fitFrame(frame: Bounds, shape: BoardFrameShape, content: Bounds 
 
   const padding = 18
   const radius =
-    shape === 'circle' ? Math.hypot(x + padding, y + padding) : Math.max((2 * (y + padding)) / SQRT3, x + padding + (y + padding) / SQRT3)
-  const width = Math.max(frame.width, Math.ceil(shape === 'rectangle' ? 2 * (x + padding) : 2 * radius))
+    shape === "circle" ? Math.hypot(x + padding, y + padding) : Math.max((2 * (y + padding)) / SQRT3, x + padding + (y + padding) / SQRT3)
+  const width = Math.max(frame.width, Math.ceil(shape === "rectangle" ? 2 * (x + padding) : 2 * radius))
   const height = Math.max(
     frame.height,
-    Math.ceil(shape === 'rectangle' ? 2 * (y + padding) : shape === 'circle' ? 2 * radius : SQRT3 * radius),
+    Math.ceil(shape === "rectangle" ? 2 * (y + padding) : shape === "circle" ? 2 * radius : SQRT3 * radius),
   )
   return { x: cx - width / 2, y: cy - height / 2, width, height }
 }
@@ -46,7 +46,7 @@ export function framePath(shape: BoardFrameShape | undefined, w: number, h: numb
   const a = w / 2
   const b = h / 2
   const point = (x: number, y: number) => `${(a + x).toFixed(3)},${(b + y).toFixed(3)}`
-  let path = ''
+  let path = ""
   const start = (x: number, y: number) => {
     path = `M${point(x, y)}`
   }
@@ -56,7 +56,7 @@ export function framePath(shape: BoardFrameShape | undefined, w: number, h: numb
   const line = (x: number, y: number) => cubic(x, y, x, y, x, y)
 
   // По 12 сегментов у каждой фигуры, чтобы при смене формы интерполировать один контур.
-  if (shape === 'circle') {
+  if (shape === "circle") {
     const r = Math.min(a, b)
     const step = Math.PI / 6
     const k = (4 / 3) * Math.tan(step / 4)
@@ -70,7 +70,7 @@ export function framePath(shape: BoardFrameShape | undefined, w: number, h: numb
         y = r * Math.sin(u)
       cubic(x0 - k * y0, y0 + k * x0, x + k * y, y - k * x, x, y)
     }
-  } else if (shape === 'hexagon') {
+  } else if (shape === "hexagon") {
     const r = hexRadius(w, h)
     const y = (r * SQRT3) / 2
     const vertices = [
@@ -104,5 +104,5 @@ export function framePath(shape: BoardFrameShape | undefined, w: number, h: numb
     cubic(a - r + k, -b, a, -b + r - k, a, -b + r)
     line(a, 0)
   }
-  return path + ' Z'
+  return path + " Z"
 }

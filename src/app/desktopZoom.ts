@@ -1,9 +1,10 @@
-import { isTauri } from '@tauri-apps/api/core'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { useEffect } from 'react'
-import { toast } from 'sonner'
-import { useUi } from './store'
-import { zoomShortcut } from './zoomValue'
+import { isTauri } from "@tauri-apps/api/core"
+import { getCurrentWebview } from "@tauri-apps/api/webview"
+import { useEffect } from "react"
+import { toast } from "sonner"
+import { errorText } from "@/lib/errors"
+import { useUi } from "./store"
+import { zoomShortcut } from "./zoomValue"
 
 export function useDesktopZoom() {
   useEffect(() => {
@@ -22,8 +23,8 @@ export function useDesktopZoom() {
             applied = requested
           } catch (error) {
             if (stopped) return
-            toast.error('Не удалось изменить масштаб. Попробуй ещё раз.', {
-              description: error instanceof Error ? error.message : String(error),
+            toast.error("Не удалось изменить масштаб. Попробуй ещё раз.", {
+              description: errorText(error),
             })
             if (useUi.getState().desktopZoom === requested) useUi.getState().setDesktopZoom(applied)
             else continue
@@ -42,12 +43,12 @@ export function useDesktopZoom() {
       event.preventDefault()
       useUi.getState().setDesktopZoom(zoom)
     }
-    window.addEventListener('keydown', onKey)
+    window.addEventListener("keydown", onKey)
     void sync()
     return () => {
       stopped = true
       unsubscribe()
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener("keydown", onKey)
     }
   }, [])
 }

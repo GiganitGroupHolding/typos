@@ -1,47 +1,47 @@
-import { describe, expect, it } from 'vitest'
-import { createMemoryAdapter } from '@/storage/flatAdapter'
-import { buildDocs, createIndex } from '@/features/search/searchIndex'
-import * as repo from './repo'
-import { sampleVault } from '@/test/sampleVault'
+import { describe, expect, it } from "vitest"
+import { buildDocs, createIndex } from "@/features/search/searchIndex"
+import { createMemoryAdapter } from "@/storage/flatAdapter"
+import { sampleVault } from "@/test/sampleVault"
+import * as repo from "./repo"
 
-describe('vault repo', () => {
-  it('load: предметы, конспекты, закреп, тулзы', async () => {
+describe("vault repo", () => {
+  it("load: предметы, конспекты, закреп, тулзы", async () => {
     const a = sampleVault()
     const v = await repo.loadVault(a)
-    expect(v.subjects.map((s) => s.name)).toEqual(['Линейная алгебра', 'Физика', 'Алгоритмы', 'История'])
+    expect(v.subjects.map((s) => s.name)).toEqual(["Линейная алгебра", "Физика", "Алгоритмы", "История"])
     expect(v.notes).toHaveLength(7)
-    expect(v.pins.filter((p) => p.subjectId === v.subjects[0].id).map((p) => p.title)[0]).toBe('Определитель 2×2')
-    expect(v.tools.find((t) => t.name === 'Калькулятор матриц')?.icon).toBe('grid')
+    expect(v.pins.filter((p) => p.subjectId === v.subjects[0].id).map((p) => p.title)[0]).toBe("Определитель 2×2")
+    expect(v.tools.find((t) => t.name === "Калькулятор матриц")?.icon).toBe("grid")
   })
 
-  it('создание → сохранение переименовывает файл по заголовку', async () => {
+  it("создание → сохранение переименовывает файл по заголовку", async () => {
     const a = sampleVault()
     const { subjects } = await repo.loadVault(a)
     const note = await repo.createNote(a, subjects[1])
-    expect(note.path).toBe('Физика/Конспекты/Без названия.md')
+    expect(note.path).toBe("Физика/Конспекты/Без названия.md")
 
-    const saved = await repo.saveNote(a, note, '# Импульс: закон сохранения\n\n$p = mv$')
-    expect(saved.path).toBe('Физика/Конспекты/Импульс закон сохранения.md')
-    expect(saved.title).toBe('Импульс: закон сохранения')
+    const saved = await repo.saveNote(a, note, "# Импульс: закон сохранения\n\n$p = mv$")
+    expect(saved.path).toBe("Физика/Конспекты/Импульс закон сохранения.md")
+    expect(saved.title).toBe("Импульс: закон сохранения")
     expect(await a.exists(note.path)).toBe(false)
 
-    const again = await repo.saveNote(a, saved, '# Импульс: закон сохранения\n\n$p = mv$, правка')
+    const again = await repo.saveNote(a, saved, "# Импульс: закон сохранения\n\n$p = mv$, правка")
     expect(again.path).toBe(saved.path)
 
     const reloaded = (await repo.loadVault(a)).notes.find((n) => n.id === note.id)
-    expect(reloaded?.body).toBe('# Импульс: закон сохранения\n\n$p = mv$, правка')
+    expect(reloaded?.body).toBe("# Импульс: закон сохранения\n\n$p = mv$, правка")
   })
 
-  it('одинаковые заголовки не перезаписывают друг друга', async () => {
+  it("одинаковые заголовки не перезаписывают друг друга", async () => {
     const a = sampleVault()
     const { subjects } = await repo.loadVault(a)
-    const n1 = await repo.saveNote(a, await repo.createNote(a, subjects[3]), '# Лекция')
-    const n2 = await repo.saveNote(a, await repo.createNote(a, subjects[3]), '# Лекция')
+    const n1 = await repo.saveNote(a, await repo.createNote(a, subjects[3]), "# Лекция")
+    const n2 = await repo.saveNote(a, await repo.createNote(a, subjects[3]), "# Лекция")
     expect(n1.path).not.toBe(n2.path)
-    expect(n2.path).toBe('История/Конспекты/Лекция (2).md')
+    expect(n2.path).toBe("История/Конспекты/Лекция (2).md")
   })
 
-  it('корзина и восстановление', async () => {
+  it("корзина и восстановление", async () => {
     const a = sampleVault()
     const { notes } = await repo.loadVault(a)
     const n = notes[0]
@@ -52,77 +52,77 @@ describe('vault repo', () => {
     expect((await repo.loadVault(a)).notes.find((x) => x.id === n.id)?.body).toBe(n.body)
   })
 
-  it('папка, созданная руками, становится предметом', async () => {
-    const a = createMemoryAdapter({ 'Химия/Конспекты/Моль.md': '# Моль\n\nКоличество вещества' })
+  it("папка, созданная руками, становится предметом", async () => {
+    const a = createMemoryAdapter({ "Химия/Конспекты/Моль.md": "# Моль\n\nКоличество вещества" })
     const v = await repo.loadVault(a)
-    expect(v.subjects[0].name).toBe('Химия')
-    expect(v.notes[0].title).toBe('Моль')
-    expect(await a.exists('Химия/_subject.json')).toBe(true)
+    expect(v.subjects[0].name).toBe("Химия")
+    expect(v.notes[0].title).toBe("Моль")
+    expect(await a.exists("Химия/_subject.json")).toBe(true)
   })
 
-  it('перенос браузер → папка: всё копируется, существующее не перезаписывается, корзина пропускается', async () => {
+  it("перенос браузер → папка: всё копируется, существующее не перезаписывается, корзина пропускается", async () => {
     const browser = sampleVault()
     const n = (await repo.loadVault(browser)).notes[0]
     await repo.trashNote(browser, (await repo.loadVault(browser)).notes[1])
-    const folder = createMemoryAdapter({ [n.path]: '# Моя версия' })
+    const folder = createMemoryAdapter({ [n.path]: "# Моя версия" })
 
     const copied = await repo.copyVault(browser, folder)
     expect(copied).toBeGreaterThan(10)
-    expect(await folder.readText(n.path)).toBe('# Моя версия')
-    expect(await folder.list('.studynotes')).toEqual([])
+    expect(await folder.readText(n.path)).toBe("# Моя версия")
+    expect(await folder.list(".studynotes")).toEqual([])
     expect((await repo.loadVault(folder)).subjects).toHaveLength(4)
   })
 
-  it('новый предмет: безопасное имя папки и без коллизий', async () => {
+  it("новый предмет: безопасное имя папки и без коллизий", async () => {
     const a = createMemoryAdapter()
-    const s1 = await repo.createSubject(a, { name: 'Мат/анализ: 1 курс', color: 'blue', icon: 'sigma' }, 0)
-    expect(s1.dir).toBe('Мат анализ 1 курс')
-    const s2 = await repo.createSubject(a, { name: 'Мат/анализ: 1 курс', color: 'rose', icon: 'book' }, 1)
-    expect(s2.dir).toBe('Мат анализ 1 курс (2)')
+    const s1 = await repo.createSubject(a, { name: "Мат/анализ: 1 курс", color: "blue", icon: "sigma" }, 0)
+    expect(s1.dir).toBe("Мат анализ 1 курс")
+    const s2 = await repo.createSubject(a, { name: "Мат/анализ: 1 курс", color: "rose", icon: "book" }, 1)
+    expect(s2.dir).toBe("Мат анализ 1 курс (2)")
     const v = await repo.loadVault(a)
     expect(v.subjects.map((s) => [s.name, s.color])).toEqual([
-      ['Мат анализ 1 курс', 'blue'],
-      ['Мат анализ 1 курс (2)', 'rose'],
+      ["Мат анализ 1 курс", "blue"],
+      ["Мат анализ 1 курс (2)", "rose"],
     ])
   })
 
-  it('картинка сохраняется рядом с конспектом', async () => {
+  it("картинка сохраняется рядом с конспектом", async () => {
     const a = sampleVault()
     const n = (await repo.loadVault(a)).notes[0]
-    const rel = await repo.saveAsset(a, 'Физика/Конспекты', new Blob(['x'], { type: 'image/gif' }))
+    const rel = await repo.saveAsset(a, "Физика/Конспекты", new Blob(["x"], { type: "image/gif" }))
     expect(rel).toMatch(/^assets\/\w+\.gif$/)
     expect(await a.exists(`Физика/Конспекты/${rel}`)).toBe(true)
     expect((await repo.loadVault(a)).notes.find((x) => x.id === n.id)).toBeTruthy()
   })
 
-  it('один id у двух конспектов (переименовали на двух устройствах) — записи разные, поиск строится', async () => {
+  it("один id у двух конспектов (переименовали на двух устройствах) — записи разные, поиск строится", async () => {
     const file = (body: string) => `---\nid: kryo0jmd\ncreated: 2026-10-18T13:29:37.044Z\n---\n\n${body}`
     const a = createMemoryAdapter({
-      'Матан/Конспекты/Скибиди в.md': file('# Скибиди в'),
-      'Матан/Конспекты/Скибиди а.md': file('# Скибиди а'),
+      "Матан/Конспекты/Скибиди в.md": file("# Скибиди в"),
+      "Матан/Конспекты/Скибиди а.md": file("# Скибиди а"),
     })
     const v = await repo.loadVault(a)
-    expect(v.notes.find((n) => n.title === 'Скибиди а')?.id).toBe('kryo0jmd')
-    const other = v.notes.find((n) => n.title === 'Скибиди в')!
-    expect(other.id).not.toBe('kryo0jmd')
+    expect(v.notes.find((n) => n.title === "Скибиди а")?.id).toBe("kryo0jmd")
+    const other = v.notes.find((n) => n.title === "Скибиди в")!
+    expect(other.id).not.toBe("kryo0jmd")
     expect(() => createIndex(buildDocs(v))).not.toThrow()
 
-    expect((await repo.loadVault(a)).notes.find((n) => n.title === 'Скибиди в')?.id).toBe(other.id)
-    await repo.saveNote(a, other, '# Скибиди в\n\nправка')
-    expect((await a.readText('Матан/Конспекты/Скибиди в.md'))!).toContain(`id: ${other.id}`)
+    expect((await repo.loadVault(a)).notes.find((n) => n.title === "Скибиди в")?.id).toBe(other.id)
+    await repo.saveNote(a, other, "# Скибиди в\n\nправка")
+    expect((await a.readText("Матан/Конспекты/Скибиди в.md"))!).toContain(`id: ${other.id}`)
   })
 
-  it('папку предмета скопировали руками — у копии свой id, конспекты не путаются', async () => {
+  it("папку предмета скопировали руками — у копии свой id, конспекты не путаются", async () => {
     const a = sampleVault()
     const files = await repo.loadVault(a)
-    const la = files.subjects.find((s) => s.name === 'Линейная алгебра')!
+    const la = files.subjects.find((s) => s.name === "Линейная алгебра")!
     for (const n of files.notes.filter((x) => x.subjectId === la.id))
-      await a.writeText(n.path.replace(la.dir, 'Копия'), (await a.readText(n.path))!)
-    await a.writeText('Копия/_subject.json', (await a.readText(`${la.dir}/_subject.json`))!)
+      await a.writeText(n.path.replace(la.dir, "Копия"), (await a.readText(n.path))!)
+    await a.writeText("Копия/_subject.json", (await a.readText(`${la.dir}/_subject.json`))!)
 
     const v = await repo.loadVault(a)
-    const copy = v.subjects.find((s) => s.name === 'Копия')!
-    expect(copy.id).not.toBe(v.subjects.find((s) => s.name === 'Линейная алгебра')!.id)
+    const copy = v.subjects.find((s) => s.name === "Копия")!
+    expect(copy.id).not.toBe(v.subjects.find((s) => s.name === "Линейная алгебра")!.id)
     expect(new Set(v.notes.map((n) => n.id)).size).toBe(v.notes.length)
     expect(v.notes.filter((n) => n.subjectId === copy.id)).toHaveLength(files.notes.filter((x) => x.subjectId === la.id).length)
     expect(() => createIndex(buildDocs(v))).not.toThrow()

@@ -1,21 +1,21 @@
-import { existsSync, statSync } from 'node:fs'
-import { build } from 'vite'
+import { existsSync, statSync } from "node:fs"
+import { build } from "vite"
 
-const entry = 'src/features/tools/viewers/officeFrame.ts'
-const out = 'public/viewers/office.js'
+const entry = "src/features/tools/viewers/officeFrame.ts"
+const out = "public/viewers/office.js"
 const mtime = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0)
 
-if (process.argv.includes('--force') || mtime(out) < Math.max(mtime(entry), mtime('package-lock.json'), mtime(import.meta.filename))) {
+if (process.argv.includes("--force") || mtime(out) < Math.max(mtime(entry), mtime("package-lock.json"), mtime(import.meta.filename))) {
   await build({
     configFile: false,
     publicDir: false,
-    logLevel: 'warn',
-    define: { 'process.env.NODE_ENV': '"production"' },
+    logLevel: "warn",
+    define: { "process.env.NODE_ENV": '"production"' },
     build: {
-      outDir: 'public/viewers',
+      outDir: "public/viewers",
       emptyOutDir: true,
       reportCompressedSize: false,
-      lib: { entry, formats: ['iife'], name: 'TyposOffice', fileName: () => 'office.js' },
+      lib: { entry, formats: ["iife"], name: "TyposOffice", fileName: () => "office.js" },
     },
   })
   console.log(`viewers: ${out} (${Math.round(statSync(out).size / 1024)} КБ)`)

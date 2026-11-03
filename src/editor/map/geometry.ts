@@ -5,15 +5,15 @@ export interface Rect {
   h: number
 }
 
-export type Side = 'top' | 'right' | 'bottom' | 'left'
+export type Side = "top" | "right" | "bottom" | "left"
 
 const center = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })
 
 export function sidePoint(r: Rect, side: Side) {
   const c = center(r)
-  if (side === 'top') return { x: c.x, y: r.y }
-  if (side === 'bottom') return { x: c.x, y: r.y + r.h }
-  if (side === 'left') return { x: r.x, y: c.y }
+  if (side === "top") return { x: c.x, y: r.y }
+  if (side === "bottom") return { x: c.x, y: r.y + r.h }
+  if (side === "left") return { x: r.x, y: c.y }
   return { x: r.x + r.w, y: c.y }
 }
 
@@ -24,8 +24,8 @@ export function facingSides(a: Rect, b: Rect): [Side, Side] {
   const bc = center(b)
   const dx = bc.x - ac.x
   const dy = bc.y - ac.y
-  if (Math.abs(dx) / (a.w + b.w) > Math.abs(dy) / (a.h + b.h)) return dx > 0 ? ['right', 'left'] : ['left', 'right']
-  return dy > 0 ? ['bottom', 'top'] : ['top', 'bottom']
+  if (Math.abs(dx) / (a.w + b.w) > Math.abs(dy) / (a.h + b.h)) return dx > 0 ? ["right", "left"] : ["left", "right"]
+  return dy > 0 ? ["bottom", "top"] : ["top", "bottom"]
 }
 
 export function curve(s: { x: number; y: number }, sSide: Side, t: { x: number; y: number }, tSide: Side | null) {

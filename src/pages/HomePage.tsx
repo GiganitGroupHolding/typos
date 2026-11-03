@@ -1,21 +1,22 @@
-import { FolderPlus } from 'lucide-react'
-import { motion } from 'motion/react'
-import { Link } from 'react-router'
-import { LiquidButton } from '@/components/ui/liquid-glass-button'
-import { LensBox, useLiquidLens } from '@/components/ui/liquid-lens'
-import { openNewSubject } from '@/features/subjects/NewSubjectDialog'
-import { SubjectBadge, subjectStyle } from '@/features/subjects/visuals'
-import { greeting, plural, relativeTime } from '@/lib/format'
-import { listItem, listParent, pageEnter } from '@/lib/motion'
-import { cn } from '@/lib/utils'
-import { storageLabel } from '@/storage/VaultAdapter'
-import type { Subject } from '@/types'
-import { useRecentNotes, useSubjects } from '@/vault/hooks'
-import { useVault } from '@/vault/store'
+import { FolderPlus } from "lucide-react"
+import { motion } from "motion/react"
+import { type ReactNode } from "react"
+import { Link } from "react-router"
+import { LiquidButton } from "@/components/ui/LiquidButton"
+import { LensBox, useLiquidLens } from "@/components/ui/LiquidLens"
+import { openNewSubject } from "@/features/subjects/NewSubjectDialog"
+import { SubjectBadge, subjectStyle } from "@/features/subjects/visuals"
+import { greeting, plural, relativeTime } from "@/lib/format"
+import { listItem, listParent, pageEnter } from "@/lib/motion"
+import { cn } from "@/lib/utils"
+import { storageLabel } from "@/storage/VaultAdapter"
+import type { Subject } from "@/types"
+import { useRecentNotes, useSubjects } from "@/vault/hooks"
+import { useVault } from "@/vault/store"
 
-const CARD_LENS = { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4, variant: 'card', fallback: 'liquid liquid-lava' } as const
+const CARD_LENS = { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4, variant: "card", fallback: "liquid liquid-lava" } as const
 
-function SubjectCard({ subject: s, children }: { subject: Subject; children: React.ReactNode }) {
+function SubjectCard({ subject: s, children }: { subject: Subject; children: ReactNode }) {
   const lens = useLiquidLens(CARD_LENS)
   return (
     <Link
@@ -24,7 +25,7 @@ function SubjectCard({ subject: s, children }: { subject: Subject; children: Rea
       style={{ ...subjectStyle(s), ...lens.style }}
       className={cn(
         lens.className,
-        'group block h-full rounded-[var(--radius-surface)] p-5 outline-none transition-transform duration-(--dur-base) ease-(--ease-out) hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]',
+        "group block h-full rounded-[var(--radius-surface)] p-5 outline-none transition-transform duration-(--dur-base) ease-(--ease-out) hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
       )}
     >
       {lens.extras}
@@ -46,7 +47,7 @@ export function HomePage() {
     <motion.div {...pageEnter} className="mx-auto w-full max-w-5xl px-6 py-10 md:px-10">
       <h1 className="text-[32px] leading-tight font-bold tracking-tight">{greeting()}</h1>
       <p className="mt-1 text-[15px] text-muted-foreground">
-        {plural(subjects.length, ['предмет', 'предмета', 'предметов'])} · {storageLabel(storage) ?? 'хранятся в браузере'}
+        {plural(subjects.length, ["предмет", "предмета", "предметов"])} · {storageLabel(storage) ?? "хранятся в браузере"}
       </p>
 
       {!subjects.length && (
@@ -70,8 +71,8 @@ export function HomePage() {
               <SubjectBadge subject={s} size="lg" />
               <div className="mt-4 text-[17px] font-semibold tracking-tight">{s.name}</div>
               <div className="mt-1 text-[13px] text-muted-foreground">
-                {plural(count(notes, s.id), ['конспект', 'конспекта', 'конспектов'])} · {count(pins, s.id)} в закрепе ·{' '}
-                {plural(count(tools, s.id), ['проект', 'проекта', 'проектов'])}
+                {plural(count(notes, s.id), ["конспект", "конспекта", "конспектов"])} · {count(pins, s.id)} в закрепе ·{" "}
+                {plural(count(tools, s.id), ["проект", "проекта", "проектов"])}
               </div>
               <div
                 aria-hidden
@@ -102,7 +103,7 @@ export function HomePage() {
                   >
                     <SubjectBadge subject={s} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[15px] font-medium">{n.title || 'Без названия'}</div>
+                      <div className="truncate text-[15px] font-medium">{n.title || "Без названия"}</div>
                       <div className="truncate text-[13px] text-muted-foreground">{n.excerpt}</div>
                     </div>
                     <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">{relativeTime(n.updated)}</span>

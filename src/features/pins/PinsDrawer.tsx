@@ -1,16 +1,16 @@
-import { GripVertical, Maximize2, Plus, X } from 'lucide-react'
-import { AnimatePresence, motion, Reorder, useDragControls } from 'motion/react'
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
-import { useUi } from '@/app/store'
-import { Button } from '@/components/ui/button'
-import { dur, easeIn, springSoft } from '@/lib/motion'
-import type { Pin } from '@/types'
-import { usePinsOf, useSubject } from '@/vault/hooks'
-import { useVault } from '@/vault/store'
-import { PinActions } from './PinActions'
-import { PinBody } from './PinCard'
-import { openPinEditor } from './PinEditorDialog'
+import { GripVertical, Maximize2, Plus, X } from "lucide-react"
+import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react"
+import { useEffect, useState } from "react"
+import { useParams } from "react-router"
+import { useUi } from "@/app/store"
+import { Button } from "@/components/ui/Button"
+import { dur, easeIn, springSoft } from "@/lib/motion"
+import type { Pin } from "@/types"
+import { usePinsOf, useSubject } from "@/vault/hooks"
+import { useVault } from "@/vault/store"
+import { PinActions } from "./PinActions"
+import { PinBody } from "./PinCard"
+import { openPinEditor } from "./PinEditorDialog"
 
 export function PinsDrawer() {
   const { subjectId } = useParams()
@@ -21,9 +21,9 @@ export function PinsDrawer() {
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [open, setOpen])
 
   return (
@@ -38,7 +38,7 @@ export function PinsDrawer() {
           className="glass absolute top-14 right-3 bottom-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col rounded-[var(--radius-surface)]"
         >
           <header className="flex items-center gap-1 border-b py-2 pr-2 pl-4">
-            <h2 className="flex-1 truncate text-sm font-semibold">Закреп{subject ? ` · ${subject.name}` : ''}</h2>
+            <h2 className="flex-1 truncate text-sm font-semibold">Закреп{subject ? ` · ${subject.name}` : ""}</h2>
             {subject && (
               <Button variant="ghost" size="icon-sm" aria-label="Новая карточка" onClick={() => openPinEditor({ subjectId: subject.id })}>
                 <Plus />
@@ -111,7 +111,7 @@ function PinRow({ pin, siblings, onDrop }: { pin: Pin; siblings: Pin[]; onDrop: 
           <PinBody pin={pin} />
           <div className="absolute top-2 right-1.5 flex flex-col gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 focus-within:opacity-100">
             <PinActions pin={pin} siblings={siblings} />
-            <Button variant="ghost" size="icon-xs" aria-label={`Открыть «${pin.title}» в окне`} onClick={() => openWindow('pin', pin.id)}>
+            <Button variant="ghost" size="icon-xs" aria-label={`Открыть «${pin.title}» в окне`} onClick={() => openWindow("pin", pin.id)}>
               <Maximize2 />
             </Button>
           </div>

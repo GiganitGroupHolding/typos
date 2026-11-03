@@ -1,18 +1,18 @@
-import { ArrowDown, ArrowUp, Maximize2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { useUi } from '@/app/store'
-import { Button } from '@/components/ui/button'
+import { ArrowDown, ArrowUp, Maximize2, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { useUi } from "@/app/store"
+import { Button } from "@/components/ui/Button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { toastUndo } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import type { Pin } from '@/types'
-import { useVault } from '@/vault/store'
-import { openPinEditor } from './PinEditorDialog'
+} from "@/components/ui/DropdownMenu"
+import { toastUndo } from "@/lib/undo"
+import { cn } from "@/lib/utils"
+import type { Pin } from "@/types"
+import { useVault } from "@/vault/store"
+import { openPinEditor } from "./PinEditorDialog"
 
 export function PinActions({ pin, siblings, className }: { pin: Pin; siblings: Pin[]; className?: string }) {
   const openWindow = useUi((s) => s.openWindow)
@@ -49,7 +49,7 @@ export function PinActions({ pin, siblings, className }: { pin: Pin; siblings: P
         <DropdownMenuItem onSelect={() => openPinEditor({ subjectId: pin.subjectId, pinId: pin.id })}>
           <Pencil /> Изменить
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => openWindow('pin', pin.id)}>
+        <DropdownMenuItem onSelect={() => openWindow("pin", pin.id)}>
           <Maximize2 /> В окне поверх
         </DropdownMenuItem>
         <DropdownMenuItem disabled={index <= 0} onSelect={() => move(-1)}>

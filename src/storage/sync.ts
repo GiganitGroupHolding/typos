@@ -1,10 +1,10 @@
-import { create } from 'zustand'
-import { genId, NOTES_DIR, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from '@/vault/format'
-import { mergeText } from '@/vault/mergeText'
-import { getHtmlMeta, setHtmlMeta } from '@/vault/repo'
-import type { FlatStore } from './flatAdapter'
-import { RemoteError, type RemoteAdapter } from './remoteAdapter'
-import { basename, dirname, joinPath } from './VaultAdapter'
+import { create } from "zustand"
+import { genId, NOTES_DIR, parseFrontmatter, serializeFrontmatter, SUBJECT_META } from "@/vault/format"
+import { mergeText } from "@/vault/mergeText"
+import { getHtmlMeta, setHtmlMeta } from "@/vault/repo"
+import type { FlatStore } from "./flatAdapter"
+import { RemoteError, type RemoteAdapter } from "./remoteAdapter"
+import { basename, dirname, joinPath } from "./VaultAdapter"
 
 export interface MetaEntry {
   etag?: string
@@ -56,9 +56,9 @@ export interface EngineHooks {
 }
 
 const TEXT_FILE = /\.(md|json|html?|txt|css|js|svg)$/i
-const toBlob = (v: string | Blob) => (typeof v === 'string' ? new Blob([v]) : v)
+const toBlob = (v: string | Blob) => (typeof v === "string" ? new Blob([v]) : v)
 const noteBase = (path: string, value: string | Blob) =>
-  path.endsWith('.md') && basename(dirname(path)) === NOTES_DIR && typeof value === 'string' ? value : undefined
+  path.endsWith(".md") && basename(dirname(path)) === NOTES_DIR && typeof value === "string" ? value : undefined
 
 function mergeNote(base: string, mine: string, theirs: string): string | null {
   const [b, m, t] = [base, mine, theirs].map(parseFrontmatter)
@@ -67,14 +67,14 @@ function mergeNote(base: string, mine: string, theirs: string): string | null {
   if (body === null) return null
   const meta: Record<string, string> = {}
   for (const key of new Set([...Object.keys(b.meta), ...Object.keys(m.meta), ...Object.keys(t.meta)])) {
-    if (key !== 'updated' && m.meta[key] !== t.meta[key] && m.meta[key] !== b.meta[key] && t.meta[key] !== b.meta[key]) return null
-    const value = key === 'updated' || m.meta[key] === b.meta[key] ? t.meta[key] : m.meta[key]
+    if (key !== "updated" && m.meta[key] !== t.meta[key] && m.meta[key] !== b.meta[key] && t.meta[key] !== b.meta[key]) return null
+    const value = key === "updated" || m.meta[key] === b.meta[key] ? t.meta[key] : m.meta[key]
     if (value !== undefined) meta[key] = value
   }
   return serializeFrontmatter(meta, body)
 }
 
-const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
 
 export async function fromBlob(path: string, blob: Blob): Promise<string | Blob> {
   if (!TEXT_FILE.test(path)) return blob
@@ -95,17 +95,17 @@ async function sameBytes(a: Blob, b: Blob) {
 }
 
 async function sameNote(path: string, a: Blob, b: Blob): Promise<boolean> {
-  if (!path.endsWith('.md') || basename(dirname(path)) !== NOTES_DIR) return false
+  if (!path.endsWith(".md") || basename(dirname(path)) !== NOTES_DIR) return false
   try {
     const stripUpdated = async (blob: Blob) => {
       const text = utf8
         .decode(await blob.arrayBuffer())
-        .replace(/^\uFEFF/, '')
-        .replace(/\r\n/g, '\n')
-      if (!text.startsWith('---\n') || !parseFrontmatter(text).meta.id) return null
-      const end = text.indexOf('\n---', 4)
+        .replace(/^\uFEFF/, "")
+        .replace(/\r\n/g, "\n")
+      if (!text.startsWith("---\n") || !parseFrontmatter(text).meta.id) return null
+      const end = text.indexOf("\n---", 4)
       if (end < 0) return null
-      return text.slice(0, end).replace(/^updated:[^\n]*$/m, '') + text.slice(end)
+      return text.slice(0, end).replace(/^updated:[^\n]*$/m, "") + text.slice(end)
     }
     const [left, right] = await Promise.all([stripUpdated(a), stripUpdated(b)])
     return left !== null && left === right
@@ -120,23 +120,23 @@ export function conflictCopy(
   taken: Set<string>,
   when = new Date(),
 ): { path: string; value: string | Blob } {
-  const pad = (n: number) => String(n).padStart(2, '0')
+  const pad = (n: number) => String(n).padStart(2, "0")
   const label = `конфликт ${pad(when.getDate())}.${pad(when.getMonth() + 1)} ${pad(when.getHours())}-${pad(when.getMinutes())}`
   const name = basename(path)
-  const dot = name.lastIndexOf('.')
-  const [base, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, '']
+  const dot = name.lastIndexOf(".")
+  const [base, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""]
   let copy = joinPath(dirname(path), `${base} (${label})${ext}`)
   for (let i = 2; taken.has(copy); i++) copy = joinPath(dirname(path), `${base} (${label}, ${i})${ext}`)
 
-  if (typeof value !== 'string') return { path: copy, value }
+  if (typeof value !== "string") return { path: copy, value }
   if (/\.md$/i.test(path)) {
     const { meta, body } = parseFrontmatter(value)
     if (!meta.id) return { path: copy, value }
     const marked = body.replace(/^(#{1,6} .*)$/m, `$1 (${label})`)
     return { path: copy, value: serializeFrontmatter({ ...meta, id: genId() }, marked) }
   }
-  if (/\.html?$/i.test(path) && getHtmlMeta(value, 'studynotes-id'))
-    return { path: copy, value: setHtmlMeta(value, 'studynotes-id', genId()) }
+  if (/\.html?$/i.test(path) && getHtmlMeta(value, "studynotes-id"))
+    return { path: copy, value: setHtmlMeta(value, "studynotes-id", genId()) }
   return { path: copy, value }
 }
 
@@ -231,7 +231,7 @@ export class SyncEngine {
     const dirty = m ? m.rev !== m.synced : hasLocal
     const remoteChanged = remoteEtag !== m?.etag
     if (!dirty && !remoteChanged) {
-      if (m && hasLocal && m.base === undefined && path.endsWith('.md') && basename(dirname(path)) === NOTES_DIR) {
+      if (m && hasLocal && m.base === undefined && path.endsWith(".md") && basename(dirname(path)) === NOTES_DIR) {
         await this.replica.lock(async () => {
           const cur = await this.replica.meta.get(path)
           if (!cur || cur.etag !== m.etag || cur.rev !== cur.synced) return
@@ -251,14 +251,14 @@ export class SyncEngine {
   private async push(path: string, m: MetaEntry | undefined, hasLocal: boolean, ctx: Pass) {
     const rev = m?.rev ?? 0
     if (!hasLocal) {
-      if (m?.etag && (await this.remote.del(path, m.etag)) === 'conflict') return this.retryOrResolve(path, m, ctx)
+      if (m?.etag && (await this.remote.del(path, m.etag)) === "conflict") return this.retryOrResolve(path, m, ctx)
       await this.dropMeta(path, rev)
       return
     }
     const value = await this.replica.files.get(path)
     if (value === undefined) return void (ctx.more = true)
     const res = await this.remote.put(path, toBlob(value), m?.etag)
-    if (res === 'conflict') return this.retryOrResolve(path, m, ctx)
+    if (res === "conflict") return this.retryOrResolve(path, m, ctx)
     await this.replica.meta.update(path, (cur) => ({ etag: res.etag, base: noteBase(path, value), rev: cur?.rev ?? rev, synced: rev }))
   }
 
@@ -299,7 +299,7 @@ export class SyncEngine {
     if (!got && mine === undefined) return this.dropMeta(path, rev)
     if (!got) {
       const res = await this.remote.put(path, toBlob(mine!))
-      if (res === 'conflict') return void (ctx.more = true)
+      if (res === "conflict") return void (ctx.more = true)
       await this.replica.meta.update(path, (cur) => ({ etag: res.etag, base: noteBase(path, mine!), rev: cur?.rev ?? rev, synced: rev }))
       return
     }
@@ -311,9 +311,9 @@ export class SyncEngine {
       basename(path) === SUBJECT_META
     )
       return this.adopt(path, got, rev, ctx)
-    if (m?.base !== undefined && typeof mine === 'string') {
+    if (m?.base !== undefined && typeof mine === "string") {
       const theirs = await fromBlob(path, got.blob)
-      const merged = typeof theirs === 'string' ? mergeNote(m.base, mine, theirs) : null
+      const merged = typeof theirs === "string" ? mergeNote(m.base, mine, theirs) : null
       if (merged !== null) {
         await this.replica.lock(async () => {
           const cur = await this.replica.meta.get(path)

@@ -1,15 +1,15 @@
-import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
-import { blockPos, foldedBlocks, headingKey, headingLevel, sectionRange } from './sections'
+import { Extension } from "@tiptap/core"
+import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state"
+import { Decoration, DecorationSet } from "@tiptap/pm/view"
+import { blockPos, foldedBlocks, headingKey, headingLevel, sectionRange } from "./sections"
 
-export const foldingKey = new PluginKey<Set<string>>('folding')
+export const foldingKey = new PluginKey<Set<string>>("folding")
 
 const storageKey = (id: string) => `typos-fold:${id}`
 
 function readFolded(id: string): Set<string> {
   try {
-    return new Set(JSON.parse(localStorage.getItem(storageKey(id)) ?? '[]') as string[])
+    return new Set(JSON.parse(localStorage.getItem(storageKey(id)) ?? "[]") as string[])
   } catch {
     return new Set()
   }
@@ -47,8 +47,8 @@ export interface FoldingOptions {
 }
 
 export const Folding = Extension.create<FoldingOptions>({
-  name: 'folding',
-  addOptions: () => ({ noteId: '' }),
+  name: "folding",
+  addOptions: () => ({ noteId: "" }),
 
   addCommands() {
     return {
@@ -84,27 +84,27 @@ export const Folding = Extension.create<FoldingOptions>({
             const decos: Decoration[] = []
             state.doc.forEach((node, offset, index) => {
               if (hidden.has(index)) {
-                decos.push(Decoration.node(offset, offset + node.nodeSize, { class: 'is-folded' }))
+                decos.push(Decoration.node(offset, offset + node.nodeSize, { class: "is-folded" }))
                 return
               }
               if (headingLevel(node) === null) return
               const [from, to] = sectionRange(state.doc, index)
               if (to - from < 2) return
               const folded = headings.includes(index)
-              decos.push(Decoration.node(offset, offset + node.nodeSize, { class: folded ? 'has-fold is-collapsed' : 'has-fold' }))
+              decos.push(Decoration.node(offset, offset + node.nodeSize, { class: folded ? "has-fold is-collapsed" : "has-fold" }))
               decos.push(
                 Decoration.widget(
                   offset + 1,
                   (view) => {
-                    const b = document.createElement('button')
-                    b.type = 'button'
-                    b.className = 'fold-toggle'
-                    b.contentEditable = 'false'
-                    b.setAttribute('aria-label', folded ? 'Развернуть раздел' : 'Свернуть раздел')
-                    b.setAttribute('aria-expanded', String(!folded))
+                    const b = document.createElement("button")
+                    b.type = "button"
+                    b.className = "fold-toggle"
+                    b.contentEditable = "false"
+                    b.setAttribute("aria-label", folded ? "Развернуть раздел" : "Свернуть раздел")
+                    b.setAttribute("aria-expanded", String(!folded))
                     b.innerHTML =
                       '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-                    b.addEventListener('mousedown', (e) => {
+                    b.addEventListener("mousedown", (e) => {
                       e.preventDefault()
                       e.stopPropagation()
 
@@ -129,7 +129,7 @@ export const Folding = Extension.create<FoldingOptions>({
   },
 })
 
-declare module '@tiptap/core' {
+declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     folding: {
       toggleFold: (index: number) => ReturnType

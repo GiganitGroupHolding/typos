@@ -1,9 +1,10 @@
-import { useCallback } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { useShallow } from 'zustand/react/shallow'
-import { templates, type TemplateId } from '@/lib/templates'
-import { useVault } from './store'
+import { useCallback } from "react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { useShallow } from "zustand/react/shallow"
+import { errorText } from "@/lib/errors"
+import { templates, type TemplateId } from "@/lib/templates"
+import { useVault } from "./store"
 
 const byUpdated = <T extends { updated: string }>(a: T, b: T) => b.updated.localeCompare(a.updated)
 
@@ -24,18 +25,18 @@ export const useRecentNotes = (limit = 5) => useVault(useShallow((s) => [...s.no
 export function useCreateNote() {
   const navigate = useNavigate()
   return useCallback(
-    async (subjectId?: string, template: TemplateId = 'blank') => {
+    async (subjectId?: string, template: TemplateId = "blank") => {
       const { subjects, createNote } = useVault.getState()
       const target = subjectId ?? subjects[0]?.id
       if (!target) {
-        toast('Сначала создай предмет')
+        toast("Сначала создай предмет")
         return
       }
       try {
         const note = await createNote(target, templates.find((t) => t.id === template)?.body())
         navigate(`/s/${target}/n/${note.id}?new=1`)
       } catch (e) {
-        toast.error('Не удалось создать конспект', { description: e instanceof Error ? e.message : String(e) })
+        toast.error("Не удалось создать конспект", { description: errorText(e) })
       }
     },
     [navigate],
@@ -50,7 +51,7 @@ export function useCreateBoard() {
         const board = await useVault.getState().createBoard(subjectId)
         navigate(`/s/${subjectId}/b/${board.id}?new=1`)
       } catch (e) {
-        toast.error('Не удалось создать доску', { description: e instanceof Error ? e.message : String(e) })
+        toast.error("Не удалось создать доску", { description: errorText(e) })
       }
     },
     [navigate],

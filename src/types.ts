@@ -1,53 +1,53 @@
-import type { BoardData } from '@/features/boards/model'
+import type { BoardData } from "@/features/boards/model"
 
 export type SubjectColor =
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'lime'
-  | 'green'
-  | 'teal'
-  | 'sky'
-  | 'blue'
-  | 'indigo'
-  | 'violet'
-  | 'fuchsia'
-  | 'pink'
-  | 'rose'
-  | 'brown'
-  | 'slate'
+  | "red"
+  | "orange"
+  | "amber"
+  | "lime"
+  | "green"
+  | "teal"
+  | "sky"
+  | "blue"
+  | "indigo"
+  | "violet"
+  | "fuchsia"
+  | "pink"
+  | "rose"
+  | "brown"
+  | "slate"
 
 export type SubjectIcon =
-  | 'sigma'
-  | 'chart'
-  | 'atom'
-  | 'flask'
-  | 'dna'
-  | 'stethoscope'
-  | 'brain'
-  | 'telescope'
-  | 'globe'
-  | 'code'
-  | 'cpu'
-  | 'cog'
-  | 'trending'
-  | 'coins'
-  | 'megaphone'
-  | 'briefcase'
-  | 'target'
-  | 'handshake'
-  | 'presentation'
-  | 'users'
-  | 'scale'
-  | 'landmark'
-  | 'lightbulb'
-  | 'feather'
-  | 'languages'
-  | 'palette'
-  | 'music'
-  | 'dumbbell'
-  | 'graduation'
-  | 'book'
+  | "sigma"
+  | "chart"
+  | "atom"
+  | "flask"
+  | "dna"
+  | "stethoscope"
+  | "brain"
+  | "telescope"
+  | "globe"
+  | "code"
+  | "cpu"
+  | "cog"
+  | "trending"
+  | "coins"
+  | "megaphone"
+  | "briefcase"
+  | "target"
+  | "handshake"
+  | "presentation"
+  | "users"
+  | "scale"
+  | "landmark"
+  | "lightbulb"
+  | "feather"
+  | "languages"
+  | "palette"
+  | "music"
+  | "dumbbell"
+  | "graduation"
+  | "book"
 
 export interface Subject {
   id: string
@@ -85,9 +85,9 @@ export interface Pin {
   order: number
 }
 
-export type ToolIcon = 'grid' | 'chart' | 'ruler' | 'binary' | 'calculator' | 'function' | 'timer' | 'table'
+export type ToolIcon = "grid" | "chart" | "ruler" | "binary" | "calculator" | "function" | "timer" | "table"
 
-export type ToolKind = 'html' | 'image' | 'pdf' | 'docx' | 'pptx' | 'text' | 'video' | 'audio' | 'other'
+export type ToolKind = "html" | "image" | "pdf" | "docx" | "pptx" | "text" | "video" | "audio" | "other"
 
 export interface Tool {
   id: string
@@ -112,4 +112,4 @@ export interface Board {
   data: BoardData
 }
 
-export type SubjectTab = 'notes' | 'pins' | 'tools' | 'boards'
+export type SubjectTab = "notes" | "pins" | "tools" | "boards"

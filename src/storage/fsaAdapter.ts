@@ -1,11 +1,11 @@
-import { del, get, set } from 'idb-keyval'
-import { settingsStore } from './settings'
-import { basename, dirname, type Entry, type VaultAdapter } from './VaultAdapter'
+import { del, get, set } from "idb-keyval"
+import { settingsStore } from "./settings"
+import { basename, dirname, type Entry, type VaultAdapter } from "./VaultAdapter"
 
-const isNotFound = (e: unknown) => e instanceof DOMException && (e.name === 'NotFoundError' || e.name === 'TypeMismatchError')
+const isNotFound = (e: unknown) => e instanceof DOMException && (e.name === "NotFoundError" || e.name === "TypeMismatchError")
 
 export class FsaAdapter implements VaultAdapter {
-  readonly kind = 'folder' as const
+  readonly kind = "folder" as const
   readonly label: string
   readonly root: FileSystemDirectoryHandle
 
@@ -16,7 +16,7 @@ export class FsaAdapter implements VaultAdapter {
 
   private async dir(path: string, create = false): Promise<FileSystemDirectoryHandle | null> {
     let h = this.root
-    for (const part of path.split('/').filter(Boolean)) {
+    for (const part of path.split("/").filter(Boolean)) {
       try {
         h = await h.getDirectoryHandle(part, { create })
       } catch (e) {
@@ -42,7 +42,7 @@ export class FsaAdapter implements VaultAdapter {
     const d = await this.dir(path)
     if (!d) return []
     const out: Entry[] = []
-    for await (const [name, h] of d.entries()) out.push({ name, kind: h.kind === 'directory' ? 'dir' : 'file' })
+    for await (const [name, h] of d.entries()) out.push({ name, kind: h.kind === "directory" ? "dir" : "file" })
     return out
   }
 
@@ -67,7 +67,7 @@ export class FsaAdapter implements VaultAdapter {
   }
 
   writeText(path: string, text: string) {
-    return this.writeBlob(path, new Blob([text], { type: 'text/plain;charset=utf-8' }))
+    return this.writeBlob(path, new Blob([text], { type: "text/plain;charset=utf-8" }))
   }
 
   async exists(path: string) {
@@ -107,27 +107,27 @@ export class FsaAdapter implements VaultAdapter {
   }
 }
 
-const HANDLE_KEY = 'vaultHandle'
+const HANDLE_KEY = "vaultHandle"
 
-export const fsaSupported = () => typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
+export const fsaSupported = () => typeof window !== "undefined" && typeof window.showDirectoryPicker === "function"
 
 export const loadSavedHandle = () => get<FileSystemDirectoryHandle>(HANDLE_KEY, settingsStore).catch(() => undefined)
 export const saveHandle = (h: FileSystemDirectoryHandle) => set(HANDLE_KEY, h, settingsStore)
 export const forgetHandle = () => del(HANDLE_KEY, settingsStore)
 
 export async function hasPermission(h: FileSystemDirectoryHandle) {
-  return (await h.queryPermission({ mode: 'readwrite' })) === 'granted'
+  return (await h.queryPermission({ mode: "readwrite" })) === "granted"
 }
 
 export async function requestPermission(h: FileSystemDirectoryHandle) {
-  return (await h.requestPermission({ mode: 'readwrite' })) === 'granted'
+  return (await h.requestPermission({ mode: "readwrite" })) === "granted"
 }
 
 export async function pickFolder(): Promise<FileSystemDirectoryHandle | null> {
   try {
-    return (await window.showDirectoryPicker!({ id: 'studynotes', mode: 'readwrite', startIn: 'documents' })) ?? null
+    return (await window.showDirectoryPicker!({ id: "studynotes", mode: "readwrite", startIn: "documents" })) ?? null
   } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') return null
+    if (e instanceof DOMException && e.name === "AbortError") return null
     throw e
   }
 }

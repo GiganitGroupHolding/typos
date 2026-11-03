@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { create } from 'zustand'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { SUBJECT_COLORS, SUBJECT_ICONS } from '@/lib/subjectPalette'
-import { cn } from '@/lib/utils'
-import type { SubjectColor, SubjectIcon } from '@/types'
-import { useVault } from '@/vault/store'
-import { SubjectBadge, subjectIcons } from './visuals'
+import { useEffect, useState, type FormEvent } from "react"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
+import { create } from "zustand"
+import { Button } from "@/components/ui/Button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
+import { Input } from "@/components/ui/Input"
+import { errorText } from "@/lib/errors"
+import { SUBJECT_COLORS, SUBJECT_ICONS } from "@/lib/subjectPalette"
+import { cn } from "@/lib/utils"
+import type { SubjectColor, SubjectIcon } from "@/types"
+import { useVault } from "@/vault/store"
+import { SubjectBadge, subjectIcons } from "./visuals"
 
 const useDialog = create<{ open: boolean; editId?: string; set: (v: boolean, editId?: string) => void }>((set) => ({
   open: false,
@@ -26,19 +27,19 @@ export function NewSubjectDialog() {
   const createSubject = useVault((s) => s.createSubject)
   const updateSubject = useVault((s) => s.updateSubject)
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [color, setColor] = useState<SubjectColor>('blue')
-  const [icon, setIcon] = useState<SubjectIcon>('book')
+  const [name, setName] = useState("")
+  const [color, setColor] = useState<SubjectColor>("blue")
+  const [icon, setIcon] = useState<SubjectIcon>("book")
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setName(editing?.name ?? '')
-    setColor(editing?.color ?? 'blue')
-    setIcon(editing?.icon ?? 'book')
+    setName(editing?.name ?? "")
+    setColor(editing?.color ?? "blue")
+    setIcon(editing?.icon ?? "book")
   }, [open, editing])
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
     setBusy(true)
@@ -52,8 +53,8 @@ export function NewSubjectDialog() {
         navigate(`/s/${s.id}`)
       }
     } catch (err) {
-      toast.error(editing ? 'Не удалось сохранить предмет' : 'Не удалось создать предмет', {
-        description: err instanceof Error ? err.message : String(err),
+      toast.error(editing ? "Не удалось сохранить предмет" : "Не удалось создать предмет", {
+        description: errorText(err),
       })
     } finally {
       setBusy(false)
@@ -65,14 +66,14 @@ export function NewSubjectDialog() {
       <DialogContent className="sm:max-w-md">
         <form onSubmit={submit} className="contents">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Предмет' : 'Новый предмет'}</DialogTitle>
+            <DialogTitle>{editing ? "Предмет" : "Новый предмет"}</DialogTitle>
             <DialogDescription>
-              {editing ? 'Новое название станет и именем папки на диске.' : 'На диске появится папка с этим названием.'}
+              {editing ? "Новое название станет и именем папки на диске." : "На диске появится папка с этим названием."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center gap-3">
-            <SubjectBadge subject={{ id: '', name, color, icon, order: 0, dir: '' }} size="lg" />
+            <SubjectBadge subject={{ id: "", name, color, icon, order: 0, dir: "" }} size="lg" />
             <div className="flex-1">
               <label htmlFor="subject-name" className="mb-1 block text-[13px] font-medium">
                 Название
@@ -101,8 +102,8 @@ export function NewSubjectDialog() {
                   onClick={() => setColor(c)}
                   style={{ background: `var(--subject-${c})` }}
                   className={cn(
-                    'size-8 rounded-full outline-none transition-transform duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95',
-                    color === c && 'ring-2 ring-foreground/70 ring-offset-2 ring-offset-background',
+                    "size-8 rounded-full outline-none transition-transform duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95",
+                    color === c && "ring-2 ring-foreground/70 ring-offset-2 ring-offset-background",
                   )}
                 />
               ))}
@@ -123,10 +124,10 @@ export function NewSubjectDialog() {
                     aria-pressed={icon === i}
                     onClick={() => setIcon(i)}
                     className={cn(
-                      'flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring',
+                      "flex size-10 items-center justify-center rounded-xl border outline-none transition-colors duration-(--dur-fast) focus-visible:ring-2 focus-visible:ring-ring",
                       icon === i
-                        ? 'border-highlight bg-accent text-highlight'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                        ? "border-highlight bg-accent text-highlight"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                   >
                     <Icon className="size-5" />
@@ -141,7 +142,7 @@ export function NewSubjectDialog() {
               Отмена
             </Button>
             <Button type="submit" disabled={!name.trim() || busy}>
-              {editing ? 'Сохранить' : 'Создать'}
+              {editing ? "Сохранить" : "Создать"}
             </Button>
           </DialogFooter>
         </form>

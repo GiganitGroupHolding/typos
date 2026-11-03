@@ -21,20 +21,20 @@ import {
   ZoomIn,
   ZoomOut,
   type LucideIcon,
-} from 'lucide-react'
-import type { ReactNode } from 'react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
-import { BOARD_COLOR_LABELS, BOARD_COLORS, type BoardEdge, type BoardFrameShape } from './model'
+} from "lucide-react"
+import type { ReactNode } from "react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/Tooltip"
+import { cn } from "@/lib/utils"
+import { BOARD_COLOR_LABELS, BOARD_COLORS, type BoardEdge, type BoardFrameShape } from "./model"
 
-export type BoardTool = 'select' | 'hand' | 'sticky' | 'text' | 'frame'
+export type BoardTool = "select" | "hand" | "sticky" | "text" | "frame"
 
 const TOOLS: { id: BoardTool; label: string; key: string; icon: LucideIcon }[] = [
-  { id: 'select', label: 'Выбор', key: 'V', icon: MousePointer2 },
-  { id: 'hand', label: 'Рука — двигать доску', key: 'H или пробел', icon: Hand },
-  { id: 'sticky', label: 'Стикер', key: 'S', icon: StickyNote },
-  { id: 'text', label: 'Карточка с текстом', key: 'T', icon: Type },
-  { id: 'frame', label: 'Рамка', key: 'F', icon: Frame },
+  { id: "select", label: "Выбор", key: "V", icon: MousePointer2 },
+  { id: "hand", label: "Рука — двигать доску", key: "H или пробел", icon: Hand },
+  { id: "sticky", label: "Стикер", key: "S", icon: StickyNote },
+  { id: "text", label: "Карточка с текстом", key: "T", icon: Type },
+  { id: "frame", label: "Рамка", key: "F", icon: Frame },
 ]
 
 function Glass({ children }: { children: ReactNode }) {
@@ -71,8 +71,8 @@ function IconButton({
           aria-pressed={active}
           onClick={onClick}
           className={cn(
-            'flex size-8 items-center justify-center rounded-full outline-none hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4',
-            active && 'liquid-active hover:bg-transparent',
+            "flex size-8 items-center justify-center rounded-full outline-none hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4",
+            active && "liquid-active hover:bg-transparent",
           )}
         >
           {children}
@@ -86,9 +86,9 @@ function IconButton({
 const Divider = () => <span aria-hidden className="mx-1 h-5 w-px bg-border" />
 
 const FRAME_SHAPES = [
-  { id: 'rectangle', label: 'Прямоугольник', icon: Square },
-  { id: 'circle', label: 'Круг', icon: Circle },
-  { id: 'hexagon', label: 'Шестиугольник', icon: Hexagon },
+  { id: "rectangle", label: "Прямоугольник", icon: Square },
+  { id: "circle", label: "Круг", icon: Circle },
+  { id: "hexagon", label: "Шестиугольник", icon: Hexagon },
 ] as const
 
 export function BoardToolbar({
@@ -107,7 +107,7 @@ export function BoardToolbar({
   onImage: () => void
   onLink: () => void
   zoom: number
-  onZoom: (factor: number | 'reset') => void
+  onZoom: (factor: number | "reset") => void
   onFit: () => void
   onUndo: () => void
   onRedo: () => void
@@ -141,7 +141,7 @@ export function BoardToolbar({
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={() => onZoom('reset')}
+              onClick={() => onZoom("reset")}
               className="h-8 w-12 rounded-full text-[12px] font-medium tabular-nums outline-none hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring"
             >
               {Math.round(zoom * 100)}%
@@ -186,7 +186,7 @@ export function SelectionBar({
   onEditLink?: () => void
   onDelete: () => void
 }) {
-  const ends = edge ? `${edge.fromEnd === 'arrow' ? 'both' : edge.toEnd === 'none' ? 'none' : 'end'}` : null
+  const ends = edge ? `${edge.fromEnd === "arrow" ? "both" : edge.toEnd === "none" ? "none" : "end"}` : null
   return (
     <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-4">
       <Glass>
@@ -199,8 +199,8 @@ export function SelectionBar({
         >
           <span
             className={cn(
-              'size-4 rounded-full border-2 border-muted-foreground/50 bg-card',
-              !color && 'ring-2 ring-highlight ring-offset-1',
+              "size-4 rounded-full border-2 border-muted-foreground/50 bg-card",
+              !color && "ring-2 ring-highlight ring-offset-1",
             )}
           />
         </button>
@@ -216,7 +216,7 @@ export function SelectionBar({
               >
                 <span
                   style={{ background: swatch(c) }}
-                  className={cn('size-4 rounded-full', color === c && 'ring-2 ring-highlight ring-offset-1 ring-offset-background')}
+                  className={cn("size-4 rounded-full", color === c && "ring-2 ring-highlight ring-offset-1 ring-offset-background")}
                 />
               </button>
             </TooltipTrigger>
@@ -237,7 +237,7 @@ export function SelectionBar({
         )}
         {onArrows && (
           <IconButton label="Концы стрелки" onClick={onArrows}>
-            {ends === 'both' ? <ArrowLeftRight /> : ends === 'none' ? <Minus /> : <ArrowRight />}
+            {ends === "both" ? <ArrowLeftRight /> : ends === "none" ? <Minus /> : <ArrowRight />}
           </IconButton>
         )}
         {onFront && (

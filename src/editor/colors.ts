@@ -1,24 +1,24 @@
-import { Extension, Mark } from '@tiptap/core'
-import Highlight from '@tiptap/extension-highlight'
+import { Extension, Mark } from "@tiptap/core"
+import Highlight from "@tiptap/extension-highlight"
 
-export const NOTE_COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const
+export const NOTE_COLORS = ["gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"] as const
 export type NoteColor = (typeof NOTE_COLORS)[number]
 
 export const COLOR_LABELS: Record<NoteColor, string> = {
-  gray: 'Серый',
-  brown: 'Коричневый',
-  orange: 'Оранжевый',
-  yellow: 'Жёлтый',
-  green: 'Зелёный',
-  blue: 'Синий',
-  purple: 'Фиолетовый',
-  pink: 'Розовый',
-  red: 'Красный',
+  gray: "Серый",
+  brown: "Коричневый",
+  orange: "Оранжевый",
+  yellow: "Жёлтый",
+  green: "Зелёный",
+  blue: "Синий",
+  purple: "Фиолетовый",
+  pink: "Розовый",
+  red: "Красный",
 }
 
-const isColor = (c: unknown): c is NoteColor => typeof c === 'string' && (NOTE_COLORS as readonly string[]).includes(c)
+const isColor = (c: unknown): c is NoteColor => typeof c === "string" && (NOTE_COLORS as readonly string[]).includes(c)
 
-declare module '@tiptap/core' {
+declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     textColor: {
       setTextColor: (color: NoteColor) => ReturnType
@@ -29,39 +29,39 @@ declare module '@tiptap/core' {
     }
   }
   interface Storage {
-    lastColor: { last: { kind: 'text' | 'bg'; color: NoteColor } | null }
+    lastColor: { last: { kind: "text" | "bg"; color: NoteColor } | null }
   }
 }
 
 export const TextColor = Mark.create({
-  name: 'textColor',
+  name: "textColor",
   addAttributes() {
     return {
       color: {
         default: null,
-        parseHTML: (el) => (isColor(el.getAttribute('data-text-color')) ? el.getAttribute('data-text-color') : null),
-        renderHTML: (a) => (isColor(a.color) ? { 'data-text-color': a.color } : {}),
+        parseHTML: (el) => (isColor(el.getAttribute("data-text-color")) ? el.getAttribute("data-text-color") : null),
+        renderHTML: (a) => (isColor(a.color) ? { "data-text-color": a.color } : {}),
       },
     }
   },
   parseHTML() {
     return [
-      { tag: 'span[data-text-color]', getAttrs: (el) => (isColor((el as HTMLElement).getAttribute('data-text-color')) ? null : false) },
+      { tag: "span[data-text-color]", getAttrs: (el) => (isColor((el as HTMLElement).getAttribute("data-text-color")) ? null : false) },
     ]
   },
   renderHTML({ HTMLAttributes }) {
-    return ['span', HTMLAttributes, 0]
+    return ["span", HTMLAttributes, 0]
   },
   renderMarkdown: (node, h) => `<span data-text-color="${node.attrs?.color}">${h.renderChildren(node)}</span>`,
-  parseMarkdown: (token, h) => h.applyMark('textColor', h.parseInline(token.tokens || []), { color: token.color }),
+  parseMarkdown: (token, h) => h.applyMark("textColor", h.parseInline(token.tokens || []), { color: token.color }),
   markdownTokenizer: {
-    name: 'textColor',
-    level: 'inline',
-    start: (src) => src.indexOf('<span data-text-color='),
+    name: "textColor",
+    level: "inline",
+    start: (src) => src.indexOf("<span data-text-color="),
     tokenize(src, _tokens, h) {
       const m = /^<span data-text-color="([a-z]+)">([\s\S]+?)<\/span>/.exec(src)
       if (!m || !isColor(m[1])) return
-      return { type: 'textColor', raw: m[0], color: m[1], text: m[2], tokens: h.inlineTokens(m[2]) }
+      return { type: "textColor", raw: m[0], color: m[1], text: m[2], tokens: h.inlineTokens(m[2]) }
     },
   },
   addCommands() {
@@ -83,8 +83,8 @@ export const ColorHighlight = Highlight.extend({
     return {
       color: {
         default: null,
-        parseHTML: (el) => (isColor(el.getAttribute('data-color')) ? el.getAttribute('data-color') : null),
-        renderHTML: (a) => (isColor(a.color) ? { 'data-color': a.color } : {}),
+        parseHTML: (el) => (isColor(el.getAttribute("data-color")) ? el.getAttribute("data-color") : null),
+        renderHTML: (a) => (isColor(a.color) ? { "data-color": a.color } : {}),
       },
     }
   },
@@ -97,28 +97,28 @@ export const ColorHighlight = Highlight.extend({
       ? `<mark data-color="${node.attrs.color}">${h.renderChildren(node)}</mark>`
       : `==${h.renderChildren(node)}==`,
   parseMarkdown: (token, h) =>
-    h.applyMark('highlight', h.parseInline(token.tokens || []), token.color ? { color: token.color } : undefined),
+    h.applyMark("highlight", h.parseInline(token.tokens || []), token.color ? { color: token.color } : undefined),
   markdownTokenizer: {
-    name: 'highlight',
-    level: 'inline',
+    name: "highlight",
+    level: "inline",
     start: (src) => {
-      const a = src.indexOf('==')
-      const b = src.indexOf('<mark data-color=')
+      const a = src.indexOf("==")
+      const b = src.indexOf("<mark data-color=")
       return a < 0 ? b : b < 0 ? a : Math.min(a, b)
     },
     tokenize(src, _tokens, h) {
       let m = /^==([^=]+)==/.exec(src)
-      if (m) return { type: 'highlight', raw: m[0], text: m[1], tokens: h.inlineTokens(m[1].trim()) }
+      if (m) return { type: "highlight", raw: m[0], text: m[1], tokens: h.inlineTokens(m[1].trim()) }
       m = /^<mark data-color="([a-z]+)">([\s\S]+?)<\/mark>/.exec(src)
-      if (m && isColor(m[1])) return { type: 'highlight', raw: m[0], color: m[1], text: m[2], tokens: h.inlineTokens(m[2]) }
+      if (m && isColor(m[1])) return { type: "highlight", raw: m[0], color: m[1], text: m[2], tokens: h.inlineTokens(m[2]) }
     },
   },
 }).configure({ multicolor: true })
 
 export const LastColor = Extension.create({
-  name: 'lastColor',
+  name: "lastColor",
   addStorage() {
-    return { last: null as { kind: 'text' | 'bg'; color: NoteColor } | null }
+    return { last: null as { kind: "text" | "bg"; color: NoteColor } | null }
   },
   addCommands() {
     return {
@@ -127,11 +127,11 @@ export const LastColor = Extension.create({
         ({ chain }) => {
           const last = this.storage.last
           if (!last) return false
-          return last.kind === 'text' ? chain().setTextColor(last.color).run() : chain().setHighlight({ color: last.color }).run()
+          return last.kind === "text" ? chain().setTextColor(last.color).run() : chain().setHighlight({ color: last.color }).run()
         },
     }
   },
   addKeyboardShortcuts() {
-    return { 'Mod-Shift-h': () => this.editor.commands.applyLastColor() }
+    return { "Mod-Shift-h": () => this.editor.commands.applyLastColor() }
   },
 })

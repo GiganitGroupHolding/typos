@@ -1,7 +1,7 @@
-import { invoke } from '@tauri-apps/api/core'
-import type { Entry, VaultAdapter } from './VaultAdapter'
+import { invoke } from "@tauri-apps/api/core"
+import type { Entry, VaultAdapter } from "./VaultAdapter"
 
-const MISSING = 'ENOENT'
+const MISSING = "ENOENT"
 const decoder = new TextDecoder()
 
 const call = <T>(cmd: string, args?: Parameters<typeof invoke>[1], options?: Parameters<typeof invoke>[2]) =>
@@ -10,7 +10,7 @@ const call = <T>(cmd: string, args?: Parameters<typeof invoke>[1], options?: Par
   })
 
 export class TauriAdapter implements VaultAdapter {
-  readonly kind = 'folder' as const
+  readonly kind = "folder" as const
   readonly label: string
   readonly root: string
 
@@ -20,12 +20,12 @@ export class TauriAdapter implements VaultAdapter {
   }
 
   list(dir: string) {
-    return call<Entry[]>('vault_list', { root: this.root, dir })
+    return call<Entry[]>("vault_list", { root: this.root, dir })
   }
 
   private async read(path: string): Promise<ArrayBuffer | null> {
     try {
-      return await call<ArrayBuffer>('vault_read', { root: this.root, path })
+      return await call<ArrayBuffer>("vault_read", { root: this.root, path })
     } catch (e) {
       if (e === MISSING) return null
       throw e
@@ -43,30 +43,30 @@ export class TauriAdapter implements VaultAdapter {
   }
 
   async writeText(path: string, text: string) {
-    await call('vault_write_text', { root: this.root, path, text })
+    await call("vault_write_text", { root: this.root, path, text })
   }
 
   async writeBlob(path: string, blob: Blob) {
-    await call('vault_write_bytes', new Uint8Array(await blob.arrayBuffer()), {
-      headers: { 'x-root': encodeURIComponent(this.root), 'x-path': encodeURIComponent(path) },
+    await call("vault_write_bytes", new Uint8Array(await blob.arrayBuffer()), {
+      headers: { "x-root": encodeURIComponent(this.root), "x-path": encodeURIComponent(path) },
     })
   }
 
   exists(path: string) {
-    return call<boolean>('vault_exists', { root: this.root, path })
+    return call<boolean>("vault_exists", { root: this.root, path })
   }
 
   async remove(path: string) {
-    await call('vault_remove', { root: this.root, path })
+    await call("vault_remove", { root: this.root, path })
   }
 
   async move(from: string, to: string) {
-    await call('vault_move', { root: this.root, from, to })
+    await call("vault_move", { root: this.root, from, to })
   }
 }
 
-export const loadSavedPath = () => call<string | null>('vault_saved')
+export const loadSavedPath = () => call<string | null>("vault_saved")
 
-export const pickFolderPath = () => call<string | null>('vault_pick')
-export const savePath = (root: string) => call<void>('vault_remember', { root })
-export const forgetPath = () => call<void>('vault_forget')
+export const pickFolderPath = () => call<string | null>("vault_pick")
+export const savePath = (root: string) => call<void>("vault_remember", { root })
+export const forgetPath = () => call<void>("vault_forget")

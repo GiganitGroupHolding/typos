@@ -1,6 +1,6 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
-import { FileText, Link2 } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
+import { invoke, isTauri } from "@tauri-apps/api/core"
+import { FileText, Link2 } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import {
   memo,
   useCallback,
@@ -14,20 +14,20 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-} from 'react'
-import { toast } from 'sonner'
-import { clamp, contains, curve, facingSides, rectOf, sidePoint, type Rect, type Side } from '@/editor/map/geometry'
-import { spring } from '@/lib/motion'
-import { errorText } from '@/lib/undo'
-import { cn } from '@/lib/utils'
-import { basename } from '@/storage/VaultAdapter'
-import type { Board } from '@/types'
-import { useVault, vaultFileUrl } from '@/vault/store'
-import { BoardLinkDialog } from './BoardLinkDialog'
-import { BoardText } from './BoardText'
-import { BoardToolbar, SelectionBar, type BoardTool } from './BoardToolbar'
-import { fitFrame, framePath, frameRadius } from './frameGeometry'
-import { textSize } from './layout'
+} from "react"
+import { toast } from "sonner"
+import { clamp, contains, curve, facingSides, rectOf, sidePoint, type Rect, type Side } from "@/editor/map/geometry"
+import { errorText } from "@/lib/errors"
+import { spring } from "@/lib/motion"
+import { cn } from "@/lib/utils"
+import { basename } from "@/storage/VaultAdapter"
+import type { Board } from "@/types"
+import { useVault, vaultFileUrl } from "@/vault/store"
+import { BoardLinkDialog } from "./BoardLinkDialog"
+import { BoardText } from "./BoardText"
+import { BoardToolbar, SelectionBar, type BoardTool } from "./BoardToolbar"
+import { fitFrame, framePath, frameRadius } from "./frameGeometry"
+import { textSize } from "./layout"
 import {
   boardBounds,
   boardItemId,
@@ -41,7 +41,7 @@ import {
   type BoardEdge,
   type BoardFrameShape,
   type BoardNode,
-} from './model'
+} from "./model"
 
 type Pt = { x: number; y: number }
 interface View {
@@ -50,34 +50,34 @@ interface View {
   zoom: number
 }
 type Drag =
-  | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number }
-  | { kind: 'marquee'; x0: number; y0: number; x1: number; y1: number; base: string[] }
-  | { kind: 'move'; id: string; sx: number; sy: number; starts: Map<string, Pt>; moved: boolean; shift: boolean }
-  | { kind: 'resize'; id: string; sx: number; sy: number; w: number; h: number }
-  | { kind: 'connect'; from: string; side: Side; x: number; y: number }
-  | { kind: 'draw'; tool: 'sticky' | 'text' | 'frame'; x0: number; y0: number; x1: number; y1: number }
-type Editing = { kind: 'node' | 'edge'; id: string; fresh?: boolean } | null
+  | { kind: "pan"; sx: number; sy: number; vx: number; vy: number }
+  | { kind: "marquee"; x0: number; y0: number; x1: number; y1: number; base: string[] }
+  | { kind: "move"; id: string; sx: number; sy: number; starts: Map<string, Pt>; moved: boolean; shift: boolean }
+  | { kind: "resize"; id: string; sx: number; sy: number; w: number; h: number }
+  | { kind: "connect"; from: string; side: Side; x: number; y: number }
+  | { kind: "draw"; tool: "sticky" | "text" | "frame"; x0: number; y0: number; x1: number; y1: number }
+type Editing = { kind: "node" | "edge"; id: string; fresh?: boolean } | null
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 4
 const SAVE_DELAY = 500
-const CLIP_MARK = 'typos-board'
+const CLIP_MARK = "typos-board"
 const IMAGE = /\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i
 
-const NEW: Record<'sticky' | 'text' | 'frame', Omit<BoardNode, 'id' | 'x' | 'y'>> = {
-  sticky: { type: 'text', width: 200, height: 200, color: '3', text: '' },
-  text: { type: 'text', width: 260, height: 80, text: '' },
-  frame: { type: 'group', width: 560, height: 380, label: 'Рамка' },
+const NEW: Record<"sticky" | "text" | "frame", Omit<BoardNode, "id" | "x" | "y">> = {
+  sticky: { type: "text", width: 200, height: 200, color: "3", text: "" },
+  text: { type: "text", width: 260, height: 80, text: "" },
+  frame: { type: "group", width: 560, height: 380, label: "Рамка" },
 }
 
 const rect = (n: BoardNode): Rect => ({ x: n.x, y: n.y, w: n.width, h: n.height })
 const bounds = (n: BoardNode) => ({ x: n.x, y: n.y, width: n.width, height: n.height })
 const preset = (c?: string) => !!c && /^[1-6]$/.test(c)
 
-const lineColor = (c?: string) => (preset(c) ? `var(--board-line-${c})` : c || 'var(--muted-foreground)')
+const lineColor = (c?: string) => (preset(c) ? `var(--board-line-${c})` : c || "var(--muted-foreground)")
 
 function framePaint(color?: string) {
-  const line = color ? lineColor(color) : 'var(--foreground)'
+  const line = color ? lineColor(color) : "var(--foreground)"
   return {
     background: `color-mix(in oklab, ${line} ${color ? 9 : 3}%, transparent)`,
     borderColor: `color-mix(in oklab, ${line} ${color ? 55 : 22}%, transparent)`,
@@ -87,7 +87,7 @@ function framePaint(color?: string) {
 function nodeStyle(n: BoardNode): CSSProperties {
   if (!n.color) return {}
   return preset(n.color)
-    ? { background: `var(--board-${n.color})`, borderColor: 'transparent' }
+    ? { background: `var(--board-${n.color})`, borderColor: "transparent" }
     : { background: `color-mix(in oklab, ${n.color} 28%, var(--card))`, borderColor: n.color }
 }
 
@@ -100,15 +100,15 @@ function edgeGeometry(e: BoardEdge, a: BoardNode, b: BoardNode) {
 
 function nodeAnchor(n: BoardNode, side: Side): Pt {
   const r = rect(n)
-  if (n.type !== 'group') return sidePoint(r, side)
-  const x = side === 'left' ? -1 : side === 'right' ? 1 : 0
-  const y = side === 'top' ? -1 : side === 'bottom' ? 1 : 0
+  if (n.type !== "group") return sidePoint(r, side)
+  const x = side === "left" ? -1 : side === "right" ? 1 : 0
+  const y = side === "top" ? -1 : side === "bottom" ? 1 : 0
   const radius = frameRadius(n.shape, r.w, r.h, x, y)
   return { x: r.x + r.w / 2 + x * radius, y: r.y + r.h / 2 + y * radius }
 }
 
 function resizeAnchor(n: BoardNode): Pt {
-  if (n.type !== 'group') return { x: n.width, y: n.height }
+  if (n.type !== "group") return { x: n.width, y: n.height }
   const length = Math.hypot(n.width, n.height)
   const x = n.width / length
   const y = n.height / length
@@ -147,7 +147,7 @@ export function BoardCanvas({ board }: { board: Board }) {
   const saveTimer = useRef(0)
   const [view, setViewState] = useState<View>({ x: 0, y: 0, zoom: 1 })
   const viewRef = useRef(view)
-  const [tool, setTool] = useState<BoardTool>('select')
+  const [tool, setTool] = useState<BoardTool>("select")
   const [sel, setSel] = useState<string[]>([])
   const [selEdge, setSelEdge] = useState<string | null>(null)
   const [editing, setEditing] = useState<Editing>(null)
@@ -187,7 +187,7 @@ export function BoardCanvas({ board }: { board: Board }) {
           dataRef.current = merged
           setDataState({ data: merged })
         },
-        (e) => toast.error('Доска не сохранилась', { id: 'board-save', description: errorText(e) }),
+        (e) => toast.error("Доска не сохранилась", { id: "board-save", description: errorText(e) }),
       )
   }, [boardId])
 
@@ -221,11 +221,11 @@ export function BoardCanvas({ board }: { board: Board }) {
       const ids = new Set(next.nodes.map((n) => n.id))
       setSel((cur) => cur.filter((id) => ids.has(id)))
     })
-    const onHide = () => document.visibilityState === 'hidden' && saveTimer.current && flush()
-    document.addEventListener('visibilitychange', onHide)
+    const onHide = () => document.visibilityState === "hidden" && saveTimer.current && flush()
+    document.addEventListener("visibilitychange", onHide)
     return () => {
       off()
-      document.removeEventListener('visibilitychange', onHide)
+      document.removeEventListener("visibilitychange", onHide)
       if (saveTimer.current) flush()
     }
   }, [boardId, flush])
@@ -264,17 +264,17 @@ export function BoardCanvas({ board }: { board: Board }) {
     setView({ zoom, x: p.x - (p.x - v.x) * k, y: p.y - (p.y - v.y) * k })
   }, [])
 
-  const zoomBy = (factor: number | 'reset') => {
+  const zoomBy = (factor: number | "reset") => {
     const el = root.current!
     const mid = { x: el.clientWidth / 2, y: el.clientHeight / 2 }
-    zoomAt(mid, factor === 'reset' ? 1 / viewRef.current.zoom : factor)
+    zoomAt(mid, factor === "reset" ? 1 / viewRef.current.zoom : factor)
   }
 
   useEffect(() => {
     const el = root.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      if ((e.target as HTMLElement).closest('textarea') && !e.ctrlKey) return
+      if ((e.target as HTMLElement).closest("textarea") && !e.ctrlKey) return
       e.preventDefault()
       const p = local(e)
       if (e.ctrlKey || e.metaKey) zoomAt(p, Math.exp(-e.deltaY * (e.deltaMode ? 0.04 : 0.0025)))
@@ -284,8 +284,8 @@ export function BoardCanvas({ board }: { board: Board }) {
         setView({ ...v, x: v.x - e.deltaX * k, y: v.y - e.deltaY * k })
       }
     }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    el.addEventListener("wheel", onWheel, { passive: false })
+    return () => el.removeEventListener("wheel", onWheel)
   }, [zoomAt])
 
   const node = (id: string) => dataRef.current.nodes.find((n) => n.id === id)
@@ -297,7 +297,7 @@ export function BoardCanvas({ board }: { board: Board }) {
     setSelEdge(null)
   }
 
-  const updateNode = (id: string, patch: Partial<Pick<BoardNode, 'shape' | 'url' | 'label' | 'file'>>) => {
+  const updateNode = (id: string, patch: Partial<Pick<BoardNode, "shape" | "url" | "label" | "file">>) => {
     const m = dataRef.current
     commit({ ...m, nodes: m.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) })
   }
@@ -309,16 +309,16 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const saveLink = (url: string, label: string) => {
     if (!linkDialog) return
-    if ('id' in linkDialog) updateNode(linkDialog.id, { url, label })
+    if ("id" in linkDialog) updateNode(linkDialog.id, { url, label })
     else {
       const { x, y } = linkDialog.at
-      addNodes([{ id: boardItemId(), type: 'link', url, label, width: 160, height: 96, x: Math.round(x - 80), y: Math.round(y - 48) }])
-      setTool('select')
+      addNodes([{ id: boardItemId(), type: "link", url, label, width: 160, height: 96, x: Math.round(x - 80), y: Math.round(y - 48) }])
+      setTool("select")
     }
     closeLinkDialog()
   }
 
-  const create = (kind: 'sticky' | 'text' | 'frame', at: Pt, size?: { width: number; height: number }) => {
+  const create = (kind: "sticky" | "text" | "frame", at: Pt, size?: { width: number; height: number }) => {
     const base = NEW[kind]
     const width = size?.width ?? base.width
     const height = size?.height ?? base.height
@@ -331,8 +331,8 @@ export function BoardCanvas({ board }: { board: Board }) {
       y: Math.round(at.y - (size ? 0 : height / 2)),
     }
     addNodes([n])
-    setTool('select')
-    if (n.type === 'text') setEditing({ kind: 'node', id: n.id, fresh: true })
+    setTool("select")
+    if (n.type === "text") setEditing({ kind: "node", id: n.id, fresh: true })
     return n
   }
 
@@ -388,9 +388,9 @@ export function BoardCanvas({ board }: { board: Board }) {
       ...m,
       edges: m.edges.map((e) => {
         if (e.id !== selEdge) return e
-        if (e.fromEnd === 'arrow') return { ...e, fromEnd: undefined, toEnd: 'none' as const }
-        if (e.toEnd === 'none') return { ...e, fromEnd: undefined, toEnd: undefined }
-        return { ...e, fromEnd: 'arrow' as const, toEnd: undefined }
+        if (e.fromEnd === "arrow") return { ...e, fromEnd: undefined, toEnd: "none" as const }
+        if (e.toEnd === "none") return { ...e, fromEnd: undefined, toEnd: undefined }
+        return { ...e, fromEnd: "arrow" as const, toEnd: undefined }
       }),
     })
   }
@@ -402,7 +402,7 @@ export function BoardCanvas({ board }: { board: Board }) {
   }
 
   const addImages = async (files: File[], at: Pt) => {
-    const images = files.filter((f) => f.type.startsWith('image/'))
+    const images = files.filter((f) => f.type.startsWith("image/"))
     if (!images.length) return false
     try {
       const nodes: BoardNode[] = []
@@ -411,7 +411,7 @@ export function BoardCanvas({ board }: { board: Board }) {
         const file = await useVault.getState().saveBoardImage(boardId, f)
         nodes.push({
           id: boardItemId(),
-          type: 'file',
+          type: "file",
           file,
           ...size,
           x: Math.round(at.x - size.width / 2 + i * 32),
@@ -420,33 +420,33 @@ export function BoardCanvas({ board }: { board: Board }) {
       }
       addNodes(nodes)
     } catch (e) {
-      toast.error('Не удалось добавить картинку', { description: errorText(e) })
+      toast.error("Не удалось добавить картинку", { description: errorText(e) })
     }
     return true
   }
 
   const saveLinkImage = async (file: File) => {
     const ext = file.name.match(IMAGE)?.[1].toLowerCase()
-    if (!ext && !file.type.startsWith('image/')) throw new Error('Выбери файл изображения.')
-    const type = ext === 'jpg' ? 'jpeg' : ext === 'svg' ? 'svg+xml' : ext
+    if (!ext && !file.type.startsWith("image/")) throw new Error("Выбери файл изображения.")
+    const type = ext === "jpg" ? "jpeg" : ext === "svg" ? "svg+xml" : ext
     return useVault.getState().saveBoardImage(boardId, type ? file.slice(0, file.size, `image/${type}`) : file)
   }
 
   const setLinkImage = async (id: string, file: File) => {
     try {
       const path = await saveLinkImage(file)
-      if (node(id)?.type === 'link') updateNode(id, { file: path })
+      if (node(id)?.type === "link") updateNode(id, { file: path })
     } catch (e) {
-      toast.error('Не удалось добавить картинку', { description: errorText(e) })
+      toast.error("Не удалось добавить картинку", { description: errorText(e) })
     }
   }
 
   const nodeAt = (all: BoardNode[], p: Pt, except?: string) => {
     const nodes = [...all].reverse().filter((n) => n.id !== except)
     return (
-      nodes.find((n) => n.type !== 'group' && contains(rect(n), p, 6)) ??
+      nodes.find((n) => n.type !== "group" && contains(rect(n), p, 6)) ??
       nodes.find((n) => {
-        if (n.type !== 'group' || !contains(rect(n), p)) return false
+        if (n.type !== "group" || !contains(rect(n), p)) return false
         const x = p.x - n.x - n.width / 2
         const y = p.y - n.y - n.height / 2
         const d = Math.hypot(x, y)
@@ -457,15 +457,15 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const startPan = (e: ReactPointerEvent) => {
     const v = viewRef.current
-    setDrag({ kind: 'pan', sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y })
+    setDrag({ kind: "pan", sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y })
   }
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    if (linkDialog || target.closest('[data-editor]')) return
+    if (linkDialog || target.closest("[data-editor]")) return
     root.current?.focus({ preventScroll: true })
     root.current?.setPointerCapture(e.pointerId)
-    if (e.pointerType === 'touch') {
+    if (e.pointerType === "touch") {
       touches.current.set(e.pointerId, local(e))
       if (touches.current.size === 2) {
         const [a, b] = [...touches.current.values()]
@@ -474,14 +474,14 @@ export function BoardCanvas({ board }: { board: Board }) {
         return
       }
     }
-    const nodeEl = target.closest<HTMLElement>('[data-node-id]')
-    if (nodeEl?.dataset.nodeId !== linkClicks.current?.id || !target.closest('[data-link-surface]')) linkClicks.current = null
-    const edgeEl = target.closest<Element>('[data-edge-id]')
+    const nodeEl = target.closest<HTMLElement>("[data-node-id]")
+    if (nodeEl?.dataset.nodeId !== linkClicks.current?.id || !target.closest("[data-link-surface]")) linkClicks.current = null
+    const edgeEl = target.closest<Element>("[data-edge-id]")
     const onEmpty = !nodeEl && !edgeEl
     if (
       e.button === 1 ||
-      (e.button === 0 && (tool === 'hand' || spaceHeld)) ||
-      (e.pointerType === 'touch' && onEmpty && tool === 'select')
+      (e.button === 0 && (tool === "hand" || spaceHeld)) ||
+      (e.pointerType === "touch" && onEmpty && tool === "select")
     ) {
       e.preventDefault()
       return startPan(e)
@@ -494,12 +494,12 @@ export function BoardCanvas({ board }: { board: Board }) {
       const id = nodeEl.dataset.nodeId!
       const n = node(id)
       if (!n) return
-      const handle = target.closest<HTMLElement>('[data-handle]')?.dataset.handle as Side | undefined
-      if (handle) return setDrag({ kind: 'connect', from: id, side: handle, x: p.x, y: p.y })
-      if (target.closest('[data-resize]')) {
+      const handle = target.closest<HTMLElement>("[data-handle]")?.dataset.handle as Side | undefined
+      if (handle) return setDrag({ kind: "connect", from: id, side: handle, x: p.x, y: p.y })
+      if (target.closest("[data-resize]")) {
         past.current = [...past.current.slice(-99), dataRef.current]
         future.current = []
-        return setDrag({ kind: 'resize', id, sx: p.x, sy: p.y, w: n.width, h: n.height })
+        return setDrag({ kind: "resize", id, sx: p.x, sy: p.y, w: n.width, h: n.height })
       }
       const next = e.shiftKey ? (sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]) : sel.includes(id) ? sel : [id]
       setSel(next)
@@ -510,27 +510,27 @@ export function BoardCanvas({ board }: { board: Board }) {
         const s = node(sid)
         if (!s) continue
         starts.set(sid, { x: s.x, y: s.y })
-        if (s.type === 'group')
+        if (s.type === "group")
           for (const c of dataRef.current.nodes) if (c.id !== sid && insideGroup(bounds(s), bounds(c))) starts.set(c.id, { x: c.x, y: c.y })
       }
-      return setDrag({ kind: 'move', id, sx: p.x, sy: p.y, starts, moved: false, shift: e.shiftKey })
+      return setDrag({ kind: "move", id, sx: p.x, sy: p.y, starts, moved: false, shift: e.shiftKey })
     }
     if (edgeEl) {
-      setSelEdge(edgeEl.getAttribute('data-edge-id'))
+      setSelEdge(edgeEl.getAttribute("data-edge-id"))
       setSel([])
       return
     }
     setEditing(null)
-    if (tool === 'sticky' || tool === 'text' || tool === 'frame') return setDrag({ kind: 'draw', tool, x0: p.x, y0: p.y, x1: p.x, y1: p.y })
+    if (tool === "sticky" || tool === "text" || tool === "frame") return setDrag({ kind: "draw", tool, x0: p.x, y0: p.y, x1: p.x, y1: p.y })
     setSelEdge(null)
     setSel(e.shiftKey ? sel : [])
-    setDrag({ kind: 'marquee', x0: p.x, y0: p.y, x1: p.x, y1: p.y, base: e.shiftKey ? sel : [] })
+    setDrag({ kind: "marquee", x0: p.x, y0: p.y, x1: p.x, y1: p.y, base: e.shiftKey ? sel : [] })
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const p = world(e)
     pointer.current = p
-    if (e.pointerType === 'touch' && touches.current.has(e.pointerId)) {
+    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
       touches.current.set(e.pointerId, local(e))
       const pz = pinch.current
       if (pz && touches.current.size === 2) {
@@ -545,20 +545,20 @@ export function BoardCanvas({ board }: { board: Board }) {
     const d = dragRef.current
     if (!d) return
     const m = dataRef.current
-    if (d.kind === 'pan') setView({ ...viewRef.current, x: d.vx + e.clientX - d.sx, y: d.vy + e.clientY - d.sy })
-    else if (d.kind === 'marquee') {
+    if (d.kind === "pan") setView({ ...viewRef.current, x: d.vx + e.clientX - d.sx, y: d.vy + e.clientY - d.sy })
+    else if (d.kind === "marquee") {
       setDrag({ ...d, x1: p.x, y1: p.y })
       const r = rectOf(d.x0, d.y0, p.x, p.y)
       const box = { x: r.x, y: r.y, width: r.w, height: r.h }
       const hit = m.nodes
         .filter((n) =>
-          n.type === 'group'
+          n.type === "group"
             ? insideGroup(box, bounds(n))
             : n.x < r.x + r.w && n.x + n.width > r.x && n.y < r.y + r.h && n.y + n.height > r.y,
         )
         .map((n) => n.id)
       setSel([...new Set([...d.base, ...hit])])
-    } else if (d.kind === 'move') {
+    } else if (d.kind === "move") {
       const dx = p.x - d.sx
       const dy = p.y - d.sy
       if (!d.moved) {
@@ -574,11 +574,11 @@ export function BoardCanvas({ board }: { board: Board }) {
         },
         false,
       )
-    } else if (d.kind === 'resize') {
+    } else if (d.kind === "resize") {
       const width = Math.round(Math.max(MIN_NODE_W, d.w + p.x - d.sx))
       const height = Math.round(Math.max(MIN_NODE_H, d.h + p.y - d.sy))
       commit({ ...m, nodes: m.nodes.map((n) => (n.id === d.id ? { ...n, width, height } : n)) }, false)
-    } else if (d.kind === 'connect') setDrag({ ...d, x: p.x, y: p.y })
+    } else if (d.kind === "connect") setDrag({ ...d, x: p.x, y: p.y })
     else setDrag({ ...d, x1: p.x, y1: p.y })
   }
 
@@ -588,17 +588,17 @@ export function BoardCanvas({ board }: { board: Board }) {
     const d = dragRef.current
     setDrag(null)
     const p = world(e)
-    const click = d?.kind === 'move' && !d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) * viewRef.current.zoom < 3
-    const hit = click && document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-link-surface]')?.closest('[data-node-id]')
-    if (click && hit && hit.getAttribute('data-node-id') === d.id) {
+    const click = d?.kind === "move" && !d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) * viewRef.current.zoom < 3
+    const hit = click && document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-link-surface]")?.closest("[data-node-id]")
+    if (click && hit && hit.getAttribute("data-node-id") === d.id) {
       const prev = linkClicks.current
       linkClicks.current = { id: d.id, count: prev?.id === d.id ? prev.count + 1 : 1 }
     } else linkClicks.current = null
     if (!d) return
     const m = dataRef.current
 
-    if (d.kind === 'move' && !d.moved && !d.shift && sel.length > 1) setSel([d.id])
-    if (d.kind === 'connect') {
+    if (d.kind === "move" && !d.moved && !d.shift && sel.length > 1) setSel([d.id])
+    if (d.kind === "connect") {
       const target = nodeAt(m.nodes, p, d.from)
       if (target) {
         if (m.edges.some((x) => (x.fromNode === d.from && x.toNode === target.id) || (x.toNode === d.from && x.fromNode === target.id)))
@@ -611,13 +611,13 @@ export function BoardCanvas({ board }: { board: Board }) {
       const start = nodeAnchor(from, d.side)
       if (Math.hypot(p.x - start.x, p.y - start.y) * viewRef.current.zoom < 24) return
 
-      const like = from.type === 'text' ? { width: from.width, height: Math.min(from.height, 200), color: from.color } : {}
+      const like = from.type === "text" ? { width: from.width, height: Math.min(from.height, 200), color: from.color } : {}
       const n: BoardNode = { ...NEW.text, ...like, id: boardItemId(), x: 0, y: 0 }
       n.x = Math.round(p.x - n.width / 2)
       n.y = Math.round(p.y - n.height / 2)
       addNodes([n], [{ id: boardItemId(), fromNode: d.from, toNode: n.id }])
-      setEditing({ kind: 'node', id: n.id, fresh: true })
-    } else if (d.kind === 'draw') {
+      setEditing({ kind: "node", id: n.id, fresh: true })
+    } else if (d.kind === "draw") {
       const r = rectOf(d.x0, d.y0, d.x1, d.y1)
       const big = r.w * viewRef.current.zoom > 12 && r.h * viewRef.current.zoom > 12
       create(
@@ -630,29 +630,29 @@ export function BoardCanvas({ board }: { board: Board }) {
 
   const onDoubleClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = (document.elementFromPoint(e.clientX, e.clientY) ?? e.target) as HTMLElement
-    if (target.closest('[data-editor]')) return
-    const nodeEl = target.closest<HTMLElement>('[data-node-id]')
-    const edgeEl = target.closest<Element>('[data-edge-id]')
+    if (target.closest("[data-editor]")) return
+    const nodeEl = target.closest<HTMLElement>("[data-node-id]")
+    const edgeEl = target.closest<Element>("[data-edge-id]")
     if (nodeEl) {
       const n = node(nodeEl.dataset.nodeId!)
-      if (n?.type === 'link') {
+      if (n?.type === "link") {
         const clicks = linkClicks.current
         linkClicks.current = null
-        if (target.closest('[data-link-surface]') && clicks?.id === n.id && clicks.count >= 2) {
-          const href = boardLinkUrl(n.url ?? '')
+        if (target.closest("[data-link-surface]") && clicks?.id === n.id && clicks.count >= 2) {
+          const href = boardLinkUrl(n.url ?? "")
           if (href && isTauri()) {
-            void invoke('open_web_link', { url: href }).catch((e: unknown) => toast.error(errorText(e)))
+            void invoke("open_web_link", { url: href }).catch((e: unknown) => toast.error(errorText(e)))
           } else if (href) {
-            const link = document.createElement('a')
+            const link = document.createElement("a")
             link.href = href
-            link.target = '_blank'
-            link.rel = 'noopener noreferrer'
+            link.target = "_blank"
+            link.rel = "noopener noreferrer"
             link.click()
           }
         }
-      } else if (n && n.type !== 'file') setEditing({ kind: 'node', id: n.id })
-    } else if (edgeEl) setEditing({ kind: 'edge', id: edgeEl.getAttribute('data-edge-id')! })
-    else if (tool === 'select') create('sticky', world(e))
+      } else if (n && n.type !== "file") setEditing({ kind: "node", id: n.id })
+    } else if (edgeEl) setEditing({ kind: "edge", id: edgeEl.getAttribute("data-edge-id")! })
+    else if (tool === "select") create("sticky", world(e))
   }
 
   const finishEdit = (value: string, height?: number) => {
@@ -661,7 +661,7 @@ export function BoardCanvas({ board }: { board: Board }) {
     root.current?.focus({ preventScroll: true })
     if (!ed) return
     const m = dataRef.current
-    if (ed.kind === 'edge') {
+    if (ed.kind === "edge") {
       const label = value.trim() || undefined
       if (m.edges.find((x) => x.id === ed.id)?.label !== label)
         commit({ ...m, edges: m.edges.map((x) => (x.id === ed.id ? { ...x, label } : x)) })
@@ -669,8 +669,8 @@ export function BoardCanvas({ board }: { board: Board }) {
     }
     const n = m.nodes.find((x) => x.id === ed.id)
     if (!n) return
-    if (n.type === 'text') {
-      const text = value.replace(/\s+$/, '')
+    if (n.type === "text") {
+      const text = value.replace(/\s+$/, "")
       if (!text.trim() && ed.fresh) {
         past.current.pop()
         commit(
@@ -683,66 +683,66 @@ export function BoardCanvas({ board }: { board: Board }) {
       const h = Math.max(n.height, Math.ceil(height ?? 0))
       if (text !== n.text || h !== n.height)
         commit({ ...m, nodes: m.nodes.map((x) => (x.id === n.id ? { ...x, text, height: h } : x)) }, !ed.fresh)
-    } else if (n.type === 'group') {
+    } else if (n.type === "group") {
       const v = value.trim() || undefined
       if (n.label !== v) updateNode(n.id, { label: v })
     }
   }
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (editing || linkDialog || (e.target as HTMLElement).closest('[data-editor]')) return
+    if (editing || linkDialog || (e.target as HTMLElement).closest("[data-editor]")) return
     const ctrl = e.ctrlKey || e.metaKey
     const stop = () => {
       e.preventDefault()
       e.stopPropagation()
     }
-    if (e.code === 'Space') {
+    if (e.code === "Space") {
       stop()
       if (!e.repeat) setSpaceHeld(true)
-    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    } else if (e.key === "Delete" || e.key === "Backspace") {
       stop()
       removeSelection()
-    } else if (ctrl && e.code === 'KeyZ') {
+    } else if (ctrl && e.code === "KeyZ") {
       stop()
       if (e.shiftKey) redo()
       else undo()
-    } else if (ctrl && e.code === 'KeyY') {
+    } else if (ctrl && e.code === "KeyY") {
       stop()
       redo()
-    } else if (ctrl && e.code === 'KeyD') {
+    } else if (ctrl && e.code === "KeyD") {
       stop()
       duplicate()
-    } else if (ctrl && e.code === 'KeyA') {
+    } else if (ctrl && e.code === "KeyA") {
       stop()
       setSel(dataRef.current.nodes.map((n) => n.id))
       setSelEdge(null)
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       stop()
       setSel([])
       setSelEdge(null)
-      setTool('select')
-    } else if (e.key === 'Enter' && (sel.length === 1 || selEdge)) {
+      setTool("select")
+    } else if (e.key === "Enter" && (sel.length === 1 || selEdge)) {
       stop()
       const n = sel.length === 1 ? node(sel[0]) : undefined
-      if (selEdge) setEditing({ kind: 'edge', id: selEdge })
-      else if (n?.type === 'link') setLinkDialog({ id: n.id })
-      else if (n && n.type !== 'file') setEditing({ kind: 'node', id: n.id })
-    } else if (e.shiftKey && e.code === 'Digit1') {
+      if (selEdge) setEditing({ kind: "edge", id: selEdge })
+      else if (n?.type === "link") setLinkDialog({ id: n.id })
+      else if (n && n.type !== "file") setEditing({ kind: "node", id: n.id })
+    } else if (e.shiftKey && e.code === "Digit1") {
       stop()
       fit()
-    } else if (e.shiftKey && e.code === 'Digit0') {
+    } else if (e.shiftKey && e.code === "Digit0") {
       stop()
-      zoomBy('reset')
-    } else if (sel.length && e.key.startsWith('Arrow')) {
+      zoomBy("reset")
+    } else if (sel.length && e.key.startsWith("Arrow")) {
       stop()
       const step = e.shiftKey ? 20 : 4
-      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
-      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
+      const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0
+      const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0
       const ids = new Set(sel)
       const m = dataRef.current
       commit({ ...m, nodes: m.nodes.map((n) => (ids.has(n.id) ? { ...n, x: n.x + dx, y: n.y + dy } : n)) })
     } else if (!ctrl && !e.altKey) {
-      const t = ({ KeyV: 'select', KeyH: 'hand', KeyS: 'sticky', KeyT: 'text', KeyF: 'frame' } as const)[e.code as 'KeyV']
+      const t = ({ KeyV: "select", KeyH: "hand", KeyS: "sticky", KeyT: "text", KeyF: "frame" } as const)[e.code as "KeyV"]
       if (t) {
         stop()
         setTool(t)
@@ -751,13 +751,13 @@ export function BoardCanvas({ board }: { board: Board }) {
   }
 
   useEffect(() => {
-    const active = () => !!root.current?.contains(document.activeElement) && !document.activeElement?.closest('[data-editor]')
+    const active = () => !!root.current?.contains(document.activeElement) && !document.activeElement?.closest("[data-editor]")
     const onCopy = (e: ClipboardEvent) => {
       if (!active() || !sel.length) return
       const { nodes, edges } = selectedItems()
       e.preventDefault()
-      e.clipboardData?.setData('text/plain', JSON.stringify({ [CLIP_MARK]: 1, nodes, edges }))
-      if (e.type === 'cut') removeSelection()
+      e.clipboardData?.setData("text/plain", JSON.stringify({ [CLIP_MARK]: 1, nodes, edges }))
+      if (e.type === "cut") removeSelection()
     }
     const onPaste = (e: ClipboardEvent) => {
       if (!active() || !e.clipboardData) return
@@ -766,16 +766,16 @@ export function BoardCanvas({ board }: { board: Board }) {
       const files = [...e.clipboardData.files]
       if (files.length) {
         const target = sel.length === 1 ? node(sel[0]) : undefined
-        return target?.type === 'link' ? void setLinkImage(target.id, files[0]) : void addImages(files, at)
+        return target?.type === "link" ? void setLinkImage(target.id, files[0]) : void addImages(files, at)
       }
-      const text = e.clipboardData.getData('text/plain')
+      const text = e.clipboardData.getData("text/plain")
       if (!text.trim()) return
       try {
         const clip = JSON.parse(text) as { [CLIP_MARK]?: number; nodes?: BoardNode[]; edges?: BoardEdge[] }
         if (clip[CLIP_MARK] && Array.isArray(clip.nodes)) {
           const b = boardBounds(clip.nodes)
           if (!b) return
-          const parsed = clip.nodes.filter((n) => typeof n.id === 'string' && Number.isFinite(n.x) && Number.isFinite(n.y))
+          const parsed = clip.nodes.filter((n) => typeof n.id === "string" && Number.isFinite(n.x) && Number.isFinite(n.y))
           const copy = cloneItems(
             parsed,
             Array.isArray(clip.edges) ? clip.edges : [],
@@ -789,7 +789,7 @@ export function BoardCanvas({ board }: { board: Board }) {
       addNodes([
         {
           id: boardItemId(),
-          type: 'text',
+          type: "text",
           text: text.trim(),
           ...size,
           x: Math.round(at.x - size.width / 2),
@@ -797,54 +797,54 @@ export function BoardCanvas({ board }: { board: Board }) {
         },
       ])
     }
-    window.addEventListener('copy', onCopy)
-    window.addEventListener('cut', onCopy)
-    window.addEventListener('paste', onPaste)
+    window.addEventListener("copy", onCopy)
+    window.addEventListener("cut", onCopy)
+    window.addEventListener("paste", onPaste)
     return () => {
-      window.removeEventListener('copy', onCopy)
-      window.removeEventListener('cut', onCopy)
-      window.removeEventListener('paste', onPaste)
+      window.removeEventListener("copy", onCopy)
+      window.removeEventListener("cut", onCopy)
+      window.removeEventListener("paste", onPaste)
     }
   })
 
   const onDrop = (e: ReactDragEvent<HTMLDivElement>) => {
     const files = [...e.dataTransfer.files]
-    const link = (e.target as Element).closest('[data-link-surface]')?.closest<HTMLElement>('[data-node-id]')
+    const link = (e.target as Element).closest("[data-link-surface]")?.closest<HTMLElement>("[data-node-id]")
     if (link?.dataset.nodeId && files[0]) {
       e.preventDefault()
       e.stopPropagation()
       return void setLinkImage(link.dataset.nodeId, files[0])
     }
-    if (!files.some((f) => f.type.startsWith('image/'))) return
+    if (!files.some((f) => f.type.startsWith("image/"))) return
     e.preventDefault()
     e.stopPropagation()
     void addImages(files, world(e))
   }
 
   const ordered = useMemo(
-    () => [...data.nodes.filter((n) => n.type === 'group'), ...data.nodes.filter((n) => n.type !== 'group')],
+    () => [...data.nodes.filter((n) => n.type === "group"), ...data.nodes.filter((n) => n.type !== "group")],
     [data.nodes],
   )
   const byId = useMemo(() => new Map(data.nodes.map((n) => [n.id, n])), [data.nodes])
-  const markers = useMemo(() => [...new Set([...data.edges.map((e) => e.color ?? ''), '', 'sel'])], [data.edges])
-  const marker = (key: string) => `url(#b${boardId}-${key || 'none'})`
+  const markers = useMemo(() => [...new Set([...data.edges.map((e) => e.color ?? ""), "", "sel"])], [data.edges])
+  const marker = (key: string) => `url(#b${boardId}-${key || "none"})`
 
   const grid = 24 * view.zoom * (view.zoom < 0.4 ? 4 : 1)
   const d = drag
   const single = sel.length === 1 ? sel[0] : null
   const selectedNode = single ? byId.get(single) : undefined
   const setFrameShape = (shape: BoardFrameShape) => {
-    if (selectedNode?.type !== 'group' || (selectedNode.shape ?? 'rectangle') === shape) return
+    if (selectedNode?.type !== "group" || (selectedNode.shape ?? "rectangle") === shape) return
     const current = dataRef.current
     const frame = bounds(selectedNode)
     const content = boardBounds(current.nodes.filter((n) => n.id !== selectedNode.id && insideGroup(frame, bounds(n))))
     const fitted = fitFrame(frame, shape, content)
     commit({ ...current, nodes: current.nodes.map((n) => (n.id === selectedNode.id ? { ...n, ...fitted, shape } : n)) })
   }
-  const editedEdge = editing?.kind === 'edge' ? data.edges.find((x) => x.id === editing.id) : undefined
+  const editedEdge = editing?.kind === "edge" ? data.edges.find((x) => x.id === editing.id) : undefined
   const selectedEdge = selEdge ? data.edges.find((x) => x.id === selEdge) : undefined
   const selColors = new Set(sel.map((id) => byId.get(id)?.color))
-  const panning = tool === 'hand' || spaceHeld || d?.kind === 'pan'
+  const panning = tool === "hand" || spaceHeld || d?.kind === "pan"
 
   return (
     <div
@@ -864,37 +864,37 @@ export function BoardCanvas({ board }: { board: Board }) {
       }}
       onDoubleClick={onDoubleClick}
       onKeyDown={onKeyDown}
-      onKeyUp={(e) => e.code === 'Space' && setSpaceHeld(false)}
+      onKeyUp={(e) => e.code === "Space" && setSpaceHeld(false)}
       onBlur={() => setSpaceHeld(false)}
-      onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
+      onDragOver={(e) => e.dataTransfer.types.includes("Files") && e.preventDefault()}
       onDrop={onDrop}
       style={{
-        backgroundImage: 'radial-gradient(circle, var(--board-dot) 1px, transparent 1.3px)',
+        backgroundImage: "radial-gradient(circle, var(--board-dot) 1px, transparent 1.3px)",
         backgroundSize: `${grid}px ${grid}px`,
         backgroundPosition: `${view.x}px ${view.y}px`,
       }}
       className={cn(
-        'relative size-full touch-none overflow-hidden outline-none select-none',
-        panning ? (d?.kind === 'pan' ? 'cursor-grabbing' : 'cursor-grab') : tool !== 'select' && 'cursor-crosshair',
+        "relative size-full touch-none overflow-hidden outline-none select-none",
+        panning ? (d?.kind === "pan" ? "cursor-grabbing" : "cursor-grab") : tool !== "select" && "cursor-crosshair",
       )}
     >
       <div
         className="absolute top-0 left-0 origin-top-left"
-        style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, '--inv': 1 / view.zoom } as CSSProperties}
+        style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, "--inv": 1 / view.zoom } as CSSProperties}
       >
         {ordered
-          .filter((n) => n.type === 'group')
+          .filter((n) => n.type === "group")
           .map((n) => (
             <NodeView
               key={n.id}
               node={n}
-              morph={!reduceMotion && d?.kind !== 'resize'}
+              morph={!reduceMotion && d?.kind !== "resize"}
               enter={!reduceMotion && !!created?.has(n.id)}
-              lifted={!reduceMotion && d?.kind === 'move' && d.starts.has(n.id)}
+              lifted={!reduceMotion && d?.kind === "move" && d.starts.has(n.id)}
               selected={sel.includes(n.id)}
               single={single === n.id}
-              tools={tool === 'select'}
-              editing={editing?.kind === 'node' && editing.id === n.id ? editing : null}
+              tools={tool === "select"}
+              editing={editing?.kind === "node" && editing.id === n.id ? editing : null}
               onFinish={editing?.id === n.id ? finishEdit : noop}
             />
           ))}
@@ -904,7 +904,7 @@ export function BoardCanvas({ board }: { board: Board }) {
             {markers.map((key) => (
               <marker
                 key={key}
-                id={`b${boardId}-${key || 'none'}`}
+                id={`b${boardId}-${key || "none"}`}
                 viewBox="0 0 10 10"
                 refX="9"
                 refY="5"
@@ -912,7 +912,7 @@ export function BoardCanvas({ board }: { board: Board }) {
                 markerHeight="7"
                 orient="auto-start-reverse"
               >
-                <path d="M0 0.5 L10 5 L0 9.5 z" fill={key === 'sel' ? 'var(--highlight)' : lineColor(key)} />
+                <path d="M0 0.5 L10 5 L0 9.5 z" fill={key === "sel" ? "var(--highlight)" : lineColor(key)} />
               </marker>
             ))}
           </defs>
@@ -922,7 +922,7 @@ export function BoardCanvas({ board }: { board: Board }) {
             if (!a || !b) return null
             const g = edgeGeometry(e, a, b)
             const picked = selEdge === e.id
-            const key = picked ? 'sel' : (e.color ?? '')
+            const key = picked ? "sel" : (e.color ?? "")
             return (
               <g key={e.id} data-edge-id={e.id}>
                 <path
@@ -930,43 +930,43 @@ export function BoardCanvas({ board }: { board: Board }) {
                   fill="none"
                   stroke="transparent"
                   strokeWidth={16}
-                  style={{ pointerEvents: 'stroke' }}
+                  style={{ pointerEvents: "stroke" }}
                   className="cursor-pointer"
                 />
                 <path
                   d={g.d}
                   fill="none"
-                  stroke={picked ? 'var(--highlight)' : lineColor(e.color)}
+                  stroke={picked ? "var(--highlight)" : lineColor(e.color)}
                   strokeWidth={picked ? 2.5 : 2}
-                  markerEnd={e.toEnd === 'none' ? undefined : marker(key)}
-                  markerStart={e.fromEnd === 'arrow' ? marker(key) : undefined}
+                  markerEnd={e.toEnd === "none" ? undefined : marker(key)}
+                  markerStart={e.fromEnd === "arrow" ? marker(key) : undefined}
                 />
               </g>
             )
           })}
-          {d?.kind === 'connect' &&
+          {d?.kind === "connect" &&
             (() => {
               const from = byId.get(d.from)
               if (!from) return null
               const target = nodeAt(data.nodes, d, d.from)
               const side = target ? facingSides(rect(from), rect(target))[1] : null
               const g = curve(nodeAnchor(from, d.side), d.side, target && side ? nodeAnchor(target, side) : d, side)
-              return <path d={g.d} fill="none" stroke="var(--highlight)" strokeWidth={2} strokeDasharray="6 5" markerEnd={marker('sel')} />
+              return <path d={g.d} fill="none" stroke="var(--highlight)" strokeWidth={2} strokeDasharray="6 5" markerEnd={marker("sel")} />
             })()}
         </svg>
 
         {ordered
-          .filter((n) => n.type !== 'group')
+          .filter((n) => n.type !== "group")
           .map((n) => (
             <NodeView
               key={n.id}
               node={n}
               enter={!reduceMotion && !!created?.has(n.id)}
-              lifted={!reduceMotion && d?.kind === 'move' && d.starts.has(n.id)}
+              lifted={!reduceMotion && d?.kind === "move" && d.starts.has(n.id)}
               selected={sel.includes(n.id)}
               single={single === n.id}
-              tools={tool === 'select'}
-              editing={editing?.kind === 'node' && editing.id === n.id ? editing : null}
+              tools={tool === "select"}
+              editing={editing?.kind === "node" && editing.id === n.id ? editing : null}
               onFinish={editing?.id === n.id ? finishEdit : noop}
             />
           ))}
@@ -985,7 +985,7 @@ export function BoardCanvas({ board }: { board: Board }) {
                 y={mid.y}
                 dy="0.35em"
                 textAnchor="middle"
-                style={{ pointerEvents: 'all', paintOrder: 'stroke', stroke: 'var(--background)', strokeWidth: 5, strokeLinejoin: 'round' }}
+                style={{ pointerEvents: "all", paintOrder: "stroke", stroke: "var(--background)", strokeWidth: 5, strokeLinejoin: "round" }}
                 className="cursor-pointer fill-foreground text-[14px]"
               >
                 {e.label}
@@ -1000,25 +1000,25 @@ export function BoardCanvas({ board }: { board: Board }) {
             const b = byId.get(editedEdge.toNode)
             if (!a || !b) return null
             const { mid } = edgeGeometry(editedEdge, a, b)
-            return <EdgeLabelEditor key={editedEdge.id} at={mid} value={editedEdge.label ?? ''} onFinish={finishEdit} />
+            return <EdgeLabelEditor key={editedEdge.id} at={mid} value={editedEdge.label ?? ""} onFinish={finishEdit} />
           })()}
 
-        {(d?.kind === 'marquee' || d?.kind === 'draw') &&
+        {(d?.kind === "marquee" || d?.kind === "draw") &&
           (() => {
             const r = rectOf(d.x0, d.y0, d.x1, d.y1)
             return (
               <div
-                style={{ left: r.x, top: r.y, width: r.w, height: r.h, borderWidth: 'calc(1.5px * var(--inv))' }}
+                style={{ left: r.x, top: r.y, width: r.w, height: r.h, borderWidth: "calc(1.5px * var(--inv))" }}
                 className={cn(
-                  'pointer-events-none absolute rounded-[calc(6px*var(--inv))] border-highlight',
-                  d.kind === 'marquee' ? 'border-solid bg-highlight/8' : 'border-dashed bg-highlight/5',
+                  "pointer-events-none absolute rounded-[calc(6px*var(--inv))] border-highlight",
+                  d.kind === "marquee" ? "border-solid bg-highlight/8" : "border-dashed bg-highlight/5",
                 )}
               />
             )
           })()}
         {view.zoom <= 0.35 &&
           ordered
-            .filter((n) => n.type === 'group')
+            .filter((n) => n.type === "group")
             .map((n) => (
               <svg
                 key={n.id}
@@ -1047,9 +1047,9 @@ export function BoardCanvas({ board }: { board: Board }) {
           onArrows={selectedEdge ? cycleArrows : undefined}
           onFront={selectedEdge ? undefined : toFront}
           onDuplicate={selectedEdge ? undefined : duplicate}
-          frameShape={selectedNode?.type === 'group' ? (selectedNode.shape ?? 'rectangle') : undefined}
+          frameShape={selectedNode?.type === "group" ? (selectedNode.shape ?? "rectangle") : undefined}
           onFrameShape={setFrameShape}
-          onEditLink={selectedNode?.type === 'link' ? () => setLinkDialog({ id: selectedNode.id }) : undefined}
+          onEditLink={selectedNode?.type === "link" ? () => setLinkDialog({ id: selectedNode.id }) : undefined}
           onDelete={removeSelection}
         />
       )}
@@ -1061,7 +1061,7 @@ export function BoardCanvas({ board }: { board: Board }) {
           root.current?.focus({ preventScroll: true })
         }}
         onImage={() => {
-          imageLink.current = selectedNode?.type === 'link' ? selectedNode.id : undefined
+          imageLink.current = selectedNode?.type === "link" ? selectedNode.id : undefined
           if (!fileInput.current) return
           fileInput.current.multiple = !imageLink.current
           fileInput.current.click()
@@ -1074,7 +1074,7 @@ export function BoardCanvas({ board }: { board: Board }) {
         onRedo={redo}
       />
       {linkDialog && (
-        <BoardLinkDialog node={'id' in linkDialog ? byId.get(linkDialog.id) : undefined} onClose={closeLinkDialog} onSave={saveLink} />
+        <BoardLinkDialog node={"id" in linkDialog ? byId.get(linkDialog.id) : undefined} onClose={closeLinkDialog} onSave={saveLink} />
       )}
       <input
         ref={fileInput}
@@ -1084,7 +1084,7 @@ export function BoardCanvas({ board }: { board: Board }) {
         hidden
         onChange={(e) => {
           const files = [...(e.target.files ?? [])]
-          e.target.value = ''
+          e.target.value = ""
           const id = imageLink.current
           imageLink.current = undefined
           if (id && files[0]) void setLinkImage(id, files[0])
@@ -1096,16 +1096,16 @@ export function BoardCanvas({ board }: { board: Board }) {
 }
 
 const noop = () => {}
-const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
+const SIDES: Side[] = ["top", "right", "bottom", "left"]
 const HANDLE_POS: Record<Side, string> = {
-  top: 'left-1/2 top-0',
-  right: 'left-full top-1/2',
-  bottom: 'left-1/2 top-full',
-  left: 'left-0 top-1/2',
+  top: "left-1/2 top-0",
+  right: "left-full top-1/2",
+  bottom: "left-1/2 top-full",
+  left: "left-0 top-1/2",
 }
-const SELECTED: CSSProperties = { outline: 'calc(2px * var(--inv)) solid var(--highlight)', outlineOffset: 'calc(2px * var(--inv))' }
+const SELECTED: CSSProperties = { outline: "calc(2px * var(--inv)) solid var(--highlight)", outlineOffset: "calc(2px * var(--inv))" }
 const POP = { ...spring, damping: 21 }
-const MORPH = { duration: 0.24, ease: 'easeInOut' } as const
+const MORPH = { duration: 0.24, ease: "easeInOut" } as const
 const INSTANT = { duration: 0 }
 
 function useVaultImage(path?: string) {
@@ -1145,27 +1145,27 @@ const NodeView = memo(function NodeView({
   editing: Editing
   onFinish: (value: string, height?: number) => void
 }) {
-  const group = n.type === 'group'
-  const circle = group && n.shape === 'circle'
+  const group = n.type === "group"
+  const circle = group && n.shape === "circle"
   const diameter = Math.min(n.width, n.height)
-  const link = n.type === 'link'
-  const sticky = n.type === 'text' && !!n.color
+  const link = n.type === "link"
+  const sticky = n.type === "text" && !!n.color
   const resize = resizeAnchor(n)
   return (
     <div
       data-node-id={n.id}
       style={{ left: n.x, top: n.y, width: n.width, height: n.height, ...(selected && !group ? SELECTED : {}) }}
-      className={cn('group/node absolute rounded-xl', (group || link) && 'pointer-events-none')}
+      className={cn("group/node absolute rounded-xl", (group || link) && "pointer-events-none")}
     >
       <motion.div
         initial={enter ? { scale: 0.88 } : false}
         animate={{ scale: lifted ? 1.018 : 1, y: lifted ? -2 : 0 }}
         transition={lifted ? spring : POP}
         className={cn(
-          'relative size-full',
+          "relative size-full",
           !group &&
             !link &&
-            cn('rounded-xl border shadow-card', !n.color && 'border-border bg-card', n.type === 'file' && 'overflow-hidden bg-muted'),
+            cn("rounded-xl border shadow-card", !n.color && "border-border bg-card", n.type === "file" && "overflow-hidden bg-muted"),
         )}
         style={group || link ? undefined : nodeStyle(n)}
       >
@@ -1174,44 +1174,44 @@ const NodeView = memo(function NodeView({
             <FrameSurface node={n} selected={selected} morph={morph} />
             <div
               className={cn(
-                'pointer-events-auto absolute max-w-full cursor-default',
-                'mb-[calc(6px*var(--inv))]',
-                circle ? 'left-1/2 -translate-x-1/2 text-center' : 'bottom-full left-0',
+                "pointer-events-auto absolute max-w-full cursor-default",
+                "mb-[calc(6px*var(--inv))]",
+                circle ? "left-1/2 -translate-x-1/2 text-center" : "bottom-full left-0",
               )}
               style={circle ? { bottom: (n.height + diameter) / 2, width: diameter } : undefined}
             >
               {editing ? (
-                <InlineEditor value={n.label ?? ''} onFinish={onFinish} className="text-[16px] font-semibold" />
+                <InlineEditor value={n.label ?? ""} onFinish={onFinish} className="text-[16px] font-semibold" />
               ) : (
                 <div
                   className="truncate rounded-md px-1 font-semibold text-muted-foreground"
-                  style={{ fontSize: circle ? 'calc(12px * max(1, var(--inv) * 0.65))' : 'calc(16px * max(1, var(--inv) * 0.6))' }}
+                  style={{ fontSize: circle ? "calc(12px * max(1, var(--inv) * 0.65))" : "calc(16px * max(1, var(--inv) * 0.6))" }}
                 >
-                  {n.label || 'Рамка'}
+                  {n.label || "Рамка"}
                 </div>
               )}
             </div>
           </>
-        ) : n.type === 'file' ? (
+        ) : n.type === "file" ? (
           <FileNode path={n.file} />
         ) : link ? (
           <LinkNode node={n} />
         ) : editing ? (
-          <TextEditor value={n.text ?? ''} centered={sticky} onFinish={onFinish} select={editing.fresh} />
+          <TextEditor value={n.text ?? ""} centered={sticky} onFinish={onFinish} select={editing.fresh} />
         ) : (
           <div
             className={cn(
-              'size-full overflow-hidden px-3.5 py-3 text-[15px] leading-[1.45] break-words',
-              sticky && 'flex flex-col justify-center text-center',
+              "size-full overflow-hidden px-3.5 py-3 text-[15px] leading-[1.45] break-words",
+              sticky && "flex flex-col justify-center text-center",
             )}
           >
-            <BoardText text={n.text ?? ''} />
+            <BoardText text={n.text ?? ""} />
           </div>
         )}
       </motion.div>
 
       {tools && !editing && (
-        <div className={cn('pointer-events-none absolute inset-0 opacity-0 group-hover/node:opacity-100', selected && 'opacity-100')}>
+        <div className={cn("pointer-events-none absolute inset-0 opacity-0 group-hover/node:opacity-100", selected && "opacity-100")}>
           {SIDES.map((side) => {
             const anchor = group ? nodeAnchor(n, side) : undefined
             return (
@@ -1224,7 +1224,7 @@ const NodeView = memo(function NodeView({
                 role="button"
                 aria-label="Протянуть стрелку"
                 className={cn(
-                  'pointer-events-auto absolute size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-[calc(2px*var(--inv))] border-background bg-highlight shadow-card',
+                  "pointer-events-auto absolute size-[calc(12px*var(--inv))] -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-[calc(2px*var(--inv))] border-background bg-highlight shadow-card",
                   !group && HANDLE_POS[side],
                 )}
               />
@@ -1253,7 +1253,7 @@ function FileNode({ path }: { path?: string }) {
   return (
     <div className="flex size-full items-center justify-center gap-2 p-3 text-[14px] text-muted-foreground">
       <FileText className="size-4 shrink-0" />
-      <span className="truncate">{path ? basename(path) : 'Файл'}</span>
+      <span className="truncate">{path ? basename(path) : "Файл"}</span>
     </div>
   )
 }
@@ -1268,16 +1268,16 @@ function FrameSurface({ node, selected, morph }: { node: BoardNode; selected: bo
         animate={{ d }}
         transition={morph ? MORPH : INSTANT}
         fill={paint.background}
-        stroke={selected ? 'var(--highlight)' : paint.borderColor}
+        stroke={selected ? "var(--highlight)" : paint.borderColor}
         strokeLinejoin="round"
-        style={{ strokeWidth: selected ? 'calc(2px * var(--inv))' : 2, pointerEvents: 'visiblePainted' }}
+        style={{ strokeWidth: selected ? "calc(2px * var(--inv))" : 2, pointerEvents: "visiblePainted" }}
       />
     </svg>
   )
 }
 
 function LinkNode({ node }: { node: BoardNode }) {
-  const label = node.label || node.url || 'Ссылка'
+  const label = node.label || node.url || "Ссылка"
   const image = useVaultImage(node.file)
   return (
     <div className="flex size-full flex-col items-center justify-center gap-1.5">
@@ -1285,7 +1285,7 @@ function LinkNode({ node }: { node: BoardNode }) {
         data-link-surface=""
         title={node.url}
         className="liquid liquid-lava pointer-events-auto flex aspect-square min-h-0 max-h-14 shrink items-center justify-center overflow-hidden rounded-full shadow-float"
-        style={{ height: '60%', color: node.color ? lineColor(node.color) : undefined }}
+        style={{ height: "60%", color: node.color ? lineColor(node.color) : undefined }}
       >
         {image ? (
           <img src={image} alt="" draggable={false} className="pointer-events-none size-full rounded-full object-cover" />
@@ -1305,8 +1305,8 @@ function LinkNode({ node }: { node: BoardNode }) {
 }
 
 function LinkFavicon({ url }: { url?: string }) {
-  const parsed = URL.parse(url ?? '')
-  const icon = parsed?.protocol === 'https:' ? new URL('/favicon.ico', parsed.origin).href : undefined
+  const parsed = URL.parse(url ?? "")
+  const icon = parsed?.protocol === "https:" ? new URL("/favicon.ico", parsed.origin).href : undefined
   const [failed, setFailed] = useState<string>()
   if (!icon || failed === icon) return <Link2 aria-hidden className="size-1/2" />
   return (
@@ -1356,14 +1356,14 @@ function TextEditor({
       onBlur={finish}
       onKeyDown={(e) => {
         e.stopPropagation()
-        if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+        if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
           e.preventDefault()
           finish()
         }
       }}
       className={cn(
-        'thin-scrollbar size-full resize-none bg-transparent px-3.5 py-3 text-[15px] leading-[1.45] outline-none select-text',
-        centered && 'text-center',
+        "thin-scrollbar size-full resize-none bg-transparent px-3.5 py-3 text-[15px] leading-[1.45] outline-none select-text",
+        centered && "text-center",
       )}
     />
   )
@@ -1386,12 +1386,12 @@ function InlineEditor({ value, className, onFinish }: { value: string; className
       onBlur={(e) => finish(e.currentTarget.value)}
       onKeyDown={(e) => {
         e.stopPropagation()
-        if (e.key === 'Enter' || e.key === 'Escape') {
+        if (e.key === "Enter" || e.key === "Escape") {
           e.preventDefault()
           finish(e.currentTarget.value)
         }
       }}
-      className={cn('w-64 rounded-md border border-highlight bg-background px-1.5 py-0.5 outline-none select-text', className)}
+      className={cn("w-64 rounded-md border border-highlight bg-background px-1.5 py-0.5 outline-none select-text", className)}
     />
   )
 }

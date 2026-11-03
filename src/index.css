@@ -1,17 +1,17 @@
-@import 'tailwindcss' source('../src');
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
-@import './styles/tokens.css';
+@import "tailwindcss" source("../src");
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "./styles/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter Variable', 'Segoe UI Variable', system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Segoe UI Variable", system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-serif: 'PT Serif', Georgia, serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-serif: "PT Serif", Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 
-  --font-brand: 'Unbounded Variable', var(--font-sans);
+  --font-brand: "Unbounded Variable", var(--font-sans);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -67,7 +67,7 @@
     @apply font-sans antialiased;
     caret-color: var(--highlight);
     accent-color: var(--highlight);
-    font-feature-settings: 'cv11', 'ss01';
+    font-feature-settings: "cv11", "ss01";
   }
   body {
     @apply text-foreground;
@@ -76,14 +76,14 @@
   html[data-desktop] {
     user-select: none;
   }
-  html[data-desktop] :where(input, textarea, [contenteditable='true'], [contenteditable='plaintext-only']) {
+  html[data-desktop] :where(input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]) {
     user-select: text;
   }
   ::selection {
     background: var(--selection);
   }
   button:not(:disabled),
-  [role='button']:not(:disabled) {
+  [role="button"]:not(:disabled) {
     cursor: pointer;
   }
 }
@@ -196,7 +196,7 @@
   }
 
   .liquid-lens::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -220,7 +220,7 @@
   }
 
   .liquid-lens::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -352,7 +352,7 @@
   }
 
   .glass::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
@@ -400,10 +400,10 @@
     max-width: 68ch;
     color: var(--foreground);
   }
-  .note-prose[data-font='golos'] {
-    font-family: 'Golos Text Variable', var(--font-sans);
+  .note-prose[data-font="golos"] {
+    font-family: "Golos Text Variable", var(--font-sans);
   }
-  .note-prose[data-font='serif'] {
+  .note-prose[data-font="serif"] {
     font-family: var(--font-serif);
     font-size: 18px;
     line-height: 1.65;
@@ -588,16 +588,16 @@
   .note-prose .tiptap td > p {
     margin: 0;
   }
-  .note-prose .tiptap th[align='center'],
-  .note-prose .tiptap td[align='center'] {
+  .note-prose .tiptap th[align="center"],
+  .note-prose .tiptap td[align="center"] {
     text-align: center;
   }
-  .note-prose .tiptap th[align='right'],
-  .note-prose .tiptap td[align='right'] {
+  .note-prose .tiptap th[align="right"],
+  .note-prose .tiptap td[align="right"] {
     text-align: right;
   }
   .note-prose .tiptap .selectedCell::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: var(--selection);
@@ -630,7 +630,7 @@
     position: relative;
   }
   .tiptap .is-collapsed::after {
-    content: '…';
+    content: "…";
     margin-left: 0.3em;
     color: var(--muted-foreground);
     font-weight: 400;
@@ -699,16 +699,16 @@
     border-radius: 6px;
   }
 
-  .tiptap [data-type='inline-math'] {
+  .tiptap [data-type="inline-math"] {
     cursor: pointer;
     border-radius: 4px;
     padding: 0 1px;
     transition: background-color var(--dur-fast) var(--ease-out);
   }
-  .tiptap [data-type='inline-math']:hover {
+  .tiptap [data-type="inline-math"]:hover {
     background: var(--accent);
   }
-  .tiptap [data-type='block-math'] {
+  .tiptap [data-type="block-math"] {
     margin: 1em 0;
     padding: 0.75em 1em;
     overflow-x: auto;
@@ -718,13 +718,13 @@
     box-shadow: var(--shadow-card);
     transition: box-shadow var(--dur-fast) var(--ease-out);
   }
-  .tiptap [data-type='block-math']:hover {
+  .tiptap [data-type="block-math"]:hover {
     box-shadow:
       var(--shadow-card),
       0 0 0 1px var(--highlight);
   }
-  .tiptap [data-type='block-math'][data-latex='']::after {
-    content: 'Формула — нажми, чтобы ввести';
+  .tiptap [data-type="block-math"][data-latex=""]::after {
+    content: "Формула — нажми, чтобы ввести";
     display: block;
     text-align: center;
     color: var(--muted-foreground);
@@ -737,29 +737,29 @@
     font-size: 0.9em;
   }
 
-  .tiptap ul[data-type='taskList'] {
+  .tiptap ul[data-type="taskList"] {
     list-style: none;
     padding-left: 0.1em;
   }
-  .tiptap ul[data-type='taskList'] li {
+  .tiptap ul[data-type="taskList"] li {
     display: flex;
     gap: 0.55em;
     align-items: flex-start;
   }
-  .tiptap ul[data-type='taskList'] li > label {
+  .tiptap ul[data-type="taskList"] li > label {
     margin-top: 0.3em;
     user-select: none;
   }
-  .tiptap ul[data-type='taskList'] li > div {
+  .tiptap ul[data-type="taskList"] li > div {
     flex: 1;
   }
-  .tiptap ul[data-type='taskList'] input[type='checkbox'] {
+  .tiptap ul[data-type="taskList"] input[type="checkbox"] {
     accent-color: var(--highlight);
     width: 1em;
     height: 1em;
     cursor: pointer;
   }
-  .tiptap ul[data-type='taskList'] li[data-checked='true'] > div {
+  .tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
     color: var(--muted-foreground);
     text-decoration: line-through;
   }
@@ -770,11 +770,11 @@
   .note-reading .tiptap {
     cursor: default;
   }
-  .note-reading .tiptap [data-type='inline-math'],
-  .note-reading .tiptap [data-type='block-math'] {
+  .note-reading .tiptap [data-type="inline-math"],
+  .note-reading .tiptap [data-type="block-math"] {
     cursor: default;
   }
-  .note-reading .tiptap [data-type='block-math'] {
+  .note-reading .tiptap [data-type="block-math"] {
     box-shadow: none;
     background: transparent;
     border-top: 1px solid var(--border);
@@ -796,58 +796,58 @@
     padding: 0.05em 0.15em;
     box-decoration-break: clone;
   }
-  .note-prose .tiptap [data-text-color='gray'] {
+  .note-prose .tiptap [data-text-color="gray"] {
     color: var(--tc-gray);
   }
-  .note-prose .tiptap [data-text-color='brown'] {
+  .note-prose .tiptap [data-text-color="brown"] {
     color: var(--tc-brown);
   }
-  .note-prose .tiptap [data-text-color='orange'] {
+  .note-prose .tiptap [data-text-color="orange"] {
     color: var(--tc-orange);
   }
-  .note-prose .tiptap [data-text-color='yellow'] {
+  .note-prose .tiptap [data-text-color="yellow"] {
     color: var(--tc-yellow);
   }
-  .note-prose .tiptap [data-text-color='green'] {
+  .note-prose .tiptap [data-text-color="green"] {
     color: var(--tc-green);
   }
-  .note-prose .tiptap [data-text-color='blue'] {
+  .note-prose .tiptap [data-text-color="blue"] {
     color: var(--tc-blue);
   }
-  .note-prose .tiptap [data-text-color='purple'] {
+  .note-prose .tiptap [data-text-color="purple"] {
     color: var(--tc-purple);
   }
-  .note-prose .tiptap [data-text-color='pink'] {
+  .note-prose .tiptap [data-text-color="pink"] {
     color: var(--tc-pink);
   }
-  .note-prose .tiptap [data-text-color='red'] {
+  .note-prose .tiptap [data-text-color="red"] {
     color: var(--tc-red);
   }
-  .note-prose .tiptap mark[data-color='gray'] {
+  .note-prose .tiptap mark[data-color="gray"] {
     background: var(--hl-gray);
   }
-  .note-prose .tiptap mark[data-color='brown'] {
+  .note-prose .tiptap mark[data-color="brown"] {
     background: var(--hl-brown);
   }
-  .note-prose .tiptap mark[data-color='orange'] {
+  .note-prose .tiptap mark[data-color="orange"] {
     background: var(--hl-orange);
   }
-  .note-prose .tiptap mark[data-color='yellow'] {
+  .note-prose .tiptap mark[data-color="yellow"] {
     background: var(--hl-yellow);
   }
-  .note-prose .tiptap mark[data-color='green'] {
+  .note-prose .tiptap mark[data-color="green"] {
     background: var(--hl-green);
   }
-  .note-prose .tiptap mark[data-color='blue'] {
+  .note-prose .tiptap mark[data-color="blue"] {
     background: var(--hl-blue);
   }
-  .note-prose .tiptap mark[data-color='purple'] {
+  .note-prose .tiptap mark[data-color="purple"] {
     background: var(--hl-purple);
   }
-  .note-prose .tiptap mark[data-color='pink'] {
+  .note-prose .tiptap mark[data-color="pink"] {
     background: var(--hl-pink);
   }
-  .note-prose .tiptap mark[data-color='red'] {
+  .note-prose .tiptap mark[data-color="red"] {
     background: var(--hl-red);
   }
 

@@ -1,11 +1,11 @@
-import type { Transition, Variants } from 'motion/react'
+import type { Transition, Variants } from "motion/react"
 
 export const dur = { fast: 0.15, base: 0.2, slow: 0.3 } as const
 export const easeOut = [0.22, 1, 0.36, 1] as const
 export const easeIn = [0.55, 0, 1, 0.45] as const
 
-export const spring: Transition = { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 }
-export const springSoft: Transition = { type: 'spring', stiffness: 260, damping: 28 }
+export const spring: Transition = { type: "spring", stiffness: 400, damping: 30, mass: 0.8 }
+export const springSoft: Transition = { type: "spring", stiffness: 260, damping: 28 }
 
 export const pageEnter = {
   initial: { opacity: 0, y: 6 },

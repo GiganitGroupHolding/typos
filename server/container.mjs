@@ -1,13 +1,12 @@
 #!/usr/bin/env node
-import { promises as fs } from 'node:fs'
-import path from 'node:path'
-import { main } from './typos-server.mjs'
+import { promises as fs } from "node:fs"
+import path from "node:path"
+import { main } from "./typos-server.mjs"
 
 const UID = 1000
 const GID = 1000
 
-/** @param {string} p
- */
+/** @param {string} p */
 async function chownTree(p) {
   const st = await fs.lstat(p)
   if (st.uid !== UID || st.gid !== GID) await fs.lchown(p, UID, GID)
@@ -16,7 +15,7 @@ async function chownTree(p) {
 }
 
 const args = process.argv.slice(2)
-const dir = path.resolve(process.env.TYPOS_VAULT ?? '/data/vault')
+const dir = path.resolve(process.env.TYPOS_VAULT ?? "/data/vault")
 if (process.getuid?.() === 0) {
   await fs.mkdir(dir, { recursive: true })
 
@@ -29,7 +28,7 @@ if (process.getuid?.() === 0) {
   process.setgid?.(GID)
   process.setuid?.(UID)
 }
-if (process.getuid?.() === 0) throw new Error('Не получилось сбросить права root — сервер хранения не запущен')
+if (process.getuid?.() === 0) throw new Error("Не получилось сбросить права root — сервер хранения не запущен")
 
-if (process.env.PORT && !args.some((a) => a === '--port' || a.startsWith('--port='))) args.push('--port', process.env.PORT)
-await main(['serve', '--dir', dir, ...args])
+if (process.env.PORT && !args.some((a) => a === "--port" || a.startsWith("--port="))) args.push("--port", process.env.PORT)
+await main(["serve", "--dir", dir, ...args])

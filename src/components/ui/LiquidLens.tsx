@@ -1,18 +1,18 @@
-import { animate, motion } from 'motion/react'
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { animate, motion } from "motion/react"
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 
 export const lensSupported =
-  typeof navigator !== 'undefined' &&
+  typeof navigator !== "undefined" &&
   /Chrome\/\d/.test(navigator.userAgent) &&
   !/Firefox|FxiOS|CriOS/.test(navigator.userAgent) &&
-  !(typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-transparency: reduce)').matches)
+  !(typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-transparency: reduce)").matches)
 
-if (lensSupported && typeof document !== 'undefined') {
+if (lensSupported && typeof document !== "undefined") {
   let timer = 0
   document.addEventListener(
-    'scroll',
+    "scroll",
     () => {
-      if (!timer) document.documentElement.dataset.scrolling = ''
+      if (!timer) document.documentElement.dataset.scrolling = ""
       clearTimeout(timer)
       timer = window.setTimeout(() => {
         timer = 0
@@ -24,11 +24,11 @@ if (lensSupported && typeof document !== 'undefined') {
 }
 
 function lensMap(w: number, h: number, radius: number, bezel: number): string {
-  const canvas = document.createElement('canvas')
+  const canvas = document.createElement("canvas")
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return ''
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return ""
   const img = ctx.createImageData(w, h)
   const hx = w / 2
   const hy = h / 2
@@ -64,11 +64,11 @@ function lensMap(w: number, h: number, radius: number, bezel: number): string {
 }
 
 function cornerMask(w: number, h: number, r: number): string {
-  const canvas = document.createElement('canvas')
+  const canvas = document.createElement("canvas")
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return 'none'
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return "none"
   const k = r * (1 - Math.SQRT1_2)
   const sigma = Math.max(r * 0.75, 8)
   const corners = [
@@ -90,7 +90,7 @@ function cornerMask(w: number, h: number, r: number): string {
 }
 
 const channel = (c: 0 | 1 | 2) =>
-  [0, 1, 2].map((k) => [0, 1, 2, 3, 4].map((j) => (k === c && j === k ? 1 : 0)).join(' ')).join('  ') + '  0 0 0 1 0'
+  [0, 1, 2].map((k) => [0, 1, 2, 3, 4].map((j) => (k === c && j === k ? 1 : 0)).join(" ")).join("  ") + "  0 0 0 1 0"
 
 interface Options {
   bezel?: number
@@ -103,7 +103,7 @@ interface Options {
 
   hidden?: boolean
 
-  variant?: 'bar' | 'menu' | 'card'
+  variant?: "bar" | "menu" | "card"
 
   fallback?: string
 }
@@ -114,10 +114,10 @@ export function useLiquidLens({
   dispersion = 0.08,
   frost = 1,
   hidden,
-  variant = 'bar',
-  fallback = '',
+  variant = "bar",
+  fallback = "",
 }: Options = {}) {
-  const id = `lens-${useId().replace(/:/g, '')}`
+  const id = `lens-${useId().replace(/:/g, "")}`
 
   const [el, attach] = useState<HTMLElement | null>(null)
   const [size, setSize] = useState<{ w: number; h: number; r: number } | null>(null)
@@ -146,7 +146,7 @@ export function useLiquidLens({
     const mo = new MutationObserver(measure)
 
     for (let n: HTMLElement | null = el, d = 0; n && d < 3; n = n.parentElement, d++) {
-      mo.observe(n, { attributes: true, attributeFilter: ['style', 'class', 'data-state'] })
+      mo.observe(n, { attributes: true, attributeFilter: ["style", "class", "data-state"] })
     }
     return () => {
       cancelAnimationFrame(raf)
@@ -155,19 +155,19 @@ export function useLiquidLens({
     }
   }, [el])
 
-  const href = useMemo(() => (size ? lensMap(size.w, size.h, size.r, Math.min(bezel, size.w / 2, size.h / 2)) : ''), [size, bezel])
-  const corners = useMemo(() => (size ? cornerMask(size.w, size.h, size.r) : 'none'), [size])
+  const href = useMemo(() => (size ? lensMap(size.w, size.h, size.r, Math.min(bezel, size.w / 2, size.h / 2)) : ""), [size, bezel])
+  const corners = useMemo(() => (size ? cornerMask(size.w, size.h, size.r) : "none"), [size])
 
   const scale = useRef(hidden ? 0 : refraction * 2)
   useEffect(() => {
     const target = hidden ? 0 : refraction * 2
     const ctrl = animate(scale.current, target, {
-      type: 'spring',
+      type: "spring",
       stiffness: 220,
       damping: 26,
       onUpdate: (v) => {
         scale.current = v
-        maps.current.forEach((m, k) => m?.setAttribute('scale', String(v * (1 + (k - 1) * dispersion))))
+        maps.current.forEach((m, k) => m?.setAttribute("scale", String(v * (1 + (k - 1) * dispersion))))
       },
     })
     return () => ctrl.stop()
@@ -179,8 +179,8 @@ export function useLiquidLens({
     ? ({
         backdropFilter: `url(#${id})`,
         WebkitBackdropFilter: `url(#${id})`,
-        '--prism-r': `${Math.round(Math.min(130, Math.max(size.w, size.h) * 0.3))}px`,
-        '--prism-corners': corners,
+        "--prism-r": `${Math.round(Math.min(130, Math.max(size.w, size.h) * 0.3))}px`,
+        "--prism-corners": corners,
       } as CSSProperties)
     : undefined
 
@@ -214,7 +214,7 @@ export function useLiquidLens({
     </svg>
   ) : null
 
-  const className = active ? (variant === 'bar' ? 'liquid-lens' : `liquid-lens liquid-lens-${variant}`) : fallback
+  const className = active ? (variant === "bar" ? "liquid-lens" : `liquid-lens liquid-lens-${variant}`) : fallback
   const extras = (
     <>
       {filter}
@@ -229,10 +229,10 @@ export function LensLight({ host: el }: { host: HTMLElement | null }) {
   useEffect(() => {
     if (!el) return
     const move = (e: PointerEvent) => {
-      el.dataset.lit = ''
+      el.dataset.lit = ""
       const r = el.getBoundingClientRect()
-      el.style.setProperty('--lx', `${e.clientX - r.left}px`)
-      el.style.setProperty('--ly', `${e.clientY - r.top}px`)
+      el.style.setProperty("--lx", `${e.clientX - r.left}px`)
+      el.style.setProperty("--ly", `${e.clientY - r.top}px`)
     }
 
     const leave = () => {
@@ -242,13 +242,13 @@ export function LensLight({ host: el }: { host: HTMLElement | null }) {
       const r = el.getBoundingClientRect()
       setPress((p) => ({ x: e.clientX - r.left, y: e.clientY - r.top, n: (p?.n ?? 0) + 1 }))
     }
-    el.addEventListener('pointermove', move)
-    el.addEventListener('pointerleave', leave)
-    el.addEventListener('pointerdown', down)
+    el.addEventListener("pointermove", move)
+    el.addEventListener("pointerleave", leave)
+    el.addEventListener("pointerdown", down)
     return () => {
-      el.removeEventListener('pointermove', move)
-      el.removeEventListener('pointerleave', leave)
-      el.removeEventListener('pointerdown', down)
+      el.removeEventListener("pointermove", move)
+      el.removeEventListener("pointerleave", leave)
+      el.removeEventListener("pointerdown", down)
     }
   }, [el])
 
@@ -276,11 +276,11 @@ export function LensBox({
   lens?: Options
   className?: string
   style?: CSSProperties
-  children?: React.ReactNode
+  children?: ReactNode
 }) {
   const lens = useLiquidLens(opts)
   return (
-    <div ref={lens.attach} style={{ ...style, ...lens.style }} className={[lens.className, className].filter(Boolean).join(' ')}>
+    <div ref={lens.attach} style={{ ...style, ...lens.style }} className={[lens.className, className].filter(Boolean).join(" ")}>
       {lens.extras}
       {children}
     </div>

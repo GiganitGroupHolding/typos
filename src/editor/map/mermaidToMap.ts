@@ -1,5 +1,5 @@
 export interface ParsedFlow {
-  dir: 'TB' | 'BT' | 'LR' | 'RL'
+  dir: "TB" | "BT" | "LR" | "RL"
   nodes: { id: string; text: string }[]
   edges: { from: string; to: string; label?: string }[]
 }
@@ -7,20 +7,20 @@ export interface ParsedFlow {
 const ID = /^[\p{L}\p{N}_]+/u
 
 const SHAPES: [string, string][] = [
-  ['(((', ')))'],
-  ['([', '])'],
-  ['[[', ']]'],
-  ['[(', ')]'],
-  ['((', '))'],
-  ['{{', '}}'],
-  ['[/', '/]'],
-  ['[\\', '\\]'],
-  ['[/', '\\]'],
-  ['[\\', '/]'],
-  ['[', ']'],
-  ['(', ')'],
-  ['{', '}'],
-  ['>', ']'],
+  ["(((", ")))"],
+  ["([", "])"],
+  ["[[", "]]"],
+  ["[(", ")]"],
+  ["((", "))"],
+  ["{{", "}}"],
+  ["[/", "/]"],
+  ["[\\", "\\]"],
+  ["[/", "\\]"],
+  ["[\\", "/]"],
+  ["[", "]"],
+  ["(", ")"],
+  ["{", "}"],
+  [">", "]"],
 ]
 
 const LABELLED = /^\s*<?(--|==|-\.)\s+(.+?)\s+(-{2,}>|-{3,}|={2,}>|={3,}|\.-+>|\.-+)/
@@ -29,27 +29,27 @@ const LINK = /^\s*<?(-{2,}[>ox]?|={2,}[>ox]?|-\.+-+[>ox]?)(?:\s*\|([^|]*)\|)?/
 
 const clean = (s: string) =>
   s
-    .replace(/^"([\s\S]*)"$/, '$1')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+    .replace(/^"([\s\S]*)"$/, "$1")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
     .replace(/#quot;/g, '"')
-    .replace(/[`*]/g, '')
-    .replace(/[ \t]+/g, ' ')
-    .split('\n')
+    .replace(/[`*]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .split("\n")
     .map((l) => l.trim())
-    .join('\n')
+    .join("\n")
     .trim()
 
 export function parseFlowchart(code: string): ParsedFlow | null {
   const lines = code
-    .replace(/%%.*$/gm, '')
+    .replace(/%%.*$/gm, "")
     .split(/\n|;/)
     .map((l) => l.trim())
     .filter(Boolean)
   const head = lines.shift()?.match(/^(?:flowchart|graph)(?:\s+(TD|TB|BT|LR|RL))?\s*$/i)
   if (!head) return null
-  const d = (head[1] ?? 'TB').toUpperCase()
-  const flow: ParsedFlow = { dir: d === 'TD' ? 'TB' : (d as ParsedFlow['dir']), nodes: [], edges: [] }
+  const d = (head[1] ?? "TB").toUpperCase()
+  const flow: ParsedFlow = { dir: d === "TD" ? "TB" : (d as ParsedFlow["dir"]), nodes: [], edges: [] }
   const texts = new Map<string, string>()
 
   const touch = (id: string, text?: string) => {
@@ -71,7 +71,7 @@ export function parseFlowchart(code: string): ParsedFlow | null {
       rest = body.slice(end + close.length)
       break
     }
-    rest = rest.replace(/^:::[\w-]+/, '')
+    rest = rest.replace(/^:::[\w-]+/, "")
     return { id: m[0], text, rest }
   }
 
@@ -100,7 +100,7 @@ export function parseFlowchart(code: string): ParsedFlow | null {
       const lnk = lab ? null : rest.match(LINK)
       const hit = lab ?? lnk
       if (!hit) break
-      const label = clean(lab ? lab[2] : (hit[2] ?? '')) || undefined
+      const label = clean(lab ? lab[2] : (hit[2] ?? "")) || undefined
       const right = group(rest.slice(hit[0].length))
       if (!right) break
       for (const from of left.ids) for (const to of right.ids) if (from !== to) flow.edges.push({ from, to, label })
@@ -123,9 +123,9 @@ export type Measure = (text: string) => { w: number; h: number }
 
 export function blockSize(text: string, lineWidth: (line: string) => number, max = 216): { w: number; h: number } {
   const lines: number[] = []
-  for (const para of (text || ' ').split('\n')) {
-    let cur = ''
-    for (const word of para.split(' ')) {
+  for (const para of (text || " ").split("\n")) {
+    let cur = ""
+    for (const word of para.split(" ")) {
       const next = cur ? `${cur} ${word}` : word
       if (cur && lineWidth(next) > max) {
         lines.push(lineWidth(cur))
@@ -138,7 +138,7 @@ export function blockSize(text: string, lineWidth: (line: string) => number, max
 }
 
 export async function layoutFlow(flow: ParsedFlow, measure: Measure): Promise<LaidOut> {
-  const { default: dagre } = await import('@dagrejs/dagre')
+  const { default: dagre } = await import("@dagrejs/dagre")
   const g = new dagre.graphlib.Graph({ multigraph: true })
   g.setGraph({ rankdir: flow.dir, nodesep: 28, ranksep: 52, edgesep: 16, marginx: 0, marginy: 0 })
   g.setDefaultEdgeLabel(() => ({}))
@@ -148,7 +148,7 @@ export async function layoutFlow(flow: ParsedFlow, measure: Measure): Promise<La
   }
   flow.edges.forEach((e, i) => {
     const lab = e.label ? measure(e.label) : null
-    g.setEdge(e.from, e.to, lab ? { width: Math.max(0, lab.w - 24), height: 18, labelpos: 'c' } : {}, `e${i}`)
+    g.setEdge(e.from, e.to, lab ? { width: Math.max(0, lab.w - 24), height: 18, labelpos: "c" } : {}, `e${i}`)
   })
   dagre.layout(g)
   const nodes = flow.nodes.map((n) => {
