@@ -22,7 +22,7 @@ export function TopBar() {
   const focusMode = useUi((s) => s.focusMode)
   const toggleFocus = useUi((s) => s.toggleFocus)
   const setPaletteOpen = useUi((s) => s.setPaletteOpen)
-  const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
 
   return (
     <div data-tauri-drag-region className="flex h-12 shrink-0 items-center gap-1 px-2">
@@ -60,8 +60,7 @@ export function TopBar() {
         ) : null}
       </nav>
 
-      <div ref={lens.attach} style={lens.style} className={cn(lens.className, "flex items-center gap-0.5 rounded-full p-1")}>
-        {lens.extras}
+      <div className={cn(lens.className, "flex items-center gap-0.5 rounded-full p-1")}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

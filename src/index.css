@@ -149,118 +149,6 @@
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / calc(var(--sheen) * 1.6));
   }
 
-  :root {
-    --lens-tint: rgb(255 255 255 / 0.16);
-    --lens-shadow: 0 10px 28px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
-    --prism-alpha: 0.64;
-    --prism-corner-alpha: 0.32;
-
-    --prism-spectrum: repeating-conic-gradient(
-      from 200deg,
-      #ff6b6b 0deg,
-      #ffb347 13deg,
-      #fff176 26deg,
-      #7ee8a2 39deg,
-      #5ad1ff 52deg,
-      #7d8bff 65deg,
-      #d07bff 78deg,
-      #ff6b6b 90deg
-    );
-  }
-  .dark {
-    --lens-tint: rgb(255 255 255 / 0.035);
-    --lens-shadow: 0 12px 32px rgb(0 0 0 / 0.38), 0 1px 3px rgb(0 0 0 / 0.3), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
-    --prism-alpha: 0.72;
-    --prism-corner-alpha: 0.36;
-  }
-
-  .liquid-lens-menu {
-    --lens-tint: rgb(255 255 255 / 0.38);
-  }
-  .dark .liquid-lens-menu {
-    --lens-tint: rgb(24 24 22 / 0.4);
-  }
-
-  .liquid-lens-card {
-    --lens-tint: var(--sidebar);
-  }
-  .liquid-lens {
-    position: relative;
-    background: var(--lens-tint);
-    box-shadow: var(--lens-shadow);
-  }
-
-  :root[data-scrolling] .liquid-lens {
-    backdrop-filter: blur(3px) saturate(1.35) !important;
-    -webkit-backdrop-filter: blur(3px) saturate(1.35) !important;
-  }
-
-  .liquid-lens::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    border-radius: inherit;
-    padding: 1px;
-    pointer-events: none;
-    opacity: var(--prism-corner-alpha);
-    background: #fff;
-    mask:
-      var(--prism-corners, linear-gradient(transparent 0 0)),
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-size:
-      100% 100%,
-      auto,
-      auto;
-    mask-composite: intersect, exclude, add;
-  }
-  .dark .liquid-lens::after {
-    mix-blend-mode: plus-lighter;
-  }
-
-  .liquid-lens::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    border-radius: inherit;
-    padding: 1.5px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--dur-base) var(--ease-out);
-    background:
-      radial-gradient(
-        var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%),
-        #fff 0%,
-        rgb(255 255 255 / 0.75) 20%,
-        rgb(255 255 255 / 0) 48%
-      ),
-      var(--prism-spectrum);
-    mask:
-      radial-gradient(
-        var(--prism-r, 130px) var(--prism-r, 130px) at var(--lx, 25%) var(--ly, 0%),
-        #000 0%,
-        rgb(0 0 0 / 0.55) 55%,
-        transparent 100%
-      ),
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: intersect, exclude, add;
-  }
-
-  .dark .liquid-lens::before {
-    mix-blend-mode: plus-lighter;
-  }
-  .liquid-lens[data-lit]::before {
-    opacity: var(--prism-alpha);
-  }
-
-  .liquid-lens > * {
-    position: relative;
-    z-index: 1;
-  }
-
   .liquid-active {
     background: var(--sidebar-accent);
     box-shadow: var(--liquid-edge);
@@ -269,14 +157,12 @@
 
   .liquid-column,
   .liquid-column-soft,
-  .liquid-lava,
-  .liquid-lens {
+  .liquid-lava {
     --muted-foreground: #2c2b28;
   }
   .dark .liquid-column,
   .dark .liquid-column-soft,
-  .dark .liquid-lava,
-  .dark .liquid-lens {
+  .dark .liquid-lava {
     --muted-foreground: #b8b5ac;
   }
   .liquid-column {
@@ -870,6 +756,113 @@
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+}
+
+@layer components {
+  [data-ui-hover="button"],
+  [data-ui-hover="card"],
+  [data-ui-hover="sidebar-row"],
+  [data-ui-hover="search-row"] {
+    position: relative;
+  }
+
+  [data-ui-hover="button"]::before,
+  [data-ui-hover="card"]::after,
+  [data-ui-hover="sidebar-row"]::before,
+  [data-ui-hover="search-row"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  [data-ui-hover="button"]::before {
+    background: currentColor;
+  }
+
+  [data-ui-hover="button"],
+  [data-ui-hover="sidebar-row"] {
+    isolation: isolate;
+  }
+
+  [data-ui-hover="button"]::before,
+  [data-ui-hover="sidebar-row"]::before {
+    z-index: -1;
+  }
+
+  [data-ui-hover="card"]::after {
+    border: 1px solid var(--subject, var(--highlight));
+  }
+
+  [data-ui-hover="sidebar-row"]::before {
+    background: var(--sidebar-accent);
+  }
+
+  [data-ui-hover="search-row"]::before {
+    background: var(--muted);
+    z-index: -1;
+  }
+
+  [data-ui-hover="search-row"] {
+    isolation: isolate;
+  }
+
+  [data-ui-hover="search-row"][data-selected="true"]::before {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    [data-ui-hover="button"]:not(:disabled):not([aria-disabled="true"]):hover::before {
+      opacity: 0.07;
+    }
+
+    [data-ui-hover="card"]:hover::after,
+    [data-ui-hover="sidebar-row"]:not(:disabled):not([aria-disabled="true"]):hover::before {
+      opacity: 1;
+    }
+
+    [data-ui-hover="pin-link"]:hover {
+      color: var(--highlight);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-ui-hover="button"]::before,
+    [data-ui-hover="card"]::after,
+    [data-ui-hover="sidebar-row"]::before,
+    [data-ui-hover="search-row"]::before {
+      transition: opacity 160ms var(--ease-out);
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    [data-ui-hover="card"] {
+      transition: translate 160ms var(--ease-out);
+    }
+
+    [data-ui-hover="card"]:hover {
+      translate: 0 -2px;
+    }
+
+    [data-ui-hover="button"] svg:not(.animate-spin),
+    [data-ui-hover="pin-link"] [data-pin-link-icon] {
+      transition: scale 160ms var(--ease-out);
+    }
+
+    [data-ui-hover="button"]:not(:disabled):not([aria-disabled="true"]):hover svg:not(.animate-spin) {
+      scale: 1.06;
+    }
+
+    [data-ui-hover="pin-link"]:hover [data-pin-link-icon] {
+      scale: 1.04;
+    }
+
+    [data-ui-hover="pin-link"] {
+      transition: color 160ms var(--ease-out);
+    }
   }
 }
 

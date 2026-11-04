@@ -34,8 +34,6 @@ export function PinsDrawer() {
     <AnimatePresence>
       {open && (
         <motion.aside
-          ref={lens.attach}
-          style={lens.style}
           key="pins"
           aria-label="Закреп"
           initial={{ x: 24, opacity: 0 }}
@@ -46,7 +44,6 @@ export function PinsDrawer() {
             "absolute top-14 right-3 bottom-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col rounded-[var(--radius-surface)]",
           )}
         >
-          {lens.extras}
           <header className="flex items-center gap-1 border-b py-2 pr-2 pl-4">
             <h2 className="flex-1 truncate text-sm font-semibold">{subject ? subject.name : "Закреп"}</h2>
             {subject && (

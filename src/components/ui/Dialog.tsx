@@ -52,8 +52,7 @@ function DialogContent({
     <DialogPortal>
       <DialogOverlay blur={surface !== "liquid"} className={surface === "liquid" ? "bg-black/60" : undefined} />
       <DialogPrimitive.Content
-        ref={surface === "liquid" ? lens.attach : undefined}
-        style={{ ...style, ...(surface === "liquid" ? lens.style : undefined) }}
+        style={style}
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[var(--radius-surface)] p-5 text-sm text-popover-foreground duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
@@ -62,7 +61,6 @@ function DialogContent({
         )}
         {...props}
       >
-        {surface === "liquid" && lens.extras}
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>

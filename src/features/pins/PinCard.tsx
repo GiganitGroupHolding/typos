@@ -12,6 +12,7 @@ export function PinLinkIcon({ icon, url, large = false }: Pick<Pin, "icon" | "ur
   const Icon = icon && icon !== "favicon" ? (subjectIcons[icon] ?? Globe) : Globe
   return (
     <span
+      data-pin-link-icon=""
       className={cn(
         "relative flex shrink-0 items-center justify-center rounded-full border bg-accent text-highlight",
         large ? "size-14" : "size-10",
@@ -41,13 +42,14 @@ export function PinBody({ pin, size = "md", hideTitle = false }: { pin: Pin; siz
   if (pin.kind === "link")
     return (
       <a
+        data-ui-hover={pinUrl(pin.url) ? "pin-link" : undefined}
         href={pinUrl(pin.url)}
         target="_blank"
         rel="noopener noreferrer"
         title={pin.url}
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
-        className="flex min-w-0 items-center gap-3 rounded-lg outline-none hover:text-highlight focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <PinLinkIcon icon={pin.icon} url={pin.url} large={size === "lg"} />
         <span

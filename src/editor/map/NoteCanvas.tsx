@@ -707,14 +707,13 @@ function MapBlock({
   onResizeDown: (e: ReactPointerEvent) => void
   onCommit: (text: string, height: number) => void
 }) {
-  const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
   return (
     <div
-      ref={lens.attach}
       data-map-node={node.id}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
-      style={{ ...lens.style, ...rectStyle(rect), position: "absolute" }}
+      style={{ ...rectStyle(rect), position: "absolute" }}
       className={cn(
         lens.className,
         "group/node rounded-[14px] outline-2 outline-offset-2 outline-transparent transition-[outline-color] duration-(--dur-fast)",
@@ -722,7 +721,6 @@ function MapBlock({
         selected && "outline-highlight",
       )}
     >
-      {lens.extras}
       <NodeText text={node.text} editing={editing} onCommit={onCommit} />
       {mode && !editing && (
         <div
@@ -809,18 +807,16 @@ function NodeText({ text, editing, onCommit }: { text: string; editing: boolean;
 }
 
 function MapHint() {
-  const lens = useLiquidLens({ bezel: 12, refraction: 12, dispersion: 0.09, frost: 1, fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
   return (
     <div
-      ref={lens.attach}
       role="status"
-      style={lens.style}
+
       className={cn(
         lens.className,
         "pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[12.5px] whitespace-nowrap text-muted-foreground",
       )}
     >
-      {lens.extras}
       <span>Потяни по фону, чтобы добавить блок. Esc для выхода.</span>
     </div>
   )

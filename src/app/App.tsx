@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from "react"
 import { createBrowserRouter, RouterProvider } from "react-router"
 import { AppShell } from "@/app/layout/AppShell"
 import { Button } from "@/components/ui/Button"
-import { GlassFilter } from "@/components/ui/LiquidButton"
 import { Toaster } from "@/components/ui/Sonner"
 import { TooltipProvider } from "@/components/ui/Tooltip"
 import { HomePage } from "@/pages/HomePage"
@@ -105,7 +104,6 @@ export function App() {
       <TooltipProvider delayDuration={400}>
         <RouterProvider router={router} />
         <Toaster position="bottom-center" />
-        <GlassFilter />
       </TooltipProvider>
     </MotionConfig>
   )

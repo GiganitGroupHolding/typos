@@ -143,7 +143,7 @@ export function BubbleToolbar({
 }) {
   const [panel, setPanel] = useState<Panel>(null)
   const mouseX = useMotionValue(Infinity)
-  const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
   const [url, setUrl] = useState("")
   const linkInput = useRef<HTMLInputElement>(null)
 
@@ -211,18 +211,15 @@ export function BubbleToolbar({
         className="relative"
       >
         <div
-          ref={lens.attach}
           role="toolbar"
           aria-label="Форматирование выделенного"
           onPointerMove={(e) => e.pointerType === "mouse" && mouseX.set(e.clientX)}
           onPointerLeave={() => mouseX.set(Infinity)}
           style={{
-            ...lens.style,
             background: "linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)), linear-gradient(var(--lens-tint), var(--lens-tint))",
           }}
           className={cn(lens.className, "flex items-center gap-0.5 rounded-2xl p-1")}
         >
-          {lens.extras}
           <ToolbarMouse.Provider value={mouseX}>
             <ToolbarButton
               type="button"

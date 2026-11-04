@@ -54,7 +54,7 @@ const Sep = () => <div aria-hidden className="mx-0.5 h-5 w-px bg-border" />
 export function TableMenu({ editor }: { editor: Editor }) {
   const header = useEditorState({ editor, selector: ({ editor: e }) => e.isActive("tableHeader") })
   const c = () => editor.chain().focus()
-  const lens = useLiquidLens({ bezel: 14, refraction: 12, dispersion: 0.09, frost: 5, variant: "menu", fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
 
   return (
     <BubbleMenu
@@ -72,13 +72,12 @@ export function TableMenu({ editor }: { editor: Editor }) {
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 500, damping: 34 }}
-        ref={lens.attach}
+
         role="toolbar"
         aria-label="Таблица"
-        style={lens.style}
+
         className={cn(lens.className, "flex items-center gap-0.5 rounded-2xl p-1")}
       >
-        {lens.extras}
         <Action icon={BetweenHorizontalEnd} label="Строка" title="Добавить строку ниже" onClick={() => c().addRowAfter().run()} />
         <Action icon={BetweenVerticalEnd} label="Столбец" title="Добавить столбец справа" onClick={() => c().addColumnAfter().run()} />
         <Sep />

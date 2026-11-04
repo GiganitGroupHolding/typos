@@ -18,15 +18,14 @@ function SubjectCard({ subject: s, children }: { subject: Subject; children: Rea
   const lens = useLiquidLens(CARD_LENS)
   return (
     <Link
-      ref={lens.attach}
+      data-ui-hover="card"
       to={`/s/${s.id}`}
-      style={{ ...subjectStyle(s), ...lens.style }}
+      style={{ ...subjectStyle(s) }}
       className={cn(
         lens.className,
-        "group block h-full rounded-[var(--radius-surface)] p-5 outline-none transition-transform duration-(--dur-base) ease-(--ease-out) hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
+        "group block h-full rounded-[var(--radius-surface)] p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
       )}
     >
-      {lens.extras}
       {children}
     </Link>
   )

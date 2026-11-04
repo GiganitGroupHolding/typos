@@ -186,10 +186,11 @@ export function ListColumn() {
           notes.map((n) => (
             <motion.li key={n.id} variants={listItem} className="flex items-center gap-1">
               <Link
+                data-ui-hover="sidebar-row"
                 to={`/s/${subject.id}/n/${n.id}`}
                 viewTransition
                 data-active={noteId === n.id || undefined}
-                className="min-w-0 flex-1 rounded-lg px-3 py-2.5 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
+                className="min-w-0 flex-1 rounded-lg px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
               >
                 <div className={cn("truncate text-[14px] font-semibold", !n.title && "text-muted-foreground")}>
                   {n.title || "Без названия"}
@@ -209,14 +210,15 @@ export function ListColumn() {
             return (
               <motion.li key={p.id} variants={listItem} className="group relative">
                 {p.kind === "link" ? (
-                  <div className="rounded-lg py-2.5 pr-10 pl-3 hover:bg-accent">
+                  <div className="rounded-lg py-2.5 pr-10 pl-3">
                     <PinBody pin={p} />
                   </div>
                 ) : (
                   <button
+                    data-ui-hover="sidebar-row"
                     type="button"
                     onClick={() => openWindow("pin", p.id)}
-                    className="w-full rounded-lg py-2.5 pr-10 pl-3 text-left outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-lg py-2.5 pr-10 pl-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="flex items-center gap-2">
                       <span className="flex-1 truncate text-[14px] font-semibold">{p.title}</span>
@@ -246,10 +248,11 @@ export function ListColumn() {
             return (
               <motion.li key={t.id} variants={listItem} className="group relative">
                 <Link
+                  data-ui-hover="sidebar-row"
                   to={`/s/${subject.id}/t/${t.id}`}
                   viewTransition
                   data-active={toolId === t.id || undefined}
-                  className="flex items-center gap-3 rounded-lg py-2.5 pr-10 pl-3 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
+                  className="flex items-center gap-3 rounded-lg py-2.5 pr-10 pl-3 outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
                 >
                   <span className="flex size-8 items-center justify-center rounded-lg bg-card shadow-card">
                     <Icon className="size-4 text-highlight" />
@@ -271,10 +274,11 @@ export function ListColumn() {
           boards.map((b) => (
             <motion.li key={b.id} variants={listItem} className="group relative">
               <Link
+                data-ui-hover="sidebar-row"
                 to={`/s/${subject.id}/b/${b.id}`}
                 viewTransition
                 data-active={boardId === b.id || undefined}
-                className="flex items-center gap-3 rounded-lg py-2.5 pr-10 pl-3 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
+                className="flex items-center gap-3 rounded-lg py-2.5 pr-10 pl-3 outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-accent"
               >
                 <span className="flex size-8 items-center justify-center rounded-lg bg-card shadow-card">
                   <LayoutDashboard className="size-4 text-highlight" />

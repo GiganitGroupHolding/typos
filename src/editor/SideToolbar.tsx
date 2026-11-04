@@ -88,7 +88,7 @@ export function SideToolbar({
   const mapMode = useUi((s) => s.mapMode)
   const setMapMode = useUi((s) => s.setMapMode)
   const mouseY = useMotionValue(Infinity)
-  const lens = useLiquidLens({ bezel: 14, refraction: 16, dispersion: 0.09, frost: 1, hidden, fallback: "liquid liquid-lava" })
+  const lens = useLiquidLens({ fallback: "liquid liquid-lava" })
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) =>
@@ -147,7 +147,6 @@ export function SideToolbar({
 
   return (
     <motion.div
-      ref={lens.attach}
       role="toolbar"
       aria-label="Форматирование"
       aria-orientation="vertical"
@@ -160,14 +159,13 @@ export function SideToolbar({
       }}
       onPointerMove={(e) => e.pointerType === "mouse" && mouseY.set(e.clientY)}
       onPointerLeave={() => mouseY.set(Infinity)}
-      style={lens.style}
+
       className={cn(
         "fixed top-1/2 right-4 z-30 flex -translate-y-1/2 flex-col items-center gap-0.5 rounded-[1.4rem] p-1.5",
         lens.className,
         hidden && "pointer-events-none",
       )}
     >
-      {lens.extras}
       {groups.map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           {i > 0 && <div aria-hidden className="mx-auto my-1 h-px w-5 bg-border" />}

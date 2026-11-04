@@ -50,16 +50,13 @@ function DockIcon({ tool, mouseX }: { tool: Tool; mouseX: MotionValue<number> })
 
 export function ToolDock({ tools }: { tools: Tool[] }) {
   const mouseX = useMotionValue(Infinity)
-  const lens = useLiquidLens({ bezel: 16, refraction: 16, dispersion: 0.09, frost: 1, fallback: "liquid" })
+  const lens = useLiquidLens({ fallback: "liquid" })
   return (
     <div
-      ref={lens.attach}
-      style={lens.style}
       onPointerMove={(e) => e.pointerType === "mouse" && mouseX.set(e.clientX)}
       onPointerLeave={() => mouseX.set(Infinity)}
       className={cn(lens.className, "inline-flex items-end gap-3 rounded-[1.4rem] px-3 pt-3 pb-3")}
     >
-      {lens.extras}
       {tools.map((t) => (
         <DockIcon key={t.id} tool={t} mouseX={mouseX} />
       ))}
