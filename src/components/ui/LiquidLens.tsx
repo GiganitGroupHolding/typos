@@ -1,4 +1,4 @@
-import { animate, motion } from "motion/react"
+import { animate } from "motion/react"
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 
 export const lensSupported =
@@ -225,7 +225,6 @@ export function useLiquidLens({
 }
 
 export function LensLight({ host: el }: { host: HTMLElement | null }) {
-  const [press, setPress] = useState<{ x: number; y: number; n: number } | null>(null)
   useEffect(() => {
     if (!el) return
     const move = (e: PointerEvent) => {
@@ -238,33 +237,15 @@ export function LensLight({ host: el }: { host: HTMLElement | null }) {
     const leave = () => {
       delete el.dataset.lit
     }
-    const down = (e: PointerEvent) => {
-      const r = el.getBoundingClientRect()
-      setPress((p) => ({ x: e.clientX - r.left, y: e.clientY - r.top, n: (p?.n ?? 0) + 1 }))
-    }
     el.addEventListener("pointermove", move)
     el.addEventListener("pointerleave", leave)
-    el.addEventListener("pointerdown", down)
     return () => {
       el.removeEventListener("pointermove", move)
       el.removeEventListener("pointerleave", leave)
-      el.removeEventListener("pointerdown", down)
     }
   }, [el])
 
-  return (
-    <span aria-hidden className="lens-light">
-      {press && (
-        <motion.i
-          key={press.n}
-          initial={{ opacity: 0.9, scale: 0.2 }}
-          animate={{ opacity: 0, scale: 2.4 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          style={{ left: press.x, top: press.y }}
-        />
-      )}
-    </span>
-  )
+  return null
 }
 
 export function LensBox({

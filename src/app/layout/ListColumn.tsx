@@ -19,6 +19,7 @@ import { pickAndImportNotes } from "@/features/import/importFiles"
 import { useFileDrop } from "@/features/import/useFileDrop"
 import { ExportMarkdownButton } from "@/features/notes/ExportMarkdownButton"
 import { PinActions } from "@/features/pins/PinActions"
+import { PinBody } from "@/features/pins/PinCard"
 import { openPinEditor } from "@/features/pins/PinEditorDialog"
 import { tabOfPath } from "@/features/subjects/tabs"
 import { SubjectBadge, toolIcon } from "@/features/subjects/visuals"
@@ -66,11 +67,11 @@ function CreateButton({ subject, tab }: { subject: Subject; tab: SubjectTab }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Новая карточка" onClick={() => openPinEditor({ subjectId: subject.id })}>
+          <Button variant="ghost" size="icon-sm" aria-label="Новый закреп" onClick={() => openPinEditor({ subjectId: subject.id })}>
             <Plus />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Новая карточка закрепа</TooltipContent>
+        <TooltipContent>Новый закреп</TooltipContent>
       </Tooltip>
     )
   if (tab === "tools")
@@ -207,22 +208,29 @@ export function ListColumn() {
             const floating = windows.some((w) => w.id === `pin:${p.id}`)
             return (
               <motion.li key={p.id} variants={listItem} className="group relative">
-                <button
-                  type="button"
-                  onClick={() => openWindow("pin", p.id)}
-                  className="w-full rounded-lg py-2.5 pr-10 pl-3 text-left outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="flex-1 truncate text-[14px] font-semibold">{p.title}</span>
-                    {floating && <Maximize2 aria-label="Открыто в окне" className="size-3.5 text-highlight" />}
+                {p.kind === "link" ? (
+                  <div className="rounded-lg py-2.5 pr-10 pl-3 hover:bg-accent">
+                    <PinBody pin={p} />
                   </div>
-                  {p.tex && (
-                    <div className="mt-1 overflow-hidden text-[13px] text-muted-foreground">
-                      <Tex tex={p.tex} className="block truncate" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openWindow("pin", p.id)}
+                    className="w-full rounded-lg py-2.5 pr-10 pl-3 text-left outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 truncate text-[14px] font-semibold">{p.title}</span>
+                      {floating && <Maximize2 aria-label="Открыто в окне" className="size-3.5 text-highlight" />}
                     </div>
-                  )}
-                  <span className="sr-only">Открыть в плавающем окне</span>
-                </button>
+                    {p.tex && (
+                      <div className="mt-1 overflow-hidden text-[13px] text-muted-foreground">
+                        <Tex tex={p.tex} className="block truncate" />
+                      </div>
+                    )}
+                    {p.text && <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{p.text}</p>}
+                    <span className="sr-only">Открыть в плавающем окне</span>
+                  </button>
+                )}
                 <PinActions
                   pin={p}
                   siblings={pins}
@@ -311,8 +319,8 @@ function EmptyList({ tab, subjectId }: { tab: SubjectTab; subjectId: string }) {
       run: () => createNote(subjectId),
     },
     pins: {
-      title: "Нет карточек",
-      action: "Карточка",
+      title: "Нет закрепов",
+      action: "Закреп",
       run: () => openPinEditor({ subjectId }),
     },
     tools: {

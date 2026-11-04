@@ -83,11 +83,15 @@ export interface Pin {
   tex?: string
   text?: string
   order: number
+  kind?: "content" | "formula" | "link"
+  quiz?: boolean
+  url?: string
+  icon?: SubjectIcon | "favicon"
 }
 
 export type ToolIcon = "grid" | "chart" | "ruler" | "binary" | "calculator" | "function" | "timer" | "table"
 
-export type ToolKind = "html" | "image" | "pdf" | "docx" | "pptx" | "text" | "video" | "audio" | "other"
+export type ToolKind = "html" | "image" | "pdf" | "docx" | "pptx" | "spreadsheet" | "text" | "video" | "audio" | "other"
 
 export interface Tool {
   id: string

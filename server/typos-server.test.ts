@@ -58,6 +58,29 @@ const rawStatus = (p: string) =>
       .on("error", reject)
   })
 
+it("передаёт каноническую версию файла при записи, чтении и условном чтении через CORS", async () => {
+  const put = await call("/files/version.md", { method: "PUT", body: "текст" })
+  const etag = put.headers.get("ETag")
+  expect(etag).toBeTruthy()
+  expect(put.headers.get("X-Typos-ETag")).toBe(etag)
+  const manifest = await adapter().manifest()
+  expect(manifest.files["version.md"].etag).toBe(etag)
+  for (const method of ["GET", "HEAD"]) {
+    const res = await call("/files/version.md", { method, headers: { Origin: "http://localhost:4173" } })
+    expect(res.headers.get("X-Typos-ETag")).toBe(etag)
+    expect(res.headers.get("Access-Control-Expose-Headers")).toContain("X-Typos-ETag")
+    expect(res.headers.get("Cache-Control")).toBe("no-store")
+    await res.arrayBuffer()
+  }
+  const unchanged = await call("/files/version.md", { headers: { "If-None-Match": etag! } })
+  expect(unchanged.status).toBe(304)
+  expect(unchanged.headers.get("X-Typos-ETag")).toBe(etag)
+  const updated = await call("/files/version.md", { method: "PUT", body: "изменено", headers: { "If-Match": etag! } })
+  expect(updated.status).toBe(204)
+  expect(updated.headers.get("X-Typos-ETag")).toBe(updated.headers.get("ETag"))
+  expect(updated.headers.get("X-Typos-ETag")).not.toBe(etag)
+})
+
 describe("ссылка подключения", () => {
   it("сервер собирает, приложение разбирает", () => {
     const link = buildLink({ base: "https://notes.example.com:8443/typos/", token: "abc", name: "Дом", vaultId: "v1" })

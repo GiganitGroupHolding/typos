@@ -2,6 +2,8 @@ import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { type ComponentProps } from "react"
 import { Button } from "@/components/ui/Button"
+import { useLiquidLens } from "@/components/ui/LiquidLens"
+import { CARD_LENS } from "@/components/ui/liquidLensOptions"
 import { cn } from "@/lib/utils"
 
 function Dialog({ ...props }: ComponentProps<typeof DialogPrimitive.Root>) {
@@ -20,12 +22,13 @@ function DialogClose({ ...props }: ComponentProps<typeof DialogPrimitive.Close>)
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
-function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
+function DialogOverlay({ className, blur = true, ...props }: ComponentProps<typeof DialogPrimitive.Overlay> & { blur?: boolean }) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/10 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        blur && "supports-backdrop-filter:backdrop-blur-xs",
         className,
       )}
       {...props}
@@ -37,21 +40,29 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  surface = "glass",
+  style,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  surface?: "glass" | "liquid"
 }) {
+  const lens = useLiquidLens(CARD_LENS)
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay blur={surface !== "liquid"} className={surface === "liquid" ? "bg-black/60" : undefined} />
       <DialogPrimitive.Content
+        ref={surface === "liquid" ? lens.attach : undefined}
+        style={{ ...style, ...(surface === "liquid" ? lens.style : undefined) }}
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 glass rounded-[var(--radius-surface)] p-5 text-sm text-popover-foreground duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[var(--radius-surface)] p-5 text-sm text-popover-foreground duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          surface === "liquid" ? lens.className : "glass",
           className,
         )}
         {...props}
       >
+        {surface === "liquid" && lens.extras}
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>

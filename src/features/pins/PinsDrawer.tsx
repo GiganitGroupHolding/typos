@@ -4,7 +4,10 @@ import { useEffect, useState } from "react"
 import { useParams } from "react-router"
 import { useUi } from "@/app/store"
 import { Button } from "@/components/ui/Button"
+import { useLiquidLens } from "@/components/ui/LiquidLens"
+import { CARD_LENS } from "@/components/ui/liquidLensOptions"
 import { dur, easeIn, springSoft } from "@/lib/motion"
+import { cn } from "@/lib/utils"
 import type { Pin } from "@/types"
 import { usePinsOf, useSubject } from "@/vault/hooks"
 import { useVault } from "@/vault/store"
@@ -18,6 +21,7 @@ export function PinsDrawer() {
   const pins = usePinsOf(subjectId)
   const open = useUi((s) => s.pinsOpen)
   const setOpen = useUi((s) => s.setPinsOpen)
+  const lens = useLiquidLens(CARD_LENS)
 
   useEffect(() => {
     if (!open) return
@@ -30,17 +34,23 @@ export function PinsDrawer() {
     <AnimatePresence>
       {open && (
         <motion.aside
+          ref={lens.attach}
+          style={lens.style}
           key="pins"
           aria-label="Закреп"
           initial={{ x: 24, opacity: 0 }}
           animate={{ x: 0, opacity: 1, transition: springSoft }}
           exit={{ x: 24, opacity: 0, transition: { duration: dur.base * 0.65, ease: easeIn } }}
-          className="glass absolute top-14 right-3 bottom-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col rounded-[var(--radius-surface)]"
+          className={cn(
+            lens.className,
+            "absolute top-14 right-3 bottom-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col rounded-[var(--radius-surface)]",
+          )}
         >
+          {lens.extras}
           <header className="flex items-center gap-1 border-b py-2 pr-2 pl-4">
             <h2 className="flex-1 truncate text-sm font-semibold">{subject ? subject.name : "Закреп"}</h2>
             {subject && (
-              <Button variant="ghost" size="icon-sm" aria-label="Новая карточка" onClick={() => openPinEditor({ subjectId: subject.id })}>
+              <Button variant="ghost" size="icon-sm" aria-label="Новый закреп" onClick={() => openPinEditor({ subjectId: subject.id })}>
                 <Plus />
               </Button>
             )}
@@ -53,9 +63,9 @@ export function PinsDrawer() {
             <p className="p-6 text-center text-sm text-muted-foreground">Выбери предмет</p>
           ) : !pins.length ? (
             <div className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">Нет карточек</p>
+              <p className="text-sm text-muted-foreground">Нет закрепов</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => openPinEditor({ subjectId: subject.id })}>
-                <Plus /> Карточка
+                <Plus /> Закреп
               </Button>
             </div>
           ) : (
@@ -98,17 +108,20 @@ function PinRow({ pin, siblings, onDrop }: { pin: Pin; siblings: Pin[]; onDrop: 
           layoutId={`pin-${pin.id}`}
           transition={springSoft}
           onDoubleClick={() => openPinEditor({ subjectId: pin.subjectId, pinId: pin.id })}
-          className="group relative rounded-xl border bg-background py-3 pr-9 pl-7"
+          className={cn("group relative py-3", pin.kind === "link" ? "pr-14" : "rounded-xl border bg-background pr-9 pl-7")}
         >
           <button
             type="button"
             aria-label={`Перетащить «${pin.title}»`}
             onPointerDown={(e) => controls.start(e)}
-            className="absolute top-3 left-1.5 cursor-grab touch-none rounded p-0.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing"
+            className={cn(
+              "absolute cursor-grab touch-none rounded p-0.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing",
+              pin.kind === "link" ? "top-3 right-8" : "top-3 left-1.5",
+            )}
           >
             <GripVertical className="size-4" />
           </button>
-          <PinBody pin={pin} />
+          <PinBody pin={pin} size={pin.kind === "link" ? "lg" : "md"} />
           <div className="absolute top-2 right-1.5 flex flex-col gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 focus-within:opacity-100">
             <PinActions pin={pin} siblings={siblings} />
             <Button variant="ghost" size="icon-xs" aria-label={`Открыть «${pin.title}» в окне`} onClick={() => openWindow("pin", pin.id)}>

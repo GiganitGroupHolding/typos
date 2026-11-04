@@ -256,30 +256,9 @@
     opacity: var(--prism-alpha);
   }
 
-  .lens-light {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  .lens-light > i {
-    position: absolute;
-    width: 90px;
-    height: 90px;
-    margin: -45px 0 0 -45px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 70%);
-  }
-  .liquid-lens > :not(.lens-light) {
+  .liquid-lens > * {
     position: relative;
     z-index: 1;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .lens-light {
-      display: none;
-    }
   }
 
   .liquid-active {

@@ -128,7 +128,14 @@ export function CommandPalette() {
           },
         ]
       : []),
-    { id: "pins", label: "Открыть закреп", keywords: "панель формулы", icon: Pin, shortcut: "Ctrl J", run: () => ui().setPinsOpen(true) },
+    {
+      id: "pins",
+      label: "Открыть закреп",
+      keywords: "панель текст ссылки",
+      icon: Pin,
+      shortcut: "Ctrl J",
+      run: () => ui().setPinsOpen(true),
+    },
     { id: "reading", label: "Режим чтения", keywords: "читать serif", icon: BookOpen, run: () => ui().toggleReading() },
     { id: "focus", label: "Режим фокуса", keywords: "скрыть колонки", icon: Focus, shortcut: "Ctrl \\", run: () => ui().toggleFocus() },
     { id: "theme", label: "Сменить тему", keywords: "тёмная светлая", icon: Moon, run: () => ui().cycleTheme() },

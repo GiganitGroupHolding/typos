@@ -1,5 +1,5 @@
 import { Download, Loader2 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/Button"
 import { kindLabels, toolIcon } from "@/features/subjects/visuals"
 import { errorText } from "@/lib/errors"
@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils"
 import type { Tool } from "@/types"
 import { downloadProjectFile, readProjectBlob } from "./projectFiles"
 import { ToolFrame } from "./ToolFrame"
+
+const SpreadsheetView = lazy(() => import("./SpreadsheetView"))
 
 export function ProjectViewer({ tool, runKey = 0 }: { tool: Tool; runKey?: number }) {
   if (tool.kind === "html") return <ToolFrame html={tool.html} title={tool.name} runKey={runKey} />
@@ -61,6 +63,12 @@ function FileView({ tool }: { tool: Tool }) {
       )
     case "text":
       return <TextView blob={file.blob} />
+    case "spreadsheet":
+      return (
+        <Suspense fallback={<Spinner />}>
+          <SpreadsheetView blob={file.blob} title={tool.name} />
+        </Suspense>
+      )
     case "docx":
     case "pptx":
       return <OfficeView blob={file.blob} kind={tool.kind} title={tool.name} />

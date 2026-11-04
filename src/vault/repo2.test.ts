@@ -59,7 +59,8 @@ describe("проекты", () => {
     expect(fileKind("pptx")).toBe("pptx")
     expect(fileKind("docx")).toBe("docx")
     expect(fileKind("htm")).toBe("html")
-    expect(fileKind("csv")).toBe("text")
+    expect(fileKind("csv")).toBe("spreadsheet")
+    expect(fileKind("xlsx")).toBe("spreadsheet")
     expect(fileKind("zip")).toBe("other")
   })
 

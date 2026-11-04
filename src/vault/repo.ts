@@ -1,6 +1,7 @@
 import { mapText, parseNoteMap, serializeNoteMap, type NoteMap } from "@/editor/map/types"
 import { normalizeMarkdownMath } from "@/editor/texImport"
 import { BOARD_EXT, emptyBoard, parseBoard, serializeBoard, type BoardData } from "@/features/boards/model"
+import { pinUrl } from "@/lib/pins"
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from "@/lib/subjectPalette"
 import { basename, dirname, fileExt, fileTitle, joinPath, safeName, uniquePath, type VaultAdapter } from "@/storage/VaultAdapter"
 import type { Board, Note, Pin, Subject, SubjectColor, SubjectIcon, Tool, ToolIcon } from "@/types"
@@ -63,6 +64,10 @@ export async function loadVault(a: VaultAdapter): Promise<VaultData> {
           title: p.title || basename(path).replace(/\.md$/, ""),
           tex: p.tex,
           text: p.text,
+          kind: meta.kind === "link" ? "link" : meta.kind === "formula" ? "formula" : "content",
+          quiz: meta.kind !== "link" && meta.quiz !== "false",
+          url: pinUrl(meta.url),
+          icon: meta.icon === "favicon" ? "favicon" : ICONS.find((icon) => icon === meta.icon),
           order: Number(meta.order ?? 999),
         })
       }),
@@ -361,23 +366,51 @@ export interface PinInput {
   title: string
   tex?: string
   text?: string
+  kind?: Pin["kind"]
+  quiz?: boolean
+  url?: string
+  icon?: Pin["icon"]
 }
 
 const clean = (s?: string) => s?.trim() || undefined
 
 function pinFile(id: string, order: number, p: PinInput) {
-  return serializeFrontmatter({ id, order: String(order) }, serializePinBody(p.title, clean(p.tex), clean(p.text)))
+  const meta: Record<string, string> = {
+    id,
+    order: String(order),
+    kind: p.kind ?? "content",
+    quiz: String(p.quiz !== false && p.kind !== "link"),
+  }
+  if (p.kind === "link" && p.url) meta.url = p.url
+  if (p.kind === "link" && p.icon) meta.icon = p.icon
+  return serializeFrontmatter(meta, serializePinBody(p.title, clean(p.tex), clean(p.text)))
+}
+
+function pinFields(input: PinInput, previous?: Pin): PinInput {
+  const kind = input.kind ?? previous?.kind ?? "content"
+  const url = kind === "link" ? pinUrl(input.url ?? previous?.url) : undefined
+  if (kind === "link" && !url) throw new Error("Вставь корректную ссылку на сайт: https://example.com.")
+  return {
+    title: input.title.trim(),
+    tex: clean(input.tex),
+    text: clean(input.text),
+    kind,
+    quiz: kind !== "link" && (input.quiz ?? previous?.quiz ?? true),
+    url,
+    icon: kind === "link" ? (input.icon ?? previous?.icon ?? "favicon") : undefined,
+  }
 }
 
 export async function createPin(a: VaultAdapter, subject: Subject, input: PinInput, order: number): Promise<Pin> {
+  const fields = pinFields(input)
   const id = genId()
   const path = await uniquePath(a, joinPath(subject.dir, PINS_DIR), safeName(input.title, "Карточка"), ".md")
-  await a.writeText(path, pinFile(id, order, input))
-  return { id, subjectId: subject.id, path, order, title: input.title.trim(), tex: clean(input.tex), text: clean(input.text) }
+  await a.writeText(path, pinFile(id, order, fields))
+  return { id, subjectId: subject.id, path, order, ...fields }
 }
 
 export async function updatePin(a: VaultAdapter, pin: Pin, input: PinInput & { order?: number }): Promise<Pin> {
-  const next: Pin = { ...pin, title: input.title.trim(), tex: clean(input.tex), text: clean(input.text), order: input.order ?? pin.order }
+  const next: Pin = { ...pin, ...pinFields(input, pin), order: input.order ?? pin.order }
   const wanted = safeName(next.title, "Карточка")
   const current = basename(pin.path)
     .replace(/\.md$/, "")

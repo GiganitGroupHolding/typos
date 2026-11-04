@@ -15,6 +15,7 @@ const KINDS: [RegExp, ToolKind][] = [
   [/^pdf$/, "pdf"],
   [/^docx$/, "docx"],
   [/^pptx$/, "pptx"],
+  [/^(xlsx|xls|xlsm|xlsb|csv|tsv)$/, "spreadsheet"],
   [/^(txt|md|markdown|csv|tsv|json|xml|ya?ml|log|ini|css|js|ts|py|java|c|cpp|cs|go|rs|sql|tex)$/, "text"],
   [/^(mp4|webm|mov|m4v|ogv)$/, "video"],
   [/^(mp3|wav|ogg|m4a|flac|aac)$/, "audio"],
@@ -180,7 +181,8 @@ export function extractExcerpt(body: string, max = 140): string {
 export function parsePinBody(body: string): { title: string; tex?: string; text?: string } {
   const title = extractTitle(body)
   const block = body.match(/\$\$\s*\n?([\s\S]+?)\n?\s*\$\$/)
-  const text = plainLines(body).slice(1).join(" ")
+  const content = body.replace(/^\s*#\s+[^\n]*(?:\n|$)/, "")
+  const text = (block ? content.replace(block[0], "") : content).trim()
   return { title, tex: block?.[1].trim() || undefined, text: text || undefined }
 }
 

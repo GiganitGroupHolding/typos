@@ -63,7 +63,7 @@ export function buildDocs(data: { subjects: Subject[]; notes: Note[]; pins: Pin[
       refId: p.id,
       subjectId: p.subjectId,
       title: p.title,
-      text: plainText([p.tex ? `$${p.tex}$` : "", p.text ?? ""].join(" ")),
+      text: plainText([p.tex ? `$${p.tex}$` : "", p.text ?? "", p.url ?? ""].join(" ")),
     })),
     ...data.tools.map((t) => ({ id: `tool:${t.id}`, kind: "tool" as const, refId: t.id, subjectId: t.subjectId, title: t.name, text: "" })),
     ...(data.boards ?? []).map((b) => ({

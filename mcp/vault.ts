@@ -92,7 +92,19 @@ export class StudyVault {
           excerpt: n.excerpt,
           ...(n.meta.source ? { source: n.meta.source } : {}),
         })),
-      pins: d.pins.filter((p) => p.subjectId === s.id).map((p) => ({ id: p.id, title: p.title, tex: p.tex, text: p.text, order: p.order })),
+      pins: d.pins
+        .filter((p) => p.subjectId === s.id)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          tex: p.tex,
+          text: p.text,
+          order: p.order,
+          kind: p.kind,
+          quiz: p.quiz,
+          url: p.url,
+          icon: p.icon,
+        })),
       tools: d.tools.filter((t) => t.subjectId === s.id).map((t) => ({ id: t.id, name: t.name, kind: t.kind, file: basename(t.path) })),
       boards: d.boards
         .filter((b) => b.subjectId === s.id)
@@ -178,7 +190,7 @@ export class StudyVault {
     return rel
   }
 
-  async createPin(input: { subject: string; title: string; tex?: string; text?: string }) {
+  async createPin(input: { subject: string } & repo.PinInput) {
     const d = await this.load()
     const s = this.subject(d, input.subject)
     const warnings = checkPin(input.tex, input.text)
@@ -187,11 +199,19 @@ export class StudyVault {
     return { id: p.id, path: p.path, warnings }
   }
 
-  async updatePin(input: { id: string; title?: string; tex?: string; text?: string }) {
+  async updatePin(input: { id: string } & Partial<repo.PinInput>) {
     const d = await this.load()
     const p = d.pins.find((x) => x.id === input.id)
     if (!p) throw new Error(`Нет карточки с id «${input.id}»`)
-    const next = { title: input.title ?? p.title, tex: input.tex ?? p.tex, text: input.text ?? p.text }
+    const next = {
+      title: input.title ?? p.title,
+      tex: input.tex ?? p.tex,
+      text: input.text ?? p.text,
+      kind: input.kind ?? p.kind,
+      quiz: input.quiz ?? p.quiz,
+      url: input.url ?? p.url,
+      icon: input.icon ?? p.icon,
+    }
     const saved = await repo.updatePin(this.a, p, next)
     return { id: saved.id, path: saved.path, warnings: checkPin(next.tex, next.text) }
   }

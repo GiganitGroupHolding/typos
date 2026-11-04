@@ -4,6 +4,7 @@ import { type ReactNode } from "react"
 import { Link } from "react-router"
 import { LiquidButton } from "@/components/ui/LiquidButton"
 import { LensBox, useLiquidLens } from "@/components/ui/LiquidLens"
+import { CARD_LENS } from "@/components/ui/liquidLensOptions"
 import { openNewSubject } from "@/features/subjects/NewSubjectDialog"
 import { SubjectBadge, subjectStyle } from "@/features/subjects/visuals"
 import { plural, relativeTime } from "@/lib/format"
@@ -12,8 +13,6 @@ import { cn } from "@/lib/utils"
 import type { Subject } from "@/types"
 import { useRecentNotes, useSubjects } from "@/vault/hooks"
 import { useVault } from "@/vault/store"
-
-const CARD_LENS = { bezel: 22, refraction: 22, dispersion: 0.08, frost: 4, variant: "card", fallback: "liquid liquid-lava" } as const
 
 function SubjectCard({ subject: s, children }: { subject: Subject; children: ReactNode }) {
   const lens = useLiquidLens(CARD_LENS)

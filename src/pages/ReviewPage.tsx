@@ -7,6 +7,7 @@ import { Kbd } from "@/components/ui/Kbd"
 import { SubjectBadge, subjectStyle } from "@/features/subjects/visuals"
 import { plural } from "@/lib/format"
 import { dur, easeIn, easeOut, pageEnter, spring } from "@/lib/motion"
+import { isQuizPin } from "@/lib/pins"
 import { Tex } from "@/lib/Tex"
 import type { Pin } from "@/types"
 import { usePinsOf, useSubject } from "@/vault/hooks"
@@ -14,7 +15,7 @@ import { usePinsOf, useSubject } from "@/vault/hooks"
 export function ReviewPage() {
   const { subjectId } = useParams()
   const subject = useSubject(subjectId)
-  const pins = usePinsOf(subjectId)
+  const pins = usePinsOf(subjectId).filter(isQuizPin)
   const [round, setRound] = useState(0)
   const [shuffled, setShuffled] = useState(false)
 
@@ -23,7 +24,7 @@ export function ReviewPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
         <p className="text-[17px] font-semibold">Повторять пока нечего</p>
-        <p className="text-sm text-muted-foreground">Добавь карточки в закреп предмета «{subject.name}».</p>
+        <p className="text-sm text-muted-foreground">Включи «Включать в викторину» у нужных закрепов предмета «{subject.name}».</p>
         <Button variant="outline" asChild>
           <Link to={`/s/${subject.id}?tab=pins`}>К закрепу</Link>
         </Button>
@@ -171,7 +172,9 @@ function Session({ pins, shuffle, onRestart }: { pins: Pin[]; shuffle: boolean; 
                     <Tex tex={card.tex} block />
                   </div>
                 )}
-                {card.text && <p className="mt-3 text-[15px] text-muted-foreground">{card.text}</p>}
+                {card.text && (
+                  <p className="mt-3 text-[15px] whitespace-pre-wrap [overflow-wrap:anywhere] text-muted-foreground">{card.text}</p>
+                )}
               </Face>
             </motion.div>
           </motion.button>

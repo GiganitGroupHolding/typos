@@ -17,6 +17,7 @@ import { openToolDialog } from "@/features/tools/ToolDialog"
 import { ToolDock } from "@/features/tools/ToolDock"
 import { plural, relativeTime } from "@/lib/format"
 import { listItem, listParent, pageEnter } from "@/lib/motion"
+import { isQuizPin } from "@/lib/pins"
 import { cn } from "@/lib/utils"
 import { useBoardsOf, useCreateBoard, useCreateNote, useNotesOf, usePinsOf, useSubject, useToolsOf } from "@/vault/hooks"
 
@@ -94,20 +95,26 @@ export function SubjectHome() {
           highlight={tab === "pins"}
           title="Закреп"
           icon={<Pin />}
-          actions={[{ label: "Карточка", icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }]}
+          actions={[{ label: "Закреп", icon: <Plus />, onClick: () => openPinEditor({ subjectId: subject.id }) }]}
         >
           {pins.length ? (
             <>
               <ul className="space-y-2">
                 {pins.slice(0, PINS_PREVIEW).map((p) => (
                   <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => openWindow("pin", p.id)}
-                      className="w-full rounded-xl border bg-background px-3 py-2 text-left outline-none transition-colors duration-(--dur-fast) hover:border-(--subject)/40 focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <PinBody pin={p} size="sm" />
-                    </button>
+                    {p.kind === "link" ? (
+                      <div className="rounded-xl border bg-background px-3 py-2">
+                        <PinBody pin={p} size="sm" />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openWindow("pin", p.id)}
+                        className="w-full rounded-xl border bg-background px-3 py-2 text-left outline-none transition-colors duration-(--dur-fast) hover:border-(--subject)/40 focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <PinBody pin={p} size="sm" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -117,15 +124,17 @@ export function SubjectHome() {
                     Ещё {pins.length - PINS_PREVIEW}
                   </Button>
                 )}
-                <Button size="sm" variant="outline" asChild>
-                  <Link to={`/s/${subject.id}/review`} viewTransition>
-                    <GraduationCap /> Повторение
-                  </Link>
-                </Button>
+                {pins.some(isQuizPin) && (
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to={`/s/${subject.id}/review`} viewTransition>
+                      <GraduationCap /> Повторение
+                    </Link>
+                  </Button>
+                )}
               </div>
             </>
           ) : (
-            <Empty text="Нет карточек" />
+            <Empty text="Нет закрепов" />
           )}
         </Tile>
 

@@ -117,10 +117,18 @@ export class RemoteAdapter {
     return (await this.request(`${this.config.url}/.typos/manifest`)).json()
   }
 
+  private fileEtag(res: Response): string {
+    // Прокси может удалить или ослабить HTTP ETag при сжатии ответа.
+    const etag = res.headers.get("X-Typos-ETag") ?? res.headers.get("ETag")
+    if (!etag || !/^"[\x21\x23-\x7e]+"$/.test(etag))
+      throw new RemoteError("Сервер не передал версию файла. Обнови сервер хранения и проверь настройки прокси.", 502)
+    return etag
+  }
+
   async get(path: string): Promise<{ blob: Blob; etag: string } | null> {
     const res = await this.request(this.fileUrl(path), {}, [404])
     if (res.status === 404) return null
-    return { blob: await res.blob(), etag: res.headers.get("ETag") ?? "" }
+    return { blob: await res.blob(), etag: this.fileEtag(res) }
   }
 
   async put(path: string, blob: Blob, ifMatch?: string): Promise<{ etag: string } | "conflict"> {
@@ -136,7 +144,7 @@ export class RemoteAdapter {
       },
       [412],
     )
-    return res.status === 412 ? "conflict" : { etag: res.headers.get("ETag") ?? "" }
+    return res.status === 412 ? "conflict" : { etag: this.fileEtag(res) }
   }
 
   async del(path: string, ifMatch?: string): Promise<"ok" | "conflict"> {

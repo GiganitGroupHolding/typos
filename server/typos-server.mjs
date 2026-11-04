@@ -500,11 +500,12 @@ export async function startServer(opts) {
         if (!st.isFile()) throw new HttpError(405, "Это папка")
         const etag = await etagOf(abs, st)
         if (matches(req.headers["if-none-match"], etag)) {
-          res.writeHead(304, { ETag: etag }).end()
+          res.writeHead(304, { ETag: etag, "X-Typos-ETag": etag }).end()
           return
         }
         res.writeHead(200, {
           ETag: etag,
+          "X-Typos-ETag": etag,
           "Content-Type": contentType(abs),
           "Content-Length": st.size,
           "Last-Modified": st.mtime.toUTCString(),
@@ -546,7 +547,7 @@ export async function startServer(opts) {
           etags.set(abs, { key: statKey(await fs.stat(abs)), etag })
           return { status: st ? 204 : 201, etag }
         })
-        res.writeHead(status, { ETag: etag, "Content-Length": 0 }).end()
+        res.writeHead(status, { ETag: etag, "X-Typos-ETag": etag, "Content-Length": 0 }).end()
         notifyChange()
         return
       }
@@ -638,7 +639,7 @@ export async function startServer(opts) {
 
     if (origin && (!origins.length || origins.includes(origin))) {
       res.setHeader("Access-Control-Allow-Origin", origin)
-      res.setHeader("Access-Control-Expose-Headers", "ETag, DAV")
+      res.setHeader("Access-Control-Expose-Headers", "ETag, X-Typos-ETag, DAV")
       res.setHeader("Vary", "Origin")
     }
     if (req.method === "OPTIONS" && req.headers["access-control-request-method"]) {

@@ -4,11 +4,12 @@ import { errorText } from "@/lib/errors"
 import { SUBJECT_COLOR_IDS, SUBJECT_ICON_IDS } from "@/lib/subjectPalette"
 import type { VaultAdapter } from "@/storage/VaultAdapter"
 import type { SubjectColor, SubjectIcon } from "@/types"
+import type { PinInput } from "@/vault/repo"
 import type { BoardEdit } from "./boards"
 import { LocalFiles } from "./localFiles"
 import { StudyVault } from "./vault"
 
-const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (карточки с одной формулой), «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки) и «Доски» (полотна как в Miro: стикеры, карточки, рамки и стрелки).
+const INSTRUCTIONS = `Хранилище учебных конспектов пользователя (приложение TYPOS, как Apple Notes). Предмет = папка; в нём конспекты (Markdown), закреп (текст, необязательный LaTeX и полезные ссылки; quiz — участие в викторине), «Проекты» (HTML-тулзы, PDF, презентации, документы, картинки) и «Доски» (полотна как в Miro: стикеры, карточки, рамки и стрелки).
 
 Формат конспекта — Markdown, который понимает редактор приложения:
 - первая строка — заголовок «# …» (по нему называется файл); дальше ## / ### для разделов;
@@ -173,27 +174,40 @@ export function createMcpServer(adapter: VaultAdapter, remote = false, files = n
     {
       title: "Карточка в закреп",
       description:
-        "Шпаргалка предмета: одна формула (LaTeX без $) и короткий простой текст под ней. Для нескольких формул — aligned/gathered в одном tex.",
+        "Закреп предмета: текст, необязательный LaTeX или ссылка (kind: link, url). quiz включает карточку в викторину, ссылки не участвуют.",
       inputSchema: {
         subject,
         title: z.string().min(1),
         tex: z.string().optional().describe("LaTeX без $: «\\det A = ad - bc»"),
-        text: z.string().optional().describe("Пояснение простым текстом, без формул"),
+        text: z.string().optional().describe("Текст закрепа"),
+        kind: z.enum(["content", "formula", "link"]).optional(),
+        quiz: z.boolean().optional().describe("Включать в викторину; по умолчанию да, кроме ссылок"),
+        url: z.string().optional().describe("Адрес сайта для ссылки"),
+        icon: z.enum(["favicon", ...SUBJECT_ICON_IDS]).optional(),
       },
       annotations: write,
     },
-    run((a: { subject: string; title: string; tex?: string; text?: string }) => vault.createPin(a)),
+    run((a: { subject: string } & PinInput) => vault.createPin(a)),
   )
 
   server.registerTool(
     "update_pin",
     {
       title: "Изменить карточку",
-      description: "Меняет заголовок, формулу или текст карточки закрепа. Поля, которые не переданы, остаются без изменений.",
-      inputSchema: { id: z.string(), title: z.string().optional(), tex: z.string().optional(), text: z.string().optional() },
+      description: "Меняет содержимое, ссылку, иконку или участие закрепа в викторине. Поля, которые не переданы, остаются без изменений.",
+      inputSchema: {
+        id: z.string(),
+        title: z.string().optional(),
+        tex: z.string().optional(),
+        text: z.string().optional(),
+        kind: z.enum(["content", "formula", "link"]).optional(),
+        quiz: z.boolean().optional(),
+        url: z.string().optional(),
+        icon: z.enum(["favicon", ...SUBJECT_ICON_IDS]).optional(),
+      },
       annotations: write,
     },
-    run((a: { id: string; title?: string; tex?: string; text?: string }) => vault.updatePin(a)),
+    run((a: { id: string } & Partial<PinInput>) => vault.updatePin(a)),
   )
 
   server.registerTool(

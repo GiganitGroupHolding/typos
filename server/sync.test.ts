@@ -2,7 +2,7 @@ import "fake-indexeddb/auto"
 import { promises as fs } from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { monitorConnection, useConnection } from "@/storage/connection"
 import { DavAdapter } from "@/storage/davAdapter"
 import { conflictCopy, fromBlob } from "@/storage/sync"
@@ -26,6 +26,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   await srv.close()
   await fs.rm(dir, { recursive: true, force: true })
 })
@@ -74,6 +75,58 @@ it("объединяет независимые правки MCP и редакт
 })
 
 describe("синхронизация с локальной копией", () => {
+  it.each(["удалён", "ослаблен"])("не скачивает неизменённые файлы повторно, если HTTP ETag %s прокси", async (mode) => {
+    const { note } = await seed()
+    const originalFetch = globalThis.fetch
+    const downloaded: string[] = []
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const res = await originalFetch(input, init)
+      if (!String(input).includes("/files/") || !res.ok) return res
+      const headers = new Headers(res.headers)
+      expect(headers.get("X-Typos-ETag")).toBe(headers.get("ETag"))
+      if (mode === "удалён") headers.delete("ETag")
+      else headers.set("ETag", `W/${headers.get("ETag")}`)
+      if (!init?.method || init.method === "GET") downloaded.push(String(input))
+      return new Response(res.body, { status: res.status, headers })
+    })
+    const a = await device(`proxy-${mode}`)
+    downloaded.length = 0
+    await a.engine.syncNow()
+    await a.engine.syncNow()
+    expect(downloaded).toEqual([])
+    await repo.saveNote(direct(), note, "# Кинематика\n\nизменено на сервере")
+    await a.engine.syncNow()
+    expect(downloaded).toEqual([`${config().url}/files/${note.path.split("/").map(encodeURIComponent).join("/")}`])
+    downloaded.length = 0
+    await repo.saveNote(a, note, "# Кинематика\n\nлокальная правка")
+    await a.engine.syncNow()
+    await a.engine.syncNow()
+    expect(downloaded).toEqual([])
+    expect(await onServer(note.path)).toContain("локальная правка")
+    expect(await a.engine.countPending()).toBe(0)
+  })
+
+  it("сохраняет защиту от перезаписи при изменении файла между манифестом и скачиванием", async () => {
+    const { note } = await seed()
+    const a = await device("race-etag")
+    await repo.saveNote(direct(), note, "# Кинематика\n\nпервая правка")
+    const originalGet = a.remote.get.bind(a.remote)
+    vi.spyOn(a.remote, "get").mockImplementationOnce(async (file) => {
+      await repo.saveNote(direct(), note, "# Кинематика\n\nвторая правка")
+      return originalGet(file)
+    })
+    await a.engine.syncNow()
+    expect(await repo.readNoteBody(a, note.path)).toContain("вторая правка")
+    const reads = vi.spyOn(a.remote, "get")
+    reads.mockClear()
+    await a.engine.syncNow()
+    expect(reads).not.toHaveBeenCalled()
+    await repo.saveNote(a, note, "# Кинематика\n\nлокальная правка")
+    await a.engine.syncNow()
+    expect(await onServer(note.path)).toContain("локальная правка")
+    expect(await a.engine.countPending()).toBe(0)
+  })
+
   it("первая синхронизация забирает всё, дальше копия открывается без сети", async () => {
     await seed()
     const a = await device("a")
